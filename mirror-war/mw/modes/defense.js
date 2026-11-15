@@ -254,6 +254,8 @@
     SURGE: { from: 14, ratio: 2, fill: 0.6, min: 6, max: 16, gap: 0.25, cool: 70, first: 60, siege: 400, times: 6 },   // times = 한 판에 반격하는 횟수 상한 (끝없이 막히지 않게)   // 적의 반격 (_updateSurge, 2026-11-14 사용자 요청). 처음 값(1.8·0.75·24·50초)은 1단계가 900초 안에 안 끝났다 — 반격 12번, 첫 벙커 앞에서 고였다
     CARDS: { trigger: 'adverse', first: 60, cool: 60, foeMin: 4, foeRatio: 1.2, pushSec: 20, pushPx: 150, baseHp: 0.7, stallFrom: 300, stallSec: 120, stallCool: 120, progPx: 30, progHp: 60, sec: 45, mana: 2, dmg: 0.5, radius: 0.3,
       wAdverse: { mana: 2, repair: 2, hero: 2, xp: 1, magic: 1, radius: 1 }, wStall: { magic: 3, radius: 3, hero: 2, mana: 1, xp: 1, repair: 1 } },   // 카드가 나오는 때와 효과 (_cardCheck, 2026-11-15 사용자 요청). trigger 가 'adverse' 가 아니면 예전처럼 레벨업마다
+    SIEGE: { dist: 400, capMul: 0.5, gapMul: 2.5 },   // 적 기지 포위: 맨 앞 3기가 기지 400px 안이면 웨이브 상한 ×0.5, 나오는 간격 ×2.5 (_lairSieged, 2026-11-15 사용자 결정)
+    ECAP_FORT: 0.25, ECAP_MIN: 8,   // 적 벙커가 하나 무너질 때마다 적 웨이브 상한(스테이지 ecap) −25%, 최소 8기 (ecapNow, 2026-11-15 사용자 결정)
     SLOT_ORDER: { band: 60, every: 1 },   // 스킬 칸 순서 = 시전자가 전장에 가까운 순 (_regroup, 2026-11-15 사용자 요청). null 이면 생긴 순서
     ALLY_CAP: 0,   // (적 웨이브 상한은 스테이지 ecap: 28·32·36·40 — 전장에 동시에 있는 웨이브 적 수, waveFoes)
     // 아군 수 상한 기본값(0 = 없음). 스테이지마다 cap 으로 정한다: 1단계 40, 2단계 45, 3단계 50, 4단계 60 (2026-11-14 사용자 요청)
@@ -264,7 +266,7 @@
         guards: [{ at: 'bottom', list: [[29, 2]] }, { at: 'top', list: [[29, 2]] }, { at: 'lair', list: [[30, 1], [29, 2]] }] },
       { name: '흑마술파의 길', cap: 45, ecap: 32, enemy: 'dark', note: '보통', waves: [0, 6], mul: 1, restMul: 1.8, loopRest: 30, loopLv: 0.34, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 4200, efort: { hp: 1000, lv: 2 }, lairLv: 2, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 3, traps: 9, trapEvery: 25, trapLv: 2,
         guards: [{ at: 'bottom', list: [[53, 2], [55, 1]] }, { at: 'top', list: [[53, 2], [57, 1]] }, { at: 'lair', list: [[54, 1], [53, 2], [61, 1]] }] },
-      { name: '악령의 성채', cap: 50, ecap: 36, enemy: 'evil', note: '어려움', waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 }, lairLv: 4, lairCast: 6, heroPosts: 3, traps: 12, trapEvery: 18, trapLv: 3,
+      { name: '악령의 성채', cap: 50, ecap: 36, enemy: 'evil', note: '어려움', waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 }, lairLv: 4, lairCast: 9, lairCastMul: 0.7, heroPosts: 3,   /* 2026-11-15: 기지 영웅 마법 쿨 6 → 9초, 배수 1 → 0.7 (사용자 요청 — 3단계는 적 기지 앞에서 기지 영웅 마법에 51 → 22기로 무너졌다, README 191. 실효 피해 0.5 → 0.35) */ traps: 12, trapEvery: 18, trapLv: 3,
         /* 기습 (2026-11-14 사용자 요청): 아군이 둘째 적 벙커(EFORTS[fort])를 지나면, 텔레포테이션 이펙트·소리와 함께 적 병력이 아군의 뒤(rear)와 옆(flank — 맨 윗줄·맨 아랫줄)에 나타난다.
            처음 지난 순간 한 번, 그 뒤 every 초마다 max 번까지. back = 아군 맨 앞에서 뒤쪽 병력까지의 거리(px). 나타난 적은 hold 초 뒤부터 움직인다 */
         ambush: { fort: 1, every: 40, max: 3, back: 170, hold: 0.7, per: 30, mulMax: 3, rear: [[29, 3], [30, 1]], flank: [[44, 2], [29, 2]] },
@@ -487,7 +489,7 @@
       lf.garrison.forEach(function (m) { if (C.EGARRISON[m.cls]) lf.weapons[m.cls] = { phase: 2, c: 0 }; });
       this.lairFort = lf; this.lairAlarm = -99; }
     this.ambN = 0; this.ambT = 0; this.ambOn = false;
-    this.surgeQ = []; this.surgeT = 0; this.surgeCd = 0; this.surgeN = 0; this.flankT = null; this.flankK = 0;
+    this.surgeQ = []; this.surgeT = 0; this.surgeCd = 0; this.surgeN = 0; this.flankT = null; this.flankK = 0; this.siegeAt = null; this.siegeOn = false;
     this.traps = []; this.trapT = 0; if (C.PUSH && this.st) for (var tn = 0; tn < (this.st.traps || 0); tn++) this._plantTrap();
     this.selFort = null; this.modal = null; this.modalT = 0;
     this.garTick = 0;            // 마지막으로 처리한 사격 틱
@@ -1286,9 +1288,9 @@
   P._updateWave = function (dt) {
     var C = CONFIG, w = C.WAVES[this.wave]; if (!w) return;
     if (this.queue.length) {
-      var ec = this.st && this.st.ecap; if (ec && this.waveFoes() >= ec) return;   // 적 웨이브 상한: 전장의 웨이브 적이 ecap 기면 다음 적은 기다린다 (쉬는 시간도 큐가 빈 뒤에야 돈다)
+      var ec = this.ecapNow(); if (ec && this.waveFoes() >= ec) return;   // 적 웨이브 상한: 전장의 웨이브 적이 ecap 기면 다음 적은 기다린다 (쉬는 시간도 큐가 빈 뒤에야 돈다)
       this.spawnT -= dt;
-      if (this.spawnT <= 0) { this.spawn(this.queue.shift(), 1); this.spawnT = w.gap; if (!this.queue.length) this.restT = C.PUSH && this.st ? this._pushRest(w) : w.rest; }
+      if (this.spawnT <= 0) { this.spawn(this.queue.shift(), 1); this.spawnT = w.gap * (this._lairSieged() ? CONFIG.SIEGE.gapMul : 1); if (!this.queue.length) this.restT = C.PUSH && this.st ? this._pushRest(w) : w.rest; }
     } else {
       if (C.PUSH && this.st) {                               // 스테이지(진격) 방식: 시간으로만 넘어간다 — 다 나온 뒤 쉬는 시간이 지나면 다음 웨이브.
         // 막는 방식처럼 "남은 적이 적으면 다음"으로 두면 빨리 잡을수록 적이 바로 다시 나와 밀고 들어갈 틈이 없다 (2026-11-14 계측: 900초 동안 전선이 x 1300~1400 에 멈춤)
@@ -1314,6 +1316,23 @@
   };
   /* 전장의 웨이브 적 수 (적 웨이브 상한 st.ecap 이 센다, 2026-11-14 사용자 요청 — 2~4단계 초반에 못 잡은 적이 쌓여 아군의 3~10배가 됐다).
      주둔·길목(guard·heroPost)·측면(flank)·반격(surge)·기습(ambush)·기지 출격(sortie)은 세지 않는다 — 그쪽은 저마다 조건이 있다 */
+  /* 지금의 적 웨이브 상한: 스테이지 ecap 에서 무너진 적 벙커 하나마다 ECAP_FORT(25%)씩 줄인다 (2026-11-15 사용자 결정 — 벙커가 적 보급선.
+     2·3단계는 벙커를 다 깬 뒤에도 기지 문 앞에서 웨이브 적이 상한까지 늘 채워져 적 기지에 닿지 못했다, README 190). 최소 ECAP_MIN 기 */
+  P.ecapNow = function () {
+    var ec = this.st && this.st.ecap; if (!ec) return 0;
+    var down = (this.eforts || []).filter(function (F) { return F.dead; }).length;
+    return Math.max(CONFIG.ECAP_MIN || 1, Math.round(ec * (1 - (CONFIG.ECAP_FORT || 0) * down) * (this._lairSieged() ? CONFIG.SIEGE.capMul : 1)));
+  };
+  /* 적 기지가 포위됐는가 (CONFIG.SIEGE, 2026-11-15 사용자 결정 — 2·3단계는 기지 문 앞에서 새 적이 끝없이 나와 아군이 기지에 닿지 못했다, README 192):
+     아군 지상 맨 앞 3기 평균이 적 기지에서 dist px 안이면 포위. 포위 중에는 웨이브 상한 ×capMul, 나오는 간격 ×gapMul. 0.5초마다 다시 본다 */
+  P._lairSieged = function () {
+    var S = CONFIG.SIEGE; if (!S || !CONFIG.PUSH || this.lairX == null || !(this.lairHp > 0)) return false;
+    if (this.siegeAt != null && this.time < this.siegeAt) return !!this.siegeOn; this.siegeAt = this.time + 0.5;
+    var xs = []; for (var i = 0; i < this.units.length; i++) { var u = this.units[i]; if (u.side === 0 && u.state !== 'dead' && !u.air) xs.push(u.x); }
+    xs.sort(function (a, b) { return b - a; }); var top = xs.slice(0, 3), on = top.length >= 3 && top.reduce(function (a, b) { return a + b; }, 0) / 3 >= this.lairX - S.dist;
+    if (on && !this.siegeOn) this._say(this.lairX - 120, this.laneY - 150, '적 기지 포위 — 적 병력이 줄어듭니다', '#ffd36e');
+    this.siegeOn = on; return on;
+  };
   P.waveFoes = function () { var n = 0, L = this.units; for (var i = 0; i < L.length; i++) { var u = L[i]; if (u.side === 1 && u.state !== 'dead' && !u.guard && !u.heroPost && !u.flank && !u.surge && !u.ambush && !u.sortie) n++; } return n; };
   P._pushRest = function (w) { var S = this.st; return this.wave >= CONFIG.WAVES.length - 1 && S.loopRest != null ? S.loopRest : w.rest * (S.restMul || 1); };
   P._alive = function (side) { return this.units.filter(function (u) { return u.side === side && u.state !== 'dead'; }); };
@@ -2571,7 +2590,10 @@
     ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(wb.x, wb.y, wb.w, wb.h);
     if (C.PUSH && this.st) {                                 // 스테이지 방식: 스테이지 번호 + 적 기지 체력(숫자 + 아래 가는 막대)
       ctx.fillStyle = '#ffd36e'; ctx.fillText(this._fit('적 기지 ' + Math.ceil(Math.max(0, this.lairHp)), wb.w - 6), wb.x + wb.w / 2, wb.y + wb.h / 2 - 1);
-      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(wb.x + 4, wb.y + wb.h - 5, wb.w - 8, 3); ctx.fillStyle = '#e0584a'; ctx.fillRect(wb.x + 4, wb.y + wb.h - 5, Math.round((wb.w - 8) * Math.max(0, this.lairHp) / this.lairMax), 3); }
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(wb.x + 4, wb.y + wb.h - 5, wb.w - 8, 3); ctx.fillStyle = '#e0584a'; ctx.fillRect(wb.x + 4, wb.y + wb.h - 5, Math.round((wb.w - 8) * Math.max(0, this.lairHp) / this.lairMax), 3);
+      // 지금 스테이지와 난이도 (2026-11-15 사용자 요청): 진행 막대 바로 아래 오른쪽에 작게 — "1단계 쉬움 · 해골 들판"
+      var mb = this.miniBox, stl = (this.stageI + 1) + '단계 ' + (this.st.note || '') + ' · ' + this.st.name; ctx.save(); ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'right';
+      var sw = ctx.measureText(stl).width + 10, sx = mb.x + mb.w, sy = mb.y + mb.h + 3; ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(sx - sw, sy, sw, 15); ctx.fillStyle = '#e8dcb5'; ctx.fillText(stl, sx - 5, sy + 8); ctx.restore(); }
     else { ctx.fillStyle = '#ffd36e'; ctx.fillText(this._fit(this.narrow ? '웨이브 ' + wv + '/' + C.WAVES.length + ' · 적 ' + left : '웨이브 ' + wv + ' / ' + C.WAVES.length + '   남은 적 ' + left, wb.w - 6), wb.x + wb.w / 2, wb.y + wb.h / 2); }
     this._drawMini();
     // 소리
