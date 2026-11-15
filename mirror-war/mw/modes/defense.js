@@ -96,7 +96,7 @@
     /* 기지 안 영웅의 마법 (2026-11-14 사용자 요청 — 쉬움에서도 적극적으로. 적 기지가 너무 빨리 무너졌다): 기지 수비대의 영웅(LAIR_GAR 첫 칸)은 건물 안에서 자기 마법을 쓴다.
        쓰는 마법 = 그 유닛의 범위 공격(플레임 헬·어쓰 퀘이크 …)과 회복(파워 힐링 — 기지 앞의 적군을 채운다). 매혹·순간이동·방어막·합체는 쓰지 않는다.
        시전 거리 안에 아군이 들어오면 first 초 뒤부터, 마법 하나마다 cool 초(스테이지 lairCast 로 바꿈)마다. 피해 = 원작 공식 × SKILL.dmgMul × dmgMul. 마나는 쓰지 않는다. 기지가 무너지면 멈춘다 */
-    LAIR_HERO: { cool: 9, first: 3, dmgMul: 1, kinds: { blast: 1, heal: 1 } },
+    LAIR_HERO: { cool: 9, first: 3, dmgMul: 0.5,   /* 2026-11-15: 1 → 0.5 (사용자 요청 — 플레임 헬 너프. 쉬움도 적 기지 앞에서 오래 고였다. 스테이지 lairCastMul 과 곱한다: 1단계 0.65 → 실효 0.33) */ kinds: { blast: 1, heal: 1 } },
     /* 매끄러운 그리기 (시험, 2026-11-14 사용자 요청 — 원본 그림은 그대로 두고 그리는 방식만): L 키로 켜고 끈다 (localStorage mwdef.look, 주소에 ?look=0 이면 끔).
        ① 캔버스를 화면 크기에 맞춰 scaleMax 배까지 크게 잡고 부드럽게 확대(도트 계단이 줄고 글자가 또렷해진다)  ② 유닛 둘레에 어두운 번짐 테두리(outline px)
        ③ 가장자리가 흐려지는 그림자  ④ 맞은 유닛이 flash 초 동안 하얗게 번쩍 */
@@ -126,7 +126,8 @@
     BASE: { hp: 1800, x: 134, front: 252, regen: 2, regenWait: 5 },   // regen = 기지(아군 성)가 초당 스스로 채우는 체력, regenWait = 마지막으로 맞은 뒤 이 초가 지나야 채우기 시작 (2026-11-14 사용자 요청)     // 2026-11-13: x 78 → 150, front 196 → 268 — 성 그림 전체가 화면에 들어오게 오른쪽으로(전에는 왼쪽 일부가 잘려 수비대 자리가 안 보였다)
       // 아군 기지(성): 체력, 그림 기준점의 가로 위치, 성 앞 선(아군이 나오고 적이 멈춰 때리는 곳)
     LAIR: { back: 74, mouth: 150, hp: 6000, reach: 30, dmgMul: 1.2 },   // hp = 마굴 체력(진격 방식 — 부수면 승리. 스테이지가 덮어쓴다), reach = 마굴 입구에서 이만큼 앞이 아군이 마굴을 치는 지점         // 적 출구(마굴): 그림 기준점이 화면 오른쪽 끝에서 떨어진 거리, 적이 나오는 입구까지의 거리
-    MANA: { max: 300, start: 80, regen: 11, perWave: 0.8 },   // perWave: 웨이브가 하나 넘어갈 때마다 초당 회복 +0.8 (1웨이브 11 → 10웨이브 18.2). 적은 수·레벨·마법이 함께 느는데 아군 수입이 고정이라 8웨이브에서 꺾였다 (README 118, 2026-11-13)
+    MANA: { max: 300, start: 80, regen: 11, perWave: 0.8, perLv: 0.6 },   // perLv: 플레이어 레벨이 하나 오를 때마다 초당 회복 +0.6 (2026-11-15 사용자 요청 — 레벨업할수록 마나가 조금씩 빨리 찬다)
+      // perWave: 웨이브가 하나 넘어갈 때마다 초당 회복 +0.8 (1웨이브 11 → 10웨이브 18.2). 적은 수·레벨·마법이 함께 느는데 아군 수입이 고정이라 8웨이브에서 꺾였다 (README 118, 2026-11-13)
       // 마나: 최대, 시작, 초당 회복. 처치 보상은 없앴다(2026-11-12) — 적을 잡으면 마나 대신 경험치를 얻는다. 그만큼 회복을 9 → 11
     /* 성장: 적을 쓰러뜨리면 전체 경험치(원작 유닛의 경험치 값, unitdata +0x2AE)가 쌓이고, 차면 게임이 멈추고 카드 3장 중 하나를 고른다.
          need(L) = base × grow^(L−1)  → 4, 9, 19, 43, 94, 206, 453, 997 … (grow 2.2, 2026-11-15. 1.6일 때는 4, 6, 10, 16, 26, 42, 67, 107, 172 …) (웨이브 전체 경험치 499로 9번쯤 오른다)
@@ -634,7 +635,7 @@
   /* ───────────────────────── 3-2. 성 배치 (건물 원거리 공격) ───────────────────────── */
   /* 성의 수용 인원 (BuildingData +0x10: 성 8) */
   /* 지금의 초당 마나 회복: 기본(+ "마나의 샘" 카드) + 웨이브마다 perWave */
-  P.regenNow = function () { var K = CONFIG.CARDS, b = K && K.trigger === 'adverse' && this.tb && this.time < (this.tb.mana || 0) ? K.mana : 1; return (this.manaRegen + CONFIG.MANA.perWave * Math.min(this.wave, CONFIG.WAVES.length - 1)) * b; };   // b = "마나의 샘" 카드가 걸린 동안의 배수
+  P.regenNow = function () { var K = CONFIG.CARDS, b = K && K.trigger === 'adverse' && this.tb && this.time < (this.tb.mana || 0) ? K.mana : 1; return (this.manaRegen + CONFIG.MANA.perWave * Math.min(this.wave, CONFIG.WAVES.length - 1) + (CONFIG.MANA.perLv || 0) * ((this.plv || 1) - 1)) * b; };   // b = "마나의 샘" 카드가 걸린 동안의 배수
   P.garCap = function (f) { return (f || this._fort()).cap; };   // 원본 성은 8명이지만 디펜스는 GAR_MAX(4)명까지 (2026-11-13)
   /* 성 안 유닛들의 건물 공격 보너스 합 (원본 건물 +0x30 = Σ unitdata +0x2B4) */
   P.garBonus = function (f) { return (f || this._fort()).garrison.reduce(function (n, m) { return n + (m.out ? 0 : m.bonus); }, 0); };   // 출격한 적 수비대(m.out)의 보너스는 빠진다
