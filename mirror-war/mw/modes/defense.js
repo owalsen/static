@@ -129,13 +129,13 @@
     MANA: { max: 300, start: 80, regen: 11, perWave: 0.8 },   // perWave: 웨이브가 하나 넘어갈 때마다 초당 회복 +0.8 (1웨이브 11 → 10웨이브 18.2). 적은 수·레벨·마법이 함께 느는데 아군 수입이 고정이라 8웨이브에서 꺾였다 (README 118, 2026-11-13)
       // 마나: 최대, 시작, 초당 회복. 처치 보상은 없앴다(2026-11-12) — 적을 잡으면 마나 대신 경험치를 얻는다. 그만큼 회복을 9 → 11
     /* 성장: 적을 쓰러뜨리면 전체 경험치(원작 유닛의 경험치 값, unitdata +0x2AE)가 쌓이고, 차면 게임이 멈추고 카드 3장 중 하나를 고른다.
-         need(L) = base × grow^(L−1)  → 4, 6, 10, 16, 26, 42, 67, 107, 172 … (웨이브 전체 경험치 499로 9번쯤 오른다)
+         need(L) = base × grow^(L−1)  → 4, 9, 19, 43, 94, 206, 453, 997 … (grow 2.2, 2026-11-15. 1.6일 때는 4, 6, 10, 16, 26, 42, 67, 107, 172 …) (웨이브 전체 경험치 499로 9번쯤 오른다)
          lvStep = "전군 단련" 한 장에 오르는 유닛 레벨, hero = 영웅으로 나올 수 있는 유닛(원작에 영웅 지정 유닛은 없어 목업이 고름), heroLv = 영웅의 추가 레벨(공격·방어 식에만 — 체력은 같은 레벨의 일반 유닛과 같다) */
     /*   heroes = 영웅 카드로 나올 수 있는 원작 영웅(이름으로 data.heroes 에서 찾는다 — 미션 파일에서 뽑은 것, tools/herobuild.js, 분석 8-40).
            영웅 = 기본 유닛의 그림·행동 + 원작 영웅 기록의 이름·초상화·공격·방어. 체력은 기본 유닛과 똑같다(2026-11-14 사용자 요청 — 영웅이 너무 안 죽어 전선이 고였다). 공격·방어는 원작 기록과 기본 유닛 중 큰 쪽, 한도 heroCap (네메시스는 원작이 공격 1000이라 자른다).
            영웅의 마법은 패널에 올라오지 않고 영웅이 스스로 쓴다 — 마나 없이 heroCool(초)마다 */
-    GROW: { heroFromWave: 5,   /* 영웅 카드는 이 웨이브(1부터)부터 나온다 — 초반에 영웅이 나오면 그 뒤가 너무 쉬워진다 (2026-11-13 사용자 요청: 중후반부터) */ xpFall: 0.08, xpMin: 0.3,   /* 웨이브가 진행될수록 같은 적을 잡아도 경험치를 덜 준다: 배수 = max(xpMin, 1 - xpFall × 지난 웨이브 수) → 1웨이브 100%, 5웨이브 68%, 10웨이브 30% (2026-11-12 사용자 요청) */ base: 4, grow: 1.6, lvStep: 1,   /* 전군 단련 한 장에 +1 레벨 (2026-11-14 사용자 요청, 전에는 +2) */ heroes: ['파인트 롤', '레디쉬 앤', '벨리프 쇼링', '다인 바운터', '가웬 포라튼', '스카이 러너', '크리스 리디아', '폴로운', '네메시스 인트루더'],
-            heroLv: 5, heroCap: { atk: 80, def: 30 }, heroAtk: 1.3, heroDef: 1.5,   /* 영웅 공격·방어는 최소 기본 유닛의 heroAtk·heroDef배 — 원작 기록이 기본 유닛과 같은 영웅(파인트 롤 등)도 일반 유닛보다 세게 (2026-11-14, 체력을 일반 유닛과 같게 하면서) */ heroCool: 10, xpGain: 0.25, xpSec: 60, cardW: { lv: 0.35 },   /* 2026-11-14 사용자 요청(유닛 레벨이 너무 빨리 오른다): xpGain = "배움의 기운" 카드 한 장에 xpSec(60)초 동안 경험치 +25% (같은 날 영구 → 60초로). cardW = 카드 종류별 뽑힐 무게(없으면 1) — 전군 단련은 0.35 */ manaRegen: 2, manaMax: 40, dmg: 0.3, radius: 0.2, repair: 0.4 },
+    GROW: { heroFromWave: 5,   /* 영웅 카드는 이 웨이브(1부터)부터 나온다 — 초반에 영웅이 나오면 그 뒤가 너무 쉬워진다 (2026-11-13 사용자 요청: 중후반부터) */ xpFall: 0.08, xpMin: 0.3,   /* 웨이브가 진행될수록 같은 적을 잡아도 경험치를 덜 준다: 배수 = max(xpMin, 1 - xpFall × 지난 웨이브 수) → 1웨이브 100%, 5웨이브 68%, 10웨이브 30% (2026-11-12 사용자 요청) */ base: 4, grow: 2.2,   /* 2026-11-15: 1.6 → 2.2 (사용자 결정 — 레벨업마다 전군 +1 이 되면서 아군이 적보다 7~8레벨 앞섰다. 처음 몇 번은 그대로, 뒤로 갈수록 느리게) */ lvStep: 1,   /* 전군 단련 한 장에 +1 레벨 (2026-11-14 사용자 요청, 전에는 +2) */ heroes: ['파인트 롤', '레디쉬 앤', '벨리프 쇼링', '다인 바운터', '가웬 포라튼', '스카이 러너', '크리스 리디아', '폴로운', '네메시스 인트루더'],
+            heroLv: 5, heroCap: { atk: 80, def: 30 }, heroAtk: 1.3, heroDef: 1.5,   /* 영웅 공격·방어는 최소 기본 유닛의 heroAtk·heroDef배 — 원작 기록이 기본 유닛과 같은 영웅(파인트 롤 등)도 일반 유닛보다 세게 (2026-11-14, 체력을 일반 유닛과 같게 하면서) */ heroCool: 10, autoLv: 1,   /* 2026-11-15 사용자 요청(적과 레벨 차이가 나면 쉬움에서도 못 이긴다): 경험치가 차서 레벨업하면 전군 레벨 +autoLv 가 무조건. 그래서 "전군 단련" 카드는 빠진다(0 이면 예전처럼 카드) */ xpGain: 0.25, xpSec: 60, cardW: { lv: 0.35 },   /* 2026-11-14 사용자 요청(유닛 레벨이 너무 빨리 오른다): xpGain = "배움의 기운" 카드 한 장에 xpSec(60)초 동안 경험치 +25% (같은 날 영구 → 60초로). cardW = 카드 종류별 뽑힐 무게(없으면 1) — 전군 단련은 0.35 */ manaRegen: 2, manaMax: 40, dmg: 0.3, radius: 0.2, repair: 0.4 },
     ALLY_MOVE_MUL: 0.85,         // 아군만 걷는 속도를 한 단계 느리게 (적 기지에 너무 빨리 닿아서, 2026-11-12). 적은 그대로
     MOVE_SCALE: 0.45,            // 원본 걷기 속도(px/틱)를 이 게임 속도로 줄이는 배수
     RANGE_SCALE: 0.07,           // 원본 사거리 → 화면 px (근접 700 → 49px, 원거리 3000 → 210px)
@@ -194,7 +194,7 @@
     /* friendlyFire: 범위 안의 아군(시전자 포함)도 같은 피해를 입는 마법 (2026-11-13 사용자 요청 — 가장 센 범위 마법이라 쓸 자리를 가려야 한다) */
     /* 스킬은 전체 마나를 쓴다 (소환과 같은 마나) + 짧은 재사용 대기 cool(초). 값 = 원본 행동 마나 × costMul 을 5 단위로, 종류별 [최소, 최대] 안으로 자른다 (COST)
        — 원본은 유닛마다 마나통이 따로라 값을 그대로 쓸 수 없어 비율만 가져온다. 2026-11-12: 쿨타임만 돌던 방식에서 바꿈 (공짜라 강화를 상시 돌리던 문제) */
-    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
+    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyAim: false, buffNeed: 2,   /* 2026-11-15 사용자 요청: 웨폰·파운틴은 다시 누르면 바로 — 시전자 주변(buffRadius)에 다른 공격형 아군이 buffNeed(2)기 이상 있어야 쓸 수 있다(칸 비활성). allyAim: true 면 175번의 아군 찍기로 돌아간다 */ allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
     /* 소환 패널의 탭: 해방부대 전체(원본 유닛 번호 0~24)를 네 묶음으로 나눈다 */
     TABS: [
       { name: '근접', ids: [0, 1, 2, 3, 6, 7, 8, 10] },      // 전사 기사 창기사 성기사 창검사 격투가 무도가 의적 (의적은 쌍칼 근접 — 2026-11-14 원거리 탭에서 옮김, 사용자 요청)
@@ -251,6 +251,9 @@
          restMul = 웨이브 사이 쉬는 시간 배수, loopRest = 마지막 줄을 되풀이할 때의 쉬는 시간(초), loopLv = 되풀이 한 번마다 오르는 적 레벨,
          lairLv = 적 기지 수비대 레벨(LAIR_GAR), traps·trapEvery·trapLv = 덫(TRAPS), guards = 주둔 적군(GUARD) */
     SURGE: { from: 14, ratio: 2, fill: 0.6, min: 6, max: 16, gap: 0.25, cool: 70, first: 60, siege: 400, times: 6 },   // times = 한 판에 반격하는 횟수 상한 (끝없이 막히지 않게)   // 적의 반격 (_updateSurge, 2026-11-14 사용자 요청). 처음 값(1.8·0.75·24·50초)은 1단계가 900초 안에 안 끝났다 — 반격 12번, 첫 벙커 앞에서 고였다
+    CARDS: { trigger: 'adverse', first: 60, cool: 60, foeMin: 4, foeRatio: 1.2, pushSec: 20, pushPx: 150, baseHp: 0.7, stallFrom: 300, stallSec: 120, stallCool: 120, progPx: 30, progHp: 60, sec: 45, mana: 2, dmg: 0.5, radius: 0.3,
+      wAdverse: { mana: 2, repair: 2, hero: 2, xp: 1, magic: 1, radius: 1 }, wStall: { magic: 3, radius: 3, hero: 2, mana: 1, xp: 1, repair: 1 } },   // 카드가 나오는 때와 효과 (_cardCheck, 2026-11-15 사용자 요청). trigger 가 'adverse' 가 아니면 예전처럼 레벨업마다
+    SLOT_ORDER: { band: 60, every: 1 },   // 스킬 칸 순서 = 시전자가 전장에 가까운 순 (_regroup, 2026-11-15 사용자 요청). null 이면 생긴 순서
     ALLY_CAP: 0,   // (적 웨이브 상한은 스테이지 ecap: 28·32·36·40 — 전장에 동시에 있는 웨이브 적 수, waveFoes)
     // 아군 수 상한 기본값(0 = 없음). 스테이지마다 cap 으로 정한다: 1단계 40, 2단계 45, 3단계 50, 4단계 60 (2026-11-14 사용자 요청)
     FLANK: { after: 1, ratio: 1.3, from: 12, recheck: 3, first: 6, every: 16, n: 3, out: 50, enter: 45, spots: [[1, 160, 'top'], [6, 0, 'bottom'], [5, 140, 'bottom'], [11, -80, 'top']] },   // 측면 리젠 (_updateFlank, 2026-11-14 사용자 요청)
@@ -493,7 +496,7 @@
     this.texts = [];             // 떠오르는 숫자·글자 (피해량 등)
     this.baseHp = C.BASE.hp; this.baseHit = 0; this.baseHurtT = null;
     this.mana = C.MANA.start; this.manaMax = C.MANA.max; this.manaRegen = C.MANA.regen;
-    this.xp = 0; this.plv = 1; this.allyLv = 0; this.xpBuffs = []; this.dmgUp = 0; this.radiusUp = 0; this.cards = null; this.cardT = 0; this.pendingLv = 0;   // 성장: 경험치·플레이어 레벨·아군 추가 레벨·마법 강화, 고르는 중인 카드
+    this.xp = 0; this.plv = 1; this.allyLv = 0; this.xpBuffs = []; this.gameT0 = this.time; this.tb = {}; this.frontHist = []; this.frontAt = null; this.cardNext = null; this.stallNext = null; this.progAt = null; this.cardWhy = ''; this.cardKind = ''; this.dmgUp = 0; this.radiusUp = 0; this.cards = null; this.cardT = 0; this.pendingLv = 0;   // 성장: 경험치·플레이어 레벨·아군 추가 레벨·마법 강화, 고르는 중인 카드
     this.roster.forEach(function (list) { list.forEach(function (r) { r.wait = 0; }); });   // 소환 버튼별 남은 대기 시간
     this.flash = 0;
     this.cam.x = 0; this.manualUntil = 0; this.drag = null; this.camGoal = null;
@@ -631,7 +634,7 @@
   /* ───────────────────────── 3-2. 성 배치 (건물 원거리 공격) ───────────────────────── */
   /* 성의 수용 인원 (BuildingData +0x10: 성 8) */
   /* 지금의 초당 마나 회복: 기본(+ "마나의 샘" 카드) + 웨이브마다 perWave */
-  P.regenNow = function () { return this.manaRegen + CONFIG.MANA.perWave * Math.min(this.wave, CONFIG.WAVES.length - 1); };
+  P.regenNow = function () { var K = CONFIG.CARDS, b = K && K.trigger === 'adverse' && this.tb && this.time < (this.tb.mana || 0) ? K.mana : 1; return (this.manaRegen + CONFIG.MANA.perWave * Math.min(this.wave, CONFIG.WAVES.length - 1)) * b; };   // b = "마나의 샘" 카드가 걸린 동안의 배수
   P.garCap = function (f) { return (f || this._fort()).cap; };   // 원본 성은 8명이지만 디펜스는 GAR_MAX(4)명까지 (2026-11-13)
   /* 성 안 유닛들의 건물 공격 보너스 합 (원본 건물 +0x30 = Σ unitdata +0x2B4) */
   P.garBonus = function (f) { return (f || this._fort()).garrison.reduce(function (n, m) { return n + (m.out ? 0 : m.bonus); }, 0); };   // 출격한 적 수비대(m.out)의 보너스는 빠진다
@@ -697,7 +700,7 @@
   SkillSlot.prototype.needsFoe = function () { return { blast: 1, weaken: 1, stun: 1, charm: 1, assassin: 1 }[this.kind] === 1; };
   /* 아군 한 기를 찍어 거는 강화 (2026-11-14 사용자 요청): 웨폰류(파이어·매직 — 자기 전용인 아이스 웨폰은 빼고)와 파운틴 베리어.
      찍은 곳에서 가장 가까운 아군 공격 유닛(CONFIG.SKILL.allyPick px 안)이 대상이고, 남는 자리(웨폰 max·buffMax)는 그 대상 둘레(allyNear px)의 공격 유닛이 받는다 */
-  SkillSlot.prototype.allyAimed = function () { return this.kind === 'buff' && !this.act.self && /웨폰|파운틴/.test(this.act.name); };
+  SkillSlot.prototype.allyAimed = function () { return !!CONFIG.SKILL.allyAim && this.kind === 'buff' && !this.act.self && /웨폰|파운틴/.test(this.act.name); };
   SkillSlot.prototype.needsAlly = function () { return { heal: 1, buff: 1, haste: 1 }[this.kind] === 1; };
 
   /* 원본 행동 → 이 게임에서의 스킬 종류 (null = 아직 구현하지 않은 행동: 텔레포테이션·천리안·숨기·술 소환 등) */
@@ -753,6 +756,12 @@
       g.slots.push(s); }
     for (i = 0; i < old.length; i++) if (old[i].slots.length) out.push(old[i]);
     Object.keys(map).forEach(function (k) { if (map[k].isNew) { delete map[k].isNew; out.push(map[k]); } });
+    // 전장에 가까운 순 (2026-11-15 사용자 요청 — 새로 소환한 유닛의 마법이 앞 칸에 뜨면, 누를 때 카메라가 성 쪽으로 가곤 했다):
+    // 묶음마다 가장 앞(적 쪽)에 선 시전자의 x 로, SLOT_ORDER.band px 띠 단위로 내림차순. 1초마다 한 번만 다시 줄 세우고, 같은 띠면 예전 순서를 지킨다(덜컹거리지 않게)
+    var SO = CONFIG.SLOT_ORDER; if (SO && (this.slotSortAt == null || this.time >= this.slotSortAt || out.length !== (this.groups || []).length)) { this.slotSortAt = this.time + SO.every;
+      out.forEach(function (g, k) { var fx = -Infinity; g.slots.forEach(function (s) { if (s.unit && s.unit.x > fx) fx = s.unit.x; }); g.band = Math.floor(fx / SO.band); g.ord = k; });
+      out.sort(function (a, b) { return (b.band - a.band) || (a.ord - b.ord); }); }
+    else if (SO) { var prev = this.groups || []; var at = function (g) { var k = prev.indexOf(g); return k < 0 ? 1e9 : k; }; out.sort(function (a, b) { return at(a) - at(b); }); }   // 줄 세우기 사이에 새로 생긴 묶음은 일단 맨 뒤
     this.groups = out; this.slotView = out;
   };
   P._sortSlots = function () { this._regroup(); };
@@ -792,7 +801,7 @@
     var self = this, any = g.slots[0] && g.slots[0].unit, R = this._readyOf(g);
     if (!R.length) { var cd = Math.min.apply(null, g.slots.map(function (s) { return s.cd > 0 ? s.cd : 99; })); return [cd < 99 ? '쿨타임 ' + Math.ceil(cd) : '멈춤 중', '#c9d1e3', any]; }
     if (this.mana < g.cost) return ['마나 부족 (' + g.cost + ')', '#e0584a', R[0].unit];
-    if (!g.aimed && !R.some(function (s) { return self.skillTarget(s.unit, s); })) return [g.slots[0].needsFoe() ? '가까이에 적이 없음' : g.act.sup === 'heal' ? '가까이에 다친 아군이 없음' : '가까이에 아군이 없음', '#c9d1e3', R[0].unit];
+    if (!g.aimed && !R.some(function (s) { return self.skillTarget(s.unit, s); })) return [g.slots[0].needsFoe() ? '가까이에 적이 없음' : g.act.sup === 'heal' ? '가까이에 다친 아군이 없음' : /웨폰|파운틴/.test(g.act.name) ? '주변 공격 아군 ' + (CONFIG.SKILL.buffNeed || 1) + '기 필요' : '가까이에 아군이 없음', '#c9d1e3', R[0].unit];
     return null;
   };
   /* 종족을 가리는 마법(턴 언데드 = 언데드, 디스트로이 언홀리 = 언데드 + 흡혈귀·늑대인간류)이 걸릴 적. pt·r 을 주면 그 둘레 안에서만 찾는다.
@@ -970,6 +979,7 @@
     if (s.needsAlly()) {
       var r = s.kind === 'haste' ? S.buffRadius * 1.3 : s.act.sup === 'massheal' ? S.buffRadius * 1.5 : S.buffRadius;
       if (s.act.sup === 'heal') { for (i = 0; i < L.length; i++) { o = L[i]; if (o.side === u.side && o.state !== 'dead' && o.hp < o.maxHp && Math.abs(o.x - u.x) <= r) return { foe: null }; } return null; }   // 힐링(성령사 등): 효과 반경 안에 체력이 깎인 아군(자신 포함)이 없으면 쓸 수 없다 — 칸이 비활성 (2026-11-14 사용자 요청)
+      if (/파운틴|웨폰/.test(s.act.name) && u.side === 0) { var na = 0; for (i = 0; i < L.length; i++) { o = L[i]; if (o !== u && o.side === u.side && o.state !== 'dead' && o.act && Math.abs(o.x - u.x) <= r) na++; } return na >= (S.buffNeed || 1) ? { foe: null } : null; }   // 웨폰·파운틴(아군): 주변 공격형 아군 buffNeed(2)기 이상 (2026-11-15)
       if (/파운틴/.test(s.act.name)) { for (i = 0; i < L.length; i++) { o = L[i]; if (o !== u && o.side === u.side && o.state !== 'dead' && o.act && Math.abs(o.x - u.x) <= r) return { foe: null }; } return null; }   // 파운틴 베리어: 걸어 줄 다른 아군(공격 유닛)이 반경 안에 없으면 쓸 수 없다 — 칸이 비활성 (2026-11-14 사용자 요청)
       return { foe: null };                                  // 걸어 줄 다른 아군이 없으면 자기에게 건다 (2026-11-13 사용자 요청) — 효과 범위에는 시전자 자신도 들어 있다
     }
@@ -1113,6 +1123,7 @@
     this.rules.now = this.time;                              // 강화(buffs)의 남은 시간을 규칙이 알 수 있게
     this._frontStep(dt);
     // 마나 회복, 버튼 대기 시간, 스킬 쿨타임
+    this._timedFx(); this._cardCheck();                     // 카드: 시간 제한 효과 맞추기, 불리함·교착이면 카드 (CONFIG.CARDS)
     this.mana = Math.min(this.manaMax, this.mana + this.regenNow() * dt);
     this.roster.forEach(function (list) { list.forEach(function (r) { r.wait = Math.max(0, r.wait - dt); }); });
     this._updateSlots(dt);
@@ -1172,8 +1183,14 @@
     var T = this.time; this.xpBuffs = (this.xpBuffs || []).filter(function (u) { return u > T; });
     n *= 1 + this.xpBuffs.length * CONFIG.GROW.xpGain;        // "배움의 기운" 카드: 걸려 있는 장 수만큼 (한 장에 xpSec 초)
     this.xp += n;
-    while (this.xp >= this._xpNeed()) { this.xp -= this._xpNeed(); this.plv++; this.pendingLv++; }
+    var adv = CONFIG.CARDS && CONFIG.CARDS.trigger === 'adverse';   // 카드가 "불리할 때·교착일 때"로 바뀌면 레벨업은 전군 레벨만 올린다 (_cardCheck)
+    while (this.xp >= this._xpNeed()) { this.xp -= this._xpNeed(); this.plv++; if (!adv) this.pendingLv++; if (CONFIG.GROW.autoLv) this._levelAll(CONFIG.GROW.autoLv); }   // 레벨업이면 전군 레벨도 무조건 오른다 (2026-11-15 사용자 요청)
     if (this.pendingLv && !this.cards) this._offerCards();
+  };
+  /* 전군 레벨 +step: 지금 있는 아군과 앞으로 소환할 아군 모두 ("전군 단련" 카드였던 것 — 2026-11-15부터 레벨업마다 자동, GROW.autoLv) */
+  P._levelAll = function (step) {
+    var self = this; this.allyLv += step;
+    this.units.forEach(function (u) { if (u.side === 0 && u.state !== 'dead') { self._setLevel(u, u.level + step); self._say(u.x, u.y - u.headY - 10, 'Lv ' + u.level, '#ffd36e'); } });
   };
   /* 유닛 레벨을 바꾼다: 최대 체력이 원작 식(종류 체력 + 레벨당 성장 × 레벨, 영웅은 추가 레벨을 뺀 일반 유닛과 같다)으로 오르고 오른 만큼 지금 체력도 는다.
      공격·방어는 원작 피해 식이 레벨을 본다 (공격 = k1 × 레벨 ÷ 8 + …, 방어 = 방어력 + 성장 × 레벨 ÷ 4) */
@@ -1190,12 +1207,43 @@
     this._addEffect(u.x, u.y, CONFIG.RECALL.fxArm, 0); this._say(u.x, u.y - u.headY - 14, '영웅 ' + h.name, '#ffd36e'); this._play(u.t.snd.ready, 0.9);
     return u;
   };
+  /* 카드는 레벨업이 아니라 판의 형편을 보고 나온다 (CONFIG.CARDS, 2026-11-15 사용자 요청 — 레벨업은 자동이 되었고, 카드는 역전·돌파 장치로):
+       불리함(adverse): 시작 first 초 뒤부터 — ① 전장의 적(주둔·길목 제외)이 foeMin 기 이상이고 아군의 foeRatio 배 이상
+                        ② 최근 pushSec 초 동안 아군 전선이 pushPx 넘게 밀림  ③ 성 체력이 baseHp 비율 아래
+       교착(stall, "깜짝 카드"): stallFrom 초 뒤부터, 전진(전선 최고 기록을 progPx 넘게 갱신)도 적 건물 피해(progHp 이상)도 없이 stallSec 초가 지났을 때
+       카드 사이 간격 cool 초, 교착 카드끼리는 stallCool 초. 종류별 뽑힐 무게는 형편마다 다르다(wAdverse·wStall) */
+  P._cardCheck = function () {
+    var K = CONFIG.CARDS; if (!K || K.trigger !== 'adverse' || this.cards) return;
+    var T = this.time, L = this.units, nA = 0, nE = 0, xs = [], i;
+    if (this.frontAt != null && T < this.frontAt) return; this.frontAt = T + 1;   // 1초에 한 번만 본다
+    for (i = 0; i < L.length; i++) { var u = L[i]; if (u.state === 'dead') continue; if (u.side === 0) { nA++; if (!u.air) xs.push(u.x); } else if (!u.guard && !u.heroPost) nE++; }
+    xs.sort(function (a, b) { return b - a; }); var top = xs.slice(0, 5), fx = top.length >= 3 ? top.reduce(function (a, b) { return a + b; }, 0) / top.length : null;
+    this.frontHist = (this.frontHist || []).filter(function (h) { return h[0] >= T - K.pushSec; }); if (fx != null) this.frontHist.push([T, fx]);
+    var bhp = (this.lairHp > 0 ? this.lairHp : 0); (this.eforts || []).forEach(function (F) { if (!F.dead) bhp += F.hp; });   // 적 건물(벙커·기지) 체력 합
+    if (this.progAt == null) { this.progAt = T; this.bestFront = fx || 0; this.progHp = bhp; }
+    if ((fx != null && fx > this.bestFront + K.progPx) || bhp < this.progHp - K.progHp) { this.progAt = T; if (fx != null) this.bestFront = Math.max(this.bestFront, fx); this.progHp = bhp; }
+    var gt = T - (this.gameT0 || 0);                         // 이 판이 시작된 뒤 흐른 시간 (this.time 은 판이 바뀌어도 0 으로 돌아가지 않는다)
+    if (gt < K.first || (this.cardNext != null && T < this.cardNext)) return;
+    var H = this.frontHist, peak = H.reduce(function (m, h) { return Math.max(m, h[1]); }, -Infinity), now = H.length ? H[H.length - 1][1] : peak, why = null, kind = 'adverse';
+    if (nE >= K.foeMin && nE >= K.foeRatio * Math.max(1, nA)) why = '적이 더 많습니다';
+    else if (H.length && peak - now >= K.pushPx) why = '전선이 밀리고 있습니다';
+    else if (this.baseHp < CONFIG.BASE.hp * K.baseHp) why = '성이 위험합니다';
+    else if (gt >= K.stallFrom && T - this.progAt >= K.stallSec && (this.stallNext == null || T >= this.stallNext)) { why = '전선이 멈췄습니다'; kind = 'stall'; this.stallNext = T + K.stallCool; }
+    if (!why) return;
+    this.cardNext = T + K.cool; this.cardWhy = why; this.cardKind = kind; if (kind === 'stall') this.progAt = T;
+    this.pendingLv = 1; this._offerCards();
+  };
+  /* 시간 제한 효과를 지금 시각에 맞춘다: 마법 증폭·확산은 dmgUp·radiusUp 으로 (피해·범위 식이 이 값을 본다), 마나의 샘은 regenNow 가 본다 */
+  P._timedFx = function () {
+    var K = CONFIG.CARDS, T = this.time, B = this.tb || {}; if (!K || K.trigger !== 'adverse') return;
+    this.dmgUp = T < (B.magic || 0) ? K.dmg : 0; this.radiusUp = T < (B.radius || 0) ? K.radius : 0;
+  };
   /* 카드 3장을 낸다 (서로 다른 종류, 무작위 — 종류마다 무게 GROW.cardW, 없으면 1). 게임은 멈춘다 */
   P._offerCards = function () {
-    var G = CONFIG.GROW, self = this, pool = ['lv', 'mana', 'magic', 'radius', 'xp'], out = [];
+    var G = CONFIG.GROW, self = this, pool = (G.autoLv ? [] : ['lv']).concat(['mana', 'magic', 'radius', 'xp']), out = [];   // 레벨업이 자동이면 "전군 단련" 카드는 나오지 않는다
     var free = this.heroDefs.filter(function (h) { return !self.units.some(function (u) { return u.hero === h && u.state !== 'dead'; }); }); if (free.length && this.wave + 1 >= G.heroFromWave) pool.push('hero');   // 영웅은 한 명씩만 — 전장에 없는 영웅 중에서 무작위
     if (this.baseHp < CONFIG.BASE.hp * 0.9) pool.push('repair');
-    var W8 = G.cardW || {}, pick = [];                       // 무게대로 겹치지 않게 3장 (전군 단련은 덜 나온다)
+    var K = CONFIG.CARDS, tm = K && K.trigger === 'adverse', W8 = tm ? (this.cardKind === 'stall' ? K.wStall : K.wAdverse) : (G.cardW || {}), pick = [];   // 무게대로 겹치지 않게 3장 (형편마다 무게가 다르다)
     while (pick.length < 3 && pool.length) { var tw = 0, j; for (j = 0; j < pool.length; j++) tw += W8[pool[j]] != null ? W8[pool[j]] : 1;
       var rr = this.rng.next() * tw; for (j = 0; j < pool.length - 1; j++) { rr -= W8[pool[j]] != null ? W8[pool[j]] : 1; if (rr < 0) break; }
       pick.push(pool.splice(j, 1)[0]); }
@@ -1203,6 +1251,9 @@
       var c = { kind: k };
       if (k === 'lv') { c.name = '전군 단련'; c.desc = '모든 아군의 레벨 +' + G.lvStep + ' — 지금 있는 유닛과 앞으로 소환할 유닛 모두'; c.tag = '유닛 Lv ' + (1 + self.allyLv) + ' → ' + (1 + self.allyLv + G.lvStep); }
       else if (k === 'hero') { var h = free[Math.floor(self.rng.next() * free.length)]; c.hero = h; c.unit = h.t; c.name = h.name; c.desc = '영웅 ' + h.name + '(' + h.t.job + ')이 마나 없이 나옵니다. 마법은 스스로 씁니다'; c.tag = 'Lv ' + (1 + self.allyLv + G.heroLv) + ' · 체력 ' + Math.round(h.t.maxHpAt(1 + self.allyLv + G.heroLv)); }
+      else if (tm && k === 'mana') { c.name = '마나의 샘'; c.desc = K.sec + '초 동안 마나 회복 ×' + K.mana; c.tag = K.sec + '초 · 회복 ' + (+self.regenNow().toFixed(1)) + ' → ' + (+(self.regenNow() * K.mana).toFixed(1)); }
+      else if (tm && k === 'magic') { c.name = '마법 증폭'; c.desc = K.sec + '초 동안 범위 공격 마법의 피해 +' + Math.round(K.dmg * 100) + '%'; c.tag = K.sec + '초 · 피해 +' + Math.round(K.dmg * 100) + '%'; }
+      else if (tm && k === 'radius') { c.name = '마법 확산'; c.desc = K.sec + '초 동안 적에게 쓰는 마법의 범위 +' + Math.round(K.radius * 100) + '%'; c.tag = K.sec + '초 · 범위 +' + Math.round(K.radius * 100) + '%'; }
       else if (k === 'mana') { c.name = '마나의 샘'; c.desc = '마나 회복 +' + G.manaRegen + '/초, 최대 마나 +' + G.manaMax; c.tag = '회복 ' + (+self.regenNow().toFixed(1)) + ' → ' + (+(self.regenNow() + G.manaRegen).toFixed(1)); }
       else if (k === 'xp') { c.name = '배움의 기운'; c.desc = G.xpSec + '초 동안 경험치 +' + Math.round(G.xpGain * 100) + '%'; c.tag = G.xpSec + '초 · 경험치 +' + Math.round(G.xpGain * 100) + '%'; }
       else if (k === 'magic') { c.name = '마법 증폭'; c.desc = '범위 공격 마법의 피해 +' + Math.round(G.dmg * 100) + '%'; c.tag = '피해 +' + Math.round((self.dmgUp + G.dmg) * 100) + '%'; }
@@ -1217,10 +1268,11 @@
   /* 카드 i를 고른다 → 효과 적용, 게임 재개. 레벨이 한꺼번에 여러 번 올랐으면 이어서 다음 카드 */
   P.pickCard = function (i) {
     var c = this.cards && this.cards[i], G = CONFIG.GROW, self = this; if (!c) return false;
-    if (c.kind === 'lv') { this.allyLv += G.lvStep; this.units.forEach(function (u) { if (u.side === 0 && u.state !== 'dead') { self._setLevel(u, u.level + G.lvStep); self._say(u.x, u.y - u.headY - 10, 'Lv ' + u.level, '#ffd36e'); } }); }
+    if (c.kind === 'lv') this._levelAll(G.lvStep);
     else if (c.kind === 'hero') this.spawnHero(c.hero);
-    else if (c.kind === 'mana') { this.manaRegen += G.manaRegen; this.manaMax += G.manaMax; }
     else if (c.kind === 'xp') this.xpBuffs.push(this.time + G.xpSec);   // 60초 동안 (여러 장이면 겹친다)
+    else if (CONFIG.CARDS && CONFIG.CARDS.trigger === 'adverse' && (c.kind === 'mana' || c.kind === 'magic' || c.kind === 'radius')) { this.tb = this.tb || {}; this.tb[c.kind] = Math.max(this.tb[c.kind] || 0, this.time) + CONFIG.CARDS.sec; this._timedFx(); }   // 시간 제한 (같은 카드를 또 고르면 시간이 이어 붙는다)
+    else if (c.kind === 'mana') { this.manaRegen += G.manaRegen; this.manaMax += G.manaMax; }
     else if (c.kind === 'magic') this.dmgUp += G.dmg;
     else if (c.kind === 'radius') this.radiusUp += G.radius;
     else if (c.kind === 'repair') { this.baseHp = Math.min(CONFIG.BASE.hp, this.baseHp + CONFIG.BASE.hp * G.repair); this.forts.forEach(function (f) { if (f.isFort && !f.dead) f.hp = Math.min(f.maxHp, f.hp + f.maxHp * G.repair); }); }   // 살아 있는 벙커도 같은 비율로
@@ -2336,8 +2388,9 @@
     var ctx = this.ctx, W = this.W, H = this.H, C = this.cards, self = this, al = Math.min(1, this.cardT / 0.25), D = this.data.fx.icon, icons = this.assets.get('acticons'), figs = this.assets.get('figs'), por = this.assets.get('portraits');
     ctx.save(); ctx.globalAlpha = al; ctx.fillStyle = 'rgba(5,7,12,.74)'; ctx.fillRect(0, 0, W, H);
     var top = C[0].box.y; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-    ctx.font = 'bold 26px sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.strokeText('레벨 업!', W / 2, top - 52); ctx.fillStyle = '#ffd36e'; ctx.fillText('레벨 업!', W / 2, top - 52);
-    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#c9d1e3'; ctx.fillText('Lv ' + (this.plv - this.pendingLv + 1) + ' — 하나를 고르세요', W / 2, top - 26);
+    var tm = CONFIG.CARDS && CONFIG.CARDS.trigger === 'adverse', ttl = tm ? (this.cardKind === 'stall' ? '돌파의 기회!' : '역전의 기회!') : '레벨 업!';
+    ctx.font = 'bold 26px sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.strokeText(ttl, W / 2, top - 52); ctx.fillStyle = '#ffd36e'; ctx.fillText(ttl, W / 2, top - 52);
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#c9d1e3'; ctx.fillText(tm ? this.cardWhy + ' — 카드 하나를 고르세요' : 'Lv ' + (this.plv - this.pendingLv + 1) + (CONFIG.GROW.autoLv ? ' — 전군 레벨 +' + CONFIG.GROW.autoLv + ' · 카드 하나를 고르세요' : ' — 하나를 고르세요'), W / 2, top - 26);
     var icoOf = function (name) { var ic = -1; self.data.units.forEach(function (d) { (d.acts || []).forEach(function (a) { if (a && a.name === name && ic < 0) ic = a.icon; }); }); return ic; };
     C.forEach(function (c) {
       var b = c.box, cx = b.x + b.w / 2, ay = b.y + 12, aw = b.w - 24, ah = 78;
@@ -2507,6 +2560,10 @@
     // 경험치: 가는 금색 줄 + 플레이어 레벨
     ctx.textAlign = 'left'; ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('Lv ' + this.plv, T.x + 8, T.y + 49);
     this._bar(bx, T.y + 46, bw, 6, this.xp / this._xpNeed(), '#e6c476'); ctx.font = 'bold 12px sans-serif';
+    // 걸려 있는 카드 효과와 남은 초: 위 왼쪽 상자 바로 아래에 작게 (전투 줄을 가리지 않게)
+    var tbs = [], tnow = this.time, B0 = this.tb || {}; [['mana', '마나×' + ((CONFIG.CARDS || {}).mana || 2)], ['magic', '증폭'], ['radius', '확산']].forEach(function (e) { if (tnow < (B0[e[0]] || 0)) tbs.push(e[1] + ' ' + Math.ceil(B0[e[0]] - tnow)); });
+    (this.xpBuffs || []).filter(function (u) { return u > tnow; }).forEach(function (u) { tbs.push('경험치 ' + Math.ceil(u - tnow)); });
+    if (tbs.length) { ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left'; var tl = tbs.join(' · '), tw0 = ctx.measureText(tl).width + 10; ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(T.x, T.y + this._topH() + 2, tw0, 15); ctx.fillStyle = '#ffd36e'; ctx.fillText(tl, T.x + 5, T.y + this._topH() + 10); ctx.font = 'bold 12px sans-serif'; }
     // 성 안의 유닛(수비대): 작은 그림을 자리 순서대로
     // 웨이브
     var wb = this.waveBox, wv = Math.min(this.wave + 1, C.WAVES.length), left = this._alive(1).length + this.queue.length;
