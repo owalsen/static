@@ -368,7 +368,7 @@
        성 사격: 데몬·데빌·사탄(원본 등급 2 = 파이어 볼)을 등급 0(마법사의 파이어 볼)으로 읽는다. 스테이지는 1단계(대 흑마술파)만 열려 있다 — 2~4단계는 soon(개발 예정) */
   var FACTIONS = {
     lib: { name: '해방부대', bgm: 0, base: 'base', baseName: '성', tabs: CONFIG.TABS, heroes: CONFIG.GROW.heroes, stages: CONFIG.STAGES },
-    evil: { name: '악령군', bgm: 1, base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
+    evil: { name: '악령군', bgm: 1, hud: 'hud1', base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
       tabs: [
         { name: '근접', ids: [28, 43, 29, 35, 36, 30, 44] },    // 해골전사 늑대 해골기사 흡혈귀 늑대인간 듀라한 켈베로스
         { name: '원거리', ids: [46, 32, 39, 40, 45, 47] },      // 박쥐 유령 데몬 데빌 펜릴 드래곤
@@ -411,6 +411,7 @@
     var F = FACTIONS[key], M = root.MW_DEF || {}; if (!F) return false;
     this.faction = key; this.fac = F; CONFIG.TABS = F.tabs; CONFIG.STAGES = F.stages;
     this.bld = Object.assign({}, M); this.bld.base = M[F.base] || M.base; if (F.fortPic && M[F.fortPic]) { this.bld.fort1 = M[F.fortPic]; this.bld.fort2 = M[F.fortPic]; }
+    if (F.hud && !this.assets.img[F.hud]) this.assets.load(F.hud, F.hud + '.png');   // 아래 패널 스킨: 그 진영의 원작 HUD 그림 (악령군 = evil.img → hud1.png, 해방부대와 같은 배치)
     this._buildRoster(); this._buildHeroes(); this.tab = 0; this.btnFirst = 0; this._loadCleared();
     this.setStage(0); this._layout && this.W && this._resize();
     if (this.bgm) this.bgm.set(F.bgm);
@@ -584,6 +585,8 @@
   }
 
   /* 그 종류가 가진 몸동작 기술 (CONFIG.BODY_TECH 에 있고 꺼지지 않은 원본 행동) */
+  /* 한 번에 매혹하는 수: 멀티 챠밍(공주)은 charmMax(3)기, 챠밍(서큐버스)은 1기 (2026-11-17 사용자 요청 — 원본도 챠밍은 한 유닛 대상) */
+  function charmN(a) { return a && a.name === '챠밍' ? 1 : CONFIG.SKILL.charmMax; }
   function bodyTechs(t) { return t.acts.filter(function (a) { return a && CONFIG.BODY_TECH[a.name] && !CONFIG.SKILL_OFF[a.name]; }); }
   function basicAct(t) { var a = t.ai >= 0 ? t.acts[t.ai] : null; return a && (a.isAtk == 1 || (a.dmg && !a.suicide && !a.mana && !a.aoe)) ? a : null; }   // 좀비의 핸드 밤처럼 '공격' 표시는 없지만 마나 없이 치는 단일 피해 행동도 기본 공격으로 본다
 
@@ -1137,7 +1140,7 @@
       // 영웅은 매혹되지 않는다 — 아군 영웅(u.hero)이든 적 영웅(길목의 영웅 heroPost, 기지에서 출격한 영웅)이든 (2026-11-14 사용자 요청). 범위 안의 영웅에게는 "면역"을 띄운다
       var isHero = function (o) { return !!(o.hero || o.heroPost || (o.sortie && o.sortie.r.hero)); }, CF = foesAt(foe, S.radius * 0.7);
       CF.filter(isHero).forEach(function (o) { self._say(o.x, o.y - o.t.h - 6, '면역', '#c9d1e3'); });
-      CF.filter(function (o) { return !isHero(o); }).sort(function (p, q) { return Math.hypot(p.x - foe.x, p.y - foe.y) - Math.hypot(q.x - foe.x, q.y - foe.y); }).slice(0, S.charmMax).forEach(function (o) { self._setSide(o, u.side); o.charmed = !o.charmed; o.state = 'idle'; self._say(o.x, o.y - o.t.h - 6, '매혹', '#ff9ad5'); });   // charmed: 원래 편이 아닌 동안 하트 표시 (되매혹하면 풀린다)
+      CF.filter(function (o) { return !isHero(o); }).sort(function (p, q) { return Math.hypot(p.x - foe.x, p.y - foe.y) - Math.hypot(q.x - foe.x, q.y - foe.y); }).slice(0, charmN(a)).forEach(function (o) { self._setSide(o, u.side); o.charmed = !o.charmed; o.state = 'idle'; self._say(o.x, o.y - o.t.h - 6, '매혹', '#ff9ad5'); });   // charmed: 원래 편이 아닌 동안 하트 표시 (되매혹하면 풀린다)
       this._addEffect(foe.x, foe.y - 20, a.arm, 0); ok = true;
     } else if (s.kind === 'assassin' && foe) {               // 가장 가까운 적 하나를 쓰러뜨린다
       this._damage(foe, foe.hp); ok = true;
@@ -2666,7 +2669,7 @@
     var ab = this.affBtn; ctx.fillStyle = this.modal === 'aff' ? 'rgba(122,74,18,.9)' : 'rgba(0,0,0,.5)'; ctx.fillRect(ab.x, ab.y, ab.w, ab.h); ctx.fillStyle = '#ffd36e'; ctx.fillText('상성', ab.x + ab.w / 2, ab.y + ab.h / 2);   // 유닛 상성 모달 열기
 
     // 아래 바탕
-    var y0 = H - this.hudH, hi = this.assets.get('hud0'), K = SKIN; ctx.fillStyle = '#12151d'; ctx.fillRect(0, y0, W, this.hudH);
+    var y0 = H - this.hudH, hi = this.assets.get(this.fac.hud || 'hud0'), K = SKIN; ctx.fillStyle = '#12151d'; ctx.fillRect(0, y0, W, this.hudH);
     if (hi) { ctx.drawImage(hi, K.stripe[0], K.stripe[1], K.stripe[2], K.stripe[3], 0, y0, W, this.hudH);      // 원작 정보 창의 어두운 줄무늬 바탕
       ctx.drawImage(hi, K.rail[0], K.rail[1], K.rail[2], K.rail[3], 0, y0 - 1, W, K.rail[3]); }                  // 위쪽 가장자리: 원작의 은색 테
     else { ctx.fillStyle = '#2a3040'; ctx.fillRect(0, y0, W, 2); }
@@ -2695,7 +2698,7 @@
   var SKIN = { tex: [594, 8, 33, 38], barV: [629, 8, 4, 38], barH: [594, 48, 33, 5], corner: [629, 48, 4, 5], stripe: [150, 50, 140, 84], plate: [148, 20, 152, 18], rail: [160, 143, 120, 6] };
   /* 원작 명령 칸 하나: 안쪽은 바탕 무늬를 늘이고, 네 변은 은색 테 조각을 늘이고, 네 귀는 교차 조각 */
   P._cell = function (x, y, w, h) {
-    var im = this.assets.get('hud0'), ctx = this.ctx, K = SKIN, t = 4; if (!im) return false;
+    var im = this.assets.get(this.fac.hud || 'hud0'), ctx = this.ctx, K = SKIN, t = 4; if (!im) return false;
     var d = function (q, dx, dy, dw, dh) { ctx.drawImage(im, q[0], q[1], q[2], q[3], dx, dy, dw, dh); };
     d(K.tex, x + t, y + t, w - t * 2, h - t * 2);
     d(K.barV, x, y + t, t, h - t * 2); d(K.barV, x + w - t, y + t, t, h - t * 2);
@@ -2705,7 +2708,7 @@
   };
   /* 원작 이름표(청록 막대): 양 끝 8px 은 그대로, 가운데만 늘인다 */
   P._plateBar = function (x, y, w, h, alpha) {
-    var im = this.assets.get('hud0'), ctx = this.ctx, q = SKIN.plate, e = 8; if (!im) return false;
+    var im = this.assets.get(this.fac.hud || 'hud0'), ctx = this.ctx, q = SKIN.plate, e = 8; if (!im) return false;
     ctx.globalAlpha = alpha == null ? 1 : alpha;
     ctx.drawImage(im, q[0], q[1], e, q[3], x, y, e, h); ctx.drawImage(im, q[0] + q[2] - e, q[1], e, q[3], x + w - e, y, e, h);
     ctx.drawImage(im, q[0] + e, q[1], q[2] - e * 2, q[3], x + e, y, w - e * 2, h);
@@ -3024,7 +3027,7 @@
   /* 마법 설명 카드의 내용 (스킬 칸을 길게 누르면): 손으로 쓴 설명(MWE.DEF_SKILL_DESC)의 {자리}를 CONFIG 값으로 채우고, 종류·마나·범위·시전 거리는 데이터에서 */
   P.skillInfo = function (g) {
     var s = g.slots[0], a = g.act, S = CONFIG.SKILL, tps = this.rules.tps, self = this; if (!s) return null;
-    var WKI = CONFIG.WEAPON[a.name] || {}; var V = { wMul: WKI.mul, wMax: WKI.max || S.buffMax, wSec: WKI.sec || S.buffSec, healMax: S.healMax, healPct: Math.round(S.healRatio * 100), buffMax: S.buffMax, buffSec: S.buffSec, stun: stunSecOf(a), charmMax: S.charmMax, dur: Math.round(a.sup === 'masshaste' ? S.hasteSec : (a.dur || 600) / tps), undead: S.undeadDmg[a.name] || 0 };
+    var WKI = CONFIG.WEAPON[a.name] || {}; var V = { wMul: WKI.mul, wMax: WKI.max || S.buffMax, wSec: WKI.sec || S.buffSec, healMax: S.healMax, healPct: Math.round(S.healRatio * 100), buffMax: S.buffMax, buffSec: S.buffSec, stun: stunSecOf(a), charmMax: charmN(a), dur: Math.round(a.sup === 'masshaste' ? S.hasteSec : (a.dur || 600) / tps), undead: S.undeadDmg[a.name] || 0 };
     var desc = ((MWE.DEF_SKILL_DESC && MWE.DEF_SKILL_DESC[a.name]) || '').replace(/\{(\w+)\}/g, function (m, k) { return V[k] != null ? V[k] : m; });
     var L = [], n = g.slots.filter(function (q) { return q.unit && q.unit.state !== 'dead'; }).length;
     if (s.allyAimed()) L.push('칸을 누른 뒤 강화할 아군을 찍습니다 · 닿지 않으면 시전 유닛이 걸어갑니다');
