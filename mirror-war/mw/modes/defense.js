@@ -273,7 +273,7 @@
         guards: [{ at: 'bottom', list: [[30, 2], [44, 1]] }, { at: 'top', list: [[30, 2], [45, 1]] }, { at: 'lair', list: [[34, 1], [44, 2], [41, 1], [30, 2]] }] },
       /* 4단계 (2026-11-14 사용자 요청): 악령군과 흑마술파가 함께 나온다 (ENEMIES.both — 두 종족의 같은 번호 웨이브를 BOTH_MUL 씩 섞은 표).
          벙커는 아래 = 납골당(악령군), 위 = 흉가(흑마술파). 기지 수비대는 두 종족 영웅 4명씩, 덫은 네 종류 전부 */
-      { name: '거울의 끝', cap: 60, ecap: 40, enemy: 'both', note: '매우 어려움', waves: [0, 10], mul: 1, restMul: 1.3, loopRest: 20, loopLv: 0.5, lv: { start: 2, perWave: 0.5 }, hpMul: 1, lair: 9600, efort: { hp: 1500, lv: 5 }, lairLv: 5, lairCast: 5, heroPosts: 8, traps: 14, trapEvery: 15, trapLv: 4,
+      { name: '거울의 끝', amp: { from: 300, perMin: 0.15, max: 1 }, cap: 60, ecap: 40, enemy: 'both', note: '매우 어려움', waves: [0, 10], mul: 1, restMul: 1.3, loopRest: 20, loopLv: 0.5, lv: { start: 2, perWave: 0.5 }, hpMul: 1, lair: 9600, efort: { hp: 1500, lv: 5 }, lairLv: 5, lairCast: 5, heroPosts: 8, traps: 14, trapEvery: 15, trapLv: 4,
         guards: [{ at: 'bottom', list: [[30, 2], [44, 1]] }, { at: 'top', list: [[54, 1], [53, 2]] }, { at: 'lair', list: [[34, 1], [54, 1], [44, 1], [57, 1], [41, 1], [61, 1]] }] }
     ],
     ENEMY_DEFAULT: 'evil',
@@ -788,8 +788,8 @@
     var S = CONFIG.SKILL, T = this.time, L = this.units, self = this;
     for (var i = 0; i < this.slots.length; i++) { var s = this.slots[i], u = s.unit; if (!s.auto || !u || u.side !== 0 || u.state === 'dead' || s.cd > 0 || u.stunUntil > T) continue;
       var f = this._nearestFoe(u), fd = f ? Math.abs(f.x - u.x) : Infinity, key = s.act.sup === 'masshaste' ? 'haste' : s.act.sup;
-      if (s.act.self) { var b = u.buffs[key], lackN = /웨폰/.test(s.act.name) && L.some(function (o) { return o !== u && o.side === 0 && o.state !== 'dead' && o.act && Math.abs(o.x - u.x) <= S.buffRadius && !(o.buffs[key] && o.buffs[key].until > T); });   // 웨폰: 주변 공격 유닛에게 그 강화가 없어도 쓴다
-        if (((b && b.until > T) && !lackN) || fd > 300) continue; this.castUnitSkill(u, u.slots.indexOf(s)); continue; }
+      if (s.act.self) { var b = u.buffs[key];   // 자기 전용 강화: 본인에게 그 강화가 없고 적이 가까이 왔을 때만 (주변 아군은 보지 않는다)
+        if ((b && b.until > T) || fd > 300) continue; this.castUnitSkill(u, u.slots.indexOf(s)); continue; }
       if (s.kind === 'recall' || s.kind === 'morph' || s.kind === 'dispel' || !this.skillTarget(u, s)) continue;
       var near = function (r, test) { return L.some(function (o) { return o.side === 0 && o.state !== 'dead' && Math.abs(o.x - u.x) <= r && test(o); }); };
       if (s.kind === 'heal' && !near(S.buffRadius, function (o) { return o.hp < o.maxHp * 0.7; })) continue;
@@ -1053,7 +1053,7 @@
       // 2026-11-14 사용자 요청: 웨폰 종류(파이어·매직·멜팅·아이스·다크)는 시전자 자신보다 주변의 공격 유닛이 먼저다. 자기 전용이던 아이스 웨폰도 주변 공격 유닛에게 먼저 걸고, 자리가 남으면 자신에게
       var wpn = /웨폰/.test(a.name), WK = CONFIG.WEAPON[a.name] || {}, mine = u.side === 0, wMax = mine && WK.max || S.buffMax, wSec = mine && WK.sec || S.buffSec, wMul = WK.mul || 0;
       var weaker = function (o) { var b = o.buffs[a.sup]; return !(b && b.until > self.time && (b.mul || 0) > wMul); };   // 더 센 강화가 걸려 있지 않다
-      if (a.self && !wpn) BT = [u];
+      if (a.self) BT = [u];   // 자기 전용(아이스 웨폰: 마법전사·마법기사)은 시전자만 — 2026-11-17 사용자 지적: 11-14 이후 주변 공격 유닛에게 먼저 걸어 주던 것을 원본대로 되돌렸다
       else if (pt && pt.ally) {                              // 대상 지정(2026-11-14): 찍은 아군 + 그 둘레(allyNear)의 공격 유닛으로 남은 자리를 채운다
         var c = pt.ally; if (c.state === 'dead') return false;
         if (!weaker(c)) { this._say(c.x, c.y - c.headY - 10, '더 센 강화가 걸려 있음', '#c9d1e3'); return false; }
