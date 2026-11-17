@@ -195,7 +195,7 @@
     /* friendlyFire: 범위 안의 아군(시전자 포함)도 같은 피해를 입는 마법 (2026-11-13 사용자 요청 — 가장 센 범위 마법이라 쓸 자리를 가려야 한다) */
     /* 스킬은 전체 마나를 쓴다 (소환과 같은 마나) + 짧은 재사용 대기 cool(초). 값 = 원본 행동 마나 × costMul 을 5 단위로, 종류별 [최소, 최대] 안으로 자른다 (COST)
        — 원본은 유닛마다 마나통이 따로라 값을 그대로 쓸 수 없어 비율만 가져온다. 2026-11-12: 쿨타임만 돌던 방식에서 바꿈 (공짜라 강화를 상시 돌리던 문제) */
-    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyAim: false, buffNeed: 2,   /* 2026-11-15 사용자 요청: 웨폰·파운틴은 다시 누르면 바로 — 시전자 주변(buffRadius)에 다른 공격형 아군이 buffNeed(2)기 이상 있어야 쓸 수 있다(칸 비활성). allyAim: true 면 175번의 아군 찍기로 돌아간다 */ allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
+    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyAim: false, buffNeed: 2,   /* 2026-11-15 사용자 요청: 웨폰·파운틴은 다시 누르면 바로 — 시전자 주변(buffRadius)에 다른 공격형 아군이 buffNeed(2)기 이상 있어야 쓸 수 있다(칸 비활성). allyAim: true 면 175번의 아군 찍기로 돌아간다 */ allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, radiusMul: { '12 리플렉터스 소환': 1.3 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
     /* 소환 패널의 탭: 해방부대 전체(원본 유닛 번호 0~24)를 네 묶음으로 나눈다 */
     TABS: [
       { name: '근접', ids: [0, 1, 2, 3, 6, 7, 8, 10] },      // 전사 기사 창기사 성기사 창검사 격투가 무도가 의적 (의적은 쌍칼 근접 — 2026-11-14 원거리 탭에서 옮김, 사용자 요청)
@@ -631,7 +631,7 @@
       if (msg) this._say(this.cam.x + this.W / 2, this.laneY - 120, msg, '#ffb36a'); return false; }
     this.mana -= r.cost; r.wait = r.cd;
     var rs = this.rep.sum[r.id] || (this.rep.sum[r.id] = { n: 0, name: r.t.name, pid: r.t.pid }); rs.n++; this.rep.mana += r.cost;   // 리포트: 소환 집계
-    if (this.selBase) { this._garrison(r); return true; }
+    if (this.selBase) { this._garrison(r); this.selBase = false; return true; }   // 건물에 한 명 넣으면 건물 선택은 풀린다 (2026-11-17 사용자 요청 — 계속 선택돼 있으면 다음 소환도 건물 배치인지 전장 소환인지 헷갈린다). 더 넣으려면 건물을 다시 누른다
     var u = this.spawn(r.id, 0);
     this._play(u.t.snd.ready, 0.8);                          // 원본 등장 음성
     return true;
@@ -835,7 +835,7 @@
   /* 지점 지정 마법의 시전 거리(px): 시전자에서 이 가로 거리 안의 지점만 찍을 수 있다 */
   P.aimReach = function (s) { return s.kind === 'recall' ? CONFIG.WORLD_W : Math.min(CONFIG.SKILL.maxCast, s.act.range * CONFIG.RANGE_SCALE); };   // 리콜은 원본처럼 거리 제한 없음
   /* 지점 지정 마법의 효과 반경(px) — 그리기와 판정이 같은 값을 쓴다 */
-  P.aimRadius = function (s) { var S = CONFIG.SKILL, k = 1 + (this.radiusUp || 0); return s.kind === 'haste' || s.kind === 'dispel' || s.act.sup === 'massheal' ? S.summonRadius : s.kind === 'buff' ? 22 : s.kind === 'recall' ? 120 : s.kind === 'blast' ? (s.act.aoe ? S.radius * k : 60) : s.kind === 'charm' ? S.radius * 0.7 : s.kind === 'assassin' ? 45 : S.radius * k; };   // radiusUp = "마법 확산" 카드
+  P.aimRadius = function (s) { var S = CONFIG.SKILL, k = 1 + (this.radiusUp || 0); return s.kind === 'haste' || s.kind === 'dispel' || s.act.sup === 'massheal' ? S.summonRadius : s.kind === 'buff' ? 22 : s.kind === 'recall' ? 120 : s.kind === 'blast' ? (s.act.aoe ? S.radius * (S.radiusMul && S.radiusMul[s.act.name] || 1) * k : 60) : s.kind === 'charm' ? S.radius * 0.7 : s.kind === 'assassin' ? 45 : S.radius * k; };   // radiusUp = "마법 확산" 카드
   /* 조준 중 전장을 눌렀다 (2026-11-12 "걸어가서 쓰기"로 바꿈): 찍은 곳에 가장 가까운 준비된 유닛이 쓴다.
      시전 거리 안이면 바로, 밖이면 **닿는 곳까지 걸어가서** 쓴다(u.castOrder → _castWalk). 시전 거리 제한으로 못 찍는 곳은 없다 —
      다만 유닛은 전장 가운데(집결선 frontX)를 넘어 적 진영으로 들어가지 못하므로, 가운데에서도 닿지 않는 곳(frontX + 시전 거리 너머)은 찍을 수 없다 */
@@ -1027,8 +1027,8 @@
       if (moved) ok = true; else { this._say(pt.x, pt.y - 12, '불러올 아군이 없음', '#c9d1e3'); return false; }
     } else if (s.kind === 'blast' && foe) {                         // 가장 가까운 적을 중심으로 범위 피해 (원본 피해 공식 × dmgMul)
       var keep = u.act; u.act = a;
-      foesAt(foe, a.aoe ? S.radius * (u.side === 0 ? 1 + this.radiusUp : 1) : 60).forEach(function (o) { self._damage(o, self.rules.damage(u, o, self.rng) * S.dmgMul * (u.side === 0 ? (1 + self.dmgUp) * blastTier(a) : 1) * (u.inLair ? CONFIG.LAIR_HERO.dmgMul * (self.st && self.st.lairCastMul || 1) : 1)); });
-      if (S.friendlyFire[a.name]) { var fr = a.aoe ? S.radius * (u.side === 0 ? 1 + this.radiusUp : 1) : 60, fm = S.dmgMul * (u.side === 0 ? (1 + this.dmgUp) * blastTier(a) : 1);   // 아군도 맞는다
+      foesAt(foe, a.aoe ? S.radius * (S.radiusMul && S.radiusMul[a.name] || 1) * (u.side === 0 ? 1 + this.radiusUp : 1) : 60).forEach(function (o) { self._damage(o, self.rules.damage(u, o, self.rng) * S.dmgMul * (u.side === 0 ? (1 + self.dmgUp) * blastTier(a) : 1) * (u.inLair ? CONFIG.LAIR_HERO.dmgMul * (self.st && self.st.lairCastMul || 1) : 1)); });
+      if (S.friendlyFire[a.name]) { var fr = a.aoe ? S.radius * (S.radiusMul && S.radiusMul[a.name] || 1) * (u.side === 0 ? 1 + this.radiusUp : 1) : 60, fm = S.dmgMul * (u.side === 0 ? (1 + this.dmgUp) * blastTier(a) : 1);   // 아군도 맞는다
         this.units.forEach(function (o) { if (o.side === u.side && o.state !== 'dead' && Math.hypot(o.x - foe.x, o.y - foe.y) <= fr) self._damage(o, self.rules.damage(u, o, self.rng) * fm); }); }
       var HO = MWE.OriginalRules.HOLY;
       if (HO && a.arm === HO.arm) {                          // 홀리 크로스 (원본 case 0x10, 분석 8-43): 범위 안의 아군은 회복 + 상태 이상 해제, 언데드 적은 석화
@@ -1208,7 +1208,7 @@
   P.spawnHero = function (h) {
     var G = CONFIG.GROW, u = this.spawn(h.base.id, 0), self = this;
     u.t = h.t; u.hero = h; this._applyType(u); u.maxHp = 0; this._setLevel(u, 1 + this.allyLv + G.heroLv); u.hp = u.maxHp;
-    u.slots.forEach(function (s) { s.auto = true; s.cost = 0; s.cdMax = G.heroCool; s.cd = 2 + self.rng.next() * 3; });   // 패널에 올리지 않는다 → _selfMagic 이 맡는다
+    u.slots.forEach(function (s) { s.auto = true; s.cost = 0; s.cdMax = (self.st && self.st.heroCool) || G.heroCool; s.cd = 2 + self.rng.next() * 3; });   // 패널에 올리지 않는다 → _selfMagic 이 맡는다. 대기시간은 스테이지 설정(st.heroCool)이 있으면 그것
     var k = this.magicUnits.indexOf(u); if (k >= 0) this.magicUnits.splice(k, 1); this._regroup();
     this._addEffect(u.x, u.y, CONFIG.RECALL.fxArm, 0); this._say(u.x, u.y - u.headY - 14, '영웅 ' + h.name, '#ffd36e'); this._play(u.t.snd.ready, 0.9);
     return u;
@@ -1242,7 +1242,9 @@
   /* 시간 제한 효과를 지금 시각에 맞춘다: 마법 증폭·확산은 dmgUp·radiusUp 으로 (피해·범위 식이 이 값을 본다), 마나의 샘은 regenNow 가 본다 */
   P._timedFx = function () {
     var K = CONFIG.CARDS, T = this.time, B = this.tb || {}; if (!K || K.trigger !== 'adverse') return;
-    this.dmgUp = T < (B.magic || 0) ? K.dmg : 0; this.radiusUp = T < (B.radius || 0) ? K.radius : 0;
+    var AM = this.st && this.st.amp, ta = AM ? Math.min(AM.max, Math.max(0, (T - this.gameT0 - AM.from) / 60) * AM.perMin) : 0;   // 시간 증폭 (2026-11-17 사용자 제안): amp.from 초 뒤부터 분당 perMin 씩, 최대 max 까지 아군 마법 피해가 늘어난다 (스테이지 설정 amp)
+    this.timeAmp = ta;
+    this.dmgUp = (T < (B.magic || 0) ? K.dmg : 0) + ta; this.radiusUp = T < (B.radius || 0) ? K.radius : 0;
   };
   /* 카드 3장을 낸다 (서로 다른 종류, 무작위 — 종류마다 무게 GROW.cardW, 없으면 1). 게임은 멈춘다 */
   P._offerCards = function () {
@@ -2093,9 +2095,9 @@
     this._drawTraps();                                       // 덫 (바닥, 유닛보다 먼저)
     // 유닛: 화면에 보이는 것만, 아래쪽(y가 큰) 유닛이 위에 그려지도록 정렬
     var L = this.units.filter(function (u) { return u.x > vx0 && u.x < vx1; }).sort(function (a, b) { return a.y - b.y; });
-    for (i = 0; i < L.length; i++) this._drawUnit(L[i]);
-    this._drawForts('bottom');                               // 아래쪽 벙커: 유닛보다 앞에 있다
+    this._drawForts('bottom');                               // 아래쪽 벙커도 유닛보다 먼저(뒤에) 그린다 — 2026-11-17 사용자 지적: 전에는 유닛 뒤에 그려서(벙커가 앞) 지나가는 유닛이 벙커 밑으로 들어가 잘려 보였다
     this._drawEForts('bottom');
+    for (i = 0; i < L.length; i++) this._drawUnit(L[i]);
     for (i = 0; i < this.shots.length; i++) this._drawShot(this.shots[i]);
     for (i = 0; i < this.effects.length; i++) this._drawEffect(this.effects[i]);
     this._drawTexts();
@@ -2160,7 +2162,7 @@
     if (B) { var sh = this.baseHit > 0 ? Math.round(Math.sin(this.time * 90) * 2) : 0, F0 = this.forts[0];   // 맞으면 살짝 흔들린다
       if (this.selFort === F0) this._drawOutline(B, C.BASE.x + sh, gy);   // 고른 건물: 윤곽을 따라 초록 선
       this._drawBuilding(B, C.BASE.x + sh, gy, F0); }
-    this._drawForts('top');                                  // 위쪽 벙커는 유닛보다 먼저(뒤에), 아래쪽 벙커는 유닛을 다 그린 뒤(앞에) — draw()
+    this._drawForts('top');                                  // 위쪽 벙커는 _drawBases 에서, 아래쪽 벙커는 유닛 바로 앞에서(둘 다 유닛보다 뒤) — draw()
     this._drawEForts('top');
     if (L) { var lx = C.WORLD_W - C.LAIR.back, lp = D.pics[L.pic], ctx = this.ctx;
       var lsh = this.lairHit > 0 ? Math.round(Math.sin(this.time * 90) * 2) : 0;   // 맞으면 흔들린다
