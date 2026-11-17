@@ -586,6 +586,8 @@
 
   /* 그 종류가 가진 몸동작 기술 (CONFIG.BODY_TECH 에 있고 꺼지지 않은 원본 행동) */
   /* 한 번에 매혹하는 수: 멀티 챠밍(공주)은 charmMax(3)기, 챠밍(서큐버스)은 1기 (2026-11-17 사용자 요청 — 원본도 챠밍은 한 유닛 대상) */
+  /* 조준 없이 누르면 시전 거리 안의 가장 가까운 적 1기에게 바로 쓰는 아군 마법 (2026-11-17 사용자 요청: 메두사의 스톤 게이즈). 적이 쓸 때는 예전처럼 둘레 범위 */
+  var SINGLE_NEAR = { '스톤 게이즈': 1 };
   function charmN(a) { return a && a.name === '챠밍' ? 1 : CONFIG.SKILL.charmMax; }
   function bodyTechs(t) { return t.acts.filter(function (a) { return a && CONFIG.BODY_TECH[a.name] && !CONFIG.SKILL_OFF[a.name]; }); }
   function basicAct(t) { var a = t.ai >= 0 ? t.acts[t.ai] : null; return a && (a.isAtk == 1 || (a.dmg && !a.suicide && !a.mana && !a.aoe)) ? a : null; }   // 좀비의 핸드 밤처럼 '공격' 표시는 없지만 마나 없이 치는 단일 피해 행동도 기본 공격으로 본다
@@ -747,7 +749,7 @@
     this.readyAt = 0;                                        // 쿨타임이 끝난 시각 (패널에서 앞에 설 순서를 정한다)
     this.vi = null;                                          // 패널에서 지금 그려지는 자리 (순서가 바뀌면 그 자리로 미끄러져 간다)
     this.kind = skillKind(act);
-    this.aimed = this.needsFoe() || this.kind === 'recall' || this.kind === 'haste' || this.kind === 'dispel' || act.sup === 'massheal' || this.allyAimed();   // 지점을 찍는 마법: 적에게 쓰는 것, 리콜, 그리고 넓은 범위의 소환 마법(말다 소환 = 범위 회복, 케멘 소환 = 범위 가속 — 2026-11-13 사용자 요청, 원본도 땅을 찍는 마법). 강화·힐링은 누르면 바로   // 리콜도 불러올 곳을 찍는다                            // 적에게 쓰는 마법은 누르면 바로 나가지 않고 전장에서 지점을 찍는다 (아군·자기에게 쓰는 마법은 즉시)
+    this.aimed = (this.needsFoe() && !SINGLE_NEAR[act.name]) || this.kind === 'recall' || this.kind === 'haste' || this.kind === 'dispel' || act.sup === 'massheal' || this.allyAimed();   // 지점을 찍는 마법: 적에게 쓰는 것, 리콜, 그리고 넓은 범위의 소환 마법(말다 소환 = 범위 회복, 케멘 소환 = 범위 가속 — 2026-11-13 사용자 요청, 원본도 땅을 찍는 마법). 강화·힐링은 누르면 바로   // 리콜도 불러올 곳을 찍는다                            // 적에게 쓰는 마법은 누르면 바로 나가지 않고 전장에서 지점을 찍는다 (아군·자기에게 쓰는 마법은 즉시)
     var lim = CONFIG.SKILL.COST[this.kind] || [20, 60];
     this.cost = Math.max(lim[0], Math.min(lim[1], Math.round(act.mana * CONFIG.SKILL.costMul / 5) * 5));   // 쓸 때 드는 마나
     var wk = CONFIG.WEAPON[act.name]; if (wk && wk.cost) this.cost = wk.cost;   // 웨폰 계열은 종류마다 따로
@@ -1132,7 +1134,7 @@
     } else if (s.kind === 'stun' && foe) {                   // 범위 안의 적을 잠시 멈춘다
       if (u.side === 0 && a.races && !this._raceFoes(a, foe, S.radius * (1 + this.radiusUp)).length) { this._say(foe.x, foe.y - 12, '대상 없음', '#c9d1e3'); return false; }   // 걸어가서 쓰는 사이에 대상이 사라졌을 때도 헛쓰지 않는다
       var ud = u.side === 0 ? S.undeadDmg[a.name] || 0 : 0;   // 디펜스 고유: 턴 언데드·디스트로이 언홀리는 걸리는 종족에게 피해도 준다 (원본 case 0xE·0xF 는 석화만 — 하급 언데드를 쓸어 내는 마법이라는 사용자 요청, 2026-11-13). 방어 무시, 마법 증폭 적용
-      foesAt(foe, S.radius * (u.side === 0 ? 1 + this.radiusUp : 1)).forEach(function (o) { if (a.races && a.races.indexOf(o.t.race) < 0) return;   // 걸리는 종족만 (턴 언데드 = 언데드, 디스트로이 언홀리 = 언데드 + 흡혈귀·늑대인간류, 분석 8-36)
+      (u.side === 0 && SINGLE_NEAR[a.name] && foe.t ? [foe] : foesAt(foe, S.radius * (u.side === 0 ? 1 + this.radiusUp : 1))).forEach(function (o) { if (a.races && a.races.indexOf(o.t.race) < 0) return;   // SINGLE_NEAR: 가장 가까운 적 1기만   // 걸리는 종족만 (턴 언데드 = 언데드, 디스트로이 언홀리 = 언데드 + 흡혈귀·늑대인간류, 분석 8-36)
         o.stunUntil = self.time + stunSecOf(a); o.state = 'idle'; delete o.buffs.weapon; delete o.buffs.shield; delete o.buffs.haste;
         if (ud) self._damage(o, ud * (1 + self.dmgUp)); });
       this._addEffect(foe.x, foe.y, a.arm, 0); ok = true;
