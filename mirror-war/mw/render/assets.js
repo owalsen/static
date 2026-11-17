@@ -53,10 +53,10 @@
     else { ctx.fillStyle = '#121519'; ctx.fillRect(0, by, bw, bh); }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     // 위 판: 제목 (원본 로고의 푸른 붓글씨 느낌 — 푸른 빛 번짐)
-    var ty = Math.round((10 + by) / 2) - 10;
+    var ty = Math.round((10 + by) / 2) - 10; if (!o.noTitle) {   // noTitle = 그 자리에 다른 판(디펜스 설명)이 얹힐 때
     ctx.save(); ctx.font = 'bold 44px "Nanum Myeongjo","AppleMyungjo","Batang",serif'; ctx.shadowColor = '#2e6bff'; ctx.shadowBlur = 22 + 6 * Math.sin(T * 2);
     ctx.fillStyle = '#9cc0ff'; ctx.fillText(o.title || '거울전쟁', W / 2, ty, W - 40); ctx.shadowBlur = 6; ctx.fillStyle = '#e8f0ff'; ctx.fillText(o.title || '거울전쟁', W / 2, ty, W - 40); ctx.restore();
-    ctx.font = 'italic bold 14px Georgia,"Times New Roman",serif'; ctx.fillStyle = '#7fa6f0'; ctx.fillText(o.sub || '', W / 2, ty + 36, W - 40);
+    ctx.font = 'italic bold 14px Georgia,"Times New Roman",serif'; ctx.fillStyle = '#7fa6f0'; ctx.fillText(o.sub || '', W / 2, ty + 36, W - 40); }
     // 아래 판: NOW LOADING + 금테 막대
     var ly = by + bh + Math.min(70, Math.round((H - by - bh) * 0.3)), mw = Math.min(300, W - 70), mx = Math.round((W - mw) / 2);
     ctx.font = 'bold 18px Georgia,"Times New Roman",serif'; ctx.fillStyle = '#000'; ctx.fillText('N O W   L O A D I N G', W / 2 + 1, ly + 1); ctx.fillStyle = '#a8a08a'; ctx.fillText('N O W   L O A D I N G', W / 2, ly);
