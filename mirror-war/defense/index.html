@@ -116,6 +116,7 @@
 
 <!-- 원소스 멀티유즈: 전장 시뮬(../index.html)과 같은 데이터(sim/)와 엔진(mw/)을 그대로 쓴다.
      이 게임만의 코드는 맨 아래 mw/modes/defense.js 한 파일이다. 세로 전용(가로로 들어도 배치가 바뀌지 않고 가운데에 세워진다). -->
+<link rel="preload" as="image" href="../sim/loading-eyes.jpg"><link rel="preload" as="image" href="../sim/title-bg.jpg"><link rel="preload" as="image" href="../sim/race-bg.jpg"><link rel="preload" as="image" href="../sim/race-knife.png"><!-- 로딩 화면의 원본판 눈 그림 (render/assets.js drawLoadingOrig) — 진행 막대보다 먼저 보이게 미리 받는다 -->
 <script src="../sim/sizes.js"></script>
 <script src="../sim/data.js"></script>
 <script src="../sim/defense.js"></script>
@@ -131,6 +132,7 @@
 <script src="../mw/ui/unitdesc.js"></script>
 <script src="../mw/modes/defense.js"></script>
 <script src="../mw/modes/defense-tut.js"></script>
+<script src="../mw/modes/defense-race.js"></script>
 <script>
   // 게임 시작. window.__defense 로 콘솔에서 상태를 들여다볼 수 있다 (예: __defense.mana = 200)
   window.__defense = new MWE.DefenseGame(document.getElementById('stage'), window.MW, { base: '../sim/' });

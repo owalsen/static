@@ -1113,8 +1113,8 @@
     if (!this.ground && this.assets.ready()) {               // 그림이 다 왔다: 바닥을 만들고 시작 화면으로 (바닥이 없으면 어느 화면에서든 먼저 만든다)
       this.terrain = new MWE.TerrainRenderer(this.map, this.assets.get('tiles'));
       this._makeGround();
-      if (this.screen === 'loading') { this.screen = 'title'; if (/[?&]demo=ambush/.test(root.location.search)) this._demoAmbush(); }
     }
+    if (this.screen === 'loading' && this.ground && !this._pendStart && this._loadHoldDone()) { this.screen = 'title'; if (/[?&]demo=ambush/.test(root.location.search)) this._demoAmbush(); }   // 첫 로딩: 70%에서 잠깐 멈춰 배경음을 튼 뒤 시작 화면으로
     if (this._pendStart && this.assets.ready()) { this._pendStart = false; this.reset(); this.screen = 'play'; }   // 적 종족을 고른 뒤 그림을 기다리던 시작
     // 바닥 조각을 0.5초마다 다시 그린다: 큰 이펙트 시트(나누기 전 arms.png 는 2,150만 픽셀)를 펼칠 때 아이폰에서 보조 캔버스가 비워져 전장 바닥만 검게 나오던 문제의 복구 (448×192 한 장이라 비용은 작다)
     else if (this.ground && this.terrain && this.time - this._groundAt > 0.5) this._makeGround();
@@ -2089,7 +2089,7 @@
     var ctx = this.ctx, W = this.W, H = this.H;
     ctx.setTransform(this.rs, 0, 0, this.rs, 0, 0); ctx.imageSmoothingEnabled = !!this.look; if (this.look) ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H);
-    if (this.screen === 'loading') { MWE.drawLoading(ctx, W, H, this.assets, this.sfx); return; }   // 진행률 바 (render/assets.js)
+    if (this.screen === 'loading') { MWE.drawLoadingOrig(ctx, W, H, this.assets, this.sfx, { title: '거울전쟁', sub: 'Mirror War Defense', p: this._loadShowP() }); return; }   // 원본판 로딩 화면 느낌 (render/assets.js)   // 진행률 바 (render/assets.js)
 
     this._drawGround();
     // 전장 층: 여기서부터는 전장 좌표로 그린다 (카메라만큼 왼쪽으로 밀고, 아래 패널 영역은 잘라낸다)
@@ -2766,9 +2766,20 @@
     var bw = Math.min(170, W - 60); this.repBack = { x: Math.round((W - bw) / 2), y: H - 30 - 54, w: bw, h: 40 };
     this._plate(this.repBack.x, this.repBack.y, bw, 40, 7, true); ctx.textAlign = 'center'; ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('돌아가기', W / 2, this.repBack.y + 21); ctx.textAlign = 'left';
   };
+  /* 시작 화면 배경 그림: 어드밴스드 원본 _mshapedf.mwd 의 cre06.img(만든이들 화면의 붉은 악마, 800×600 RGB565)에서 악마가 선 오른쪽을 세로로 잘랐다(x 335~600, y 28~572 → sim/title-bg.jpg 265×544). 오기 전에는 예전처럼 전장 위에 어두운 덮개 */
+  var titleBgImg = null;
+  P._titleBg = function () { if (!titleBgImg) { titleBgImg = new Image(); titleBgImg.src = (this.assets && this.assets.base || '') + 'title-bg.jpg'; } return titleBgImg.complete && titleBgImg.naturalWidth ? titleBgImg : null; };
   P._drawOverlay = function () {
+    if (this._raceShow && this._raceShow()) { this._drawRace(); return; }   // 진영 선택 화면 (defense-race.js, 원본판 시나리오 화면)
     var ctx = this.ctx, W = this.W, H = this.H, sc = this.screen, G = '#9aa3b8', items;
-    ctx.fillStyle = 'rgba(5,7,12,.78)'; ctx.fillRect(0, 0, W, H);
+    var tb = sc === 'title' && CONFIG.PUSH && this.st ? this._titleBg() : null;
+    if (tb) {                                                // 시작 화면(설명·스테이지 고르기) 배경: 전장 대신 원작 그림 (2026-11-17 사용자 요청 — 소설 표지처럼 어두운 하늘 아래 선 인물)
+      var tk = Math.max(W / tb.naturalWidth, H / tb.naturalHeight), tw = tb.naturalWidth * tk, th = tb.naturalHeight * tk;
+      ctx.drawImage(tb, Math.round((W - tw) / 2), Math.round((H - th) / 2), Math.round(tw), Math.round(th));
+      var tg = ctx.createLinearGradient(0, 0, 0, H); tg.addColorStop(0, 'rgba(5,4,6,.12)'); tg.addColorStop(0.3, 'rgba(5,4,6,.48)'); tg.addColorStop(0.72, 'rgba(5,4,6,.6)'); tg.addColorStop(1, 'rgba(5,4,6,.8)');
+      ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H);
+    } else { ctx.fillStyle = 'rgba(5,7,12,.78)'; ctx.fillRect(0, 0, W, H); }
+    if (sc === 'title' && this.bgm.on && this.bgm.blocked) { ctx.save(); ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,233,176,' + (0.55 + 0.35 * Math.sin(Date.now() / 300)) + ')'; ctx.fillText('♪ 화면을 누르면 소리가 켜집니다', W / 2, 22); ctx.restore(); }
     var push = CONFIG.PUSH && this.st;
     if (this.reportOpen && push && (sc === 'win' || sc === 'lose')) { this._drawReport(); return; }
     var FAN = [['이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', 10, '#7b8397', 22], ['원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', 10, '#7b8397', 4]];   // 팬 게임 고지 (사용자 2026-11-12 확정 문구)
@@ -2853,7 +2864,8 @@
     if (this.screen === 'play' && this.modal) { if (this.modalT > 0.25) this.modal = null; return; }   // 상성 모달: 아무 곳이나 누르면 닫히고 게임이 이어진다
     if (this.screen === 'play' && !this.cards && inBox(this.affBtn, x, y)) { this.modal = 'aff'; this.modalT = 0; this.aim = null; this.info = null; this.sinfo = null; return; }
     if (this.screen === 'title') {   // 적 종족 버튼을 눌러 시작 (스페이스·엔터는 지금 고른 종족으로)
-      if (CONFIG.PUSH && this.st && !this.titleSeen) { this.titleSeen = true; return; }   // 첫 장(공지): 아무 곳이나 누르면 스테이지 고르기로
+      if (CONFIG.PUSH && this.st && !this.titleSeen) { this.titleSeen = true; return; }   // 첫 장(공지): 아무 곳이나 누르면 진영 선택 → 스테이지 고르기로
+      if (this._raceShow && this._raceShow()) { this._raceTap(x, y); return; }   // 진영 선택 화면 (defense-race.js)
       if (CONFIG.PUSH && this.st) { if (x < 0) { this.pickStage(this.stageI); return; }
         for (i = 0; i < (this.stageBtns || []).length; i++) if (inBox(this.stageBtns[i], x, y)) { this.pickStage(this.stageBtns[i].i); break; }
         return; }
@@ -3012,7 +3024,7 @@
     if (hit === 'sound') { this.toggleSound(); return; }
     this.modal = null;
     if (hit === 'retry') { if (CONFIG.PUSH && this.st) this.pickStage(this.stageI); else this.pickEnemy(this.enemy); }
-    else if (hit === 'title') { this.reset(); this.screen = 'title'; }
+    else if (hit === 'title') { this.reset(); this.screen = 'title'; this.titleSeen = false; this.raceOk = false; if (this.raceS) this.raceS = null; }   // 처음 화면 = 첫 장(공지)부터 → 진영 선택 → 스테이지 (2026-11-17 사용자 요청)
   };
   P._drawAff = function () {
     var ctx = this.ctx, W = this.W, H = this.H, figs = this.assets.get('figs'), self = this, x0 = 8, w = W - 16, y0 = 44, foot = 78, h = H - y0 - 12, rh = Math.floor((h - 40 - foot) / 2), nw = Math.floor((w - 24 - 40) / 2), nh = Math.floor((rh - 44) / 2), r, k, AF = AFF[this.enemy] || AFF.evil, AFF_RINGS = AF.rings;
@@ -3081,6 +3093,15 @@
     this.mana = 300; this.cam.x = Math.max(0, EF.x - 190 - this.W * 0.5); this.manualUntil = this.time + 6;
   };
   P.toggleLook = function () { this.look = !this.look; try { root.localStorage.setItem('mwdef.hd', this.look ? '1' : '0'); } catch (err) {} this._resize(); };
+  /* 첫 로딩의 배경음 (2026-11-17 사용자 요청): 진행률이 70%에 닿으면 막대를 1.2초 멈추고 그때 배경음·효과음을 켠다(LOAD_HOLD).
+     브라우저가 자동 재생을 막으면(사용자가 아직 페이지를 누르지 않음) 첫 누르기·키에서 이어서 튼다(bgm.resume). 전에는 소리가 꺼진 채로 시작했다(2026-11-12) */
+  var LOAD_HOLD = { at: 0.7, ms: 1200 };
+  P._loadHoldDone = function () {
+    if (!this._bgmTry && this.assets.progress() >= LOAD_HOLD.at) { this._bgmTry = true; this._holdUntil = Date.now() + LOAD_HOLD.ms; this._autoSound(); }
+    return !!this._bgmTry && Date.now() >= this._holdUntil;
+  };
+  P._loadShowP = function () { var p = this.assets.progress(); this._loadHoldDone(); return !this._bgmTry || Date.now() < this._holdUntil ? Math.min(p, LOAD_HOLD.at) : p; };
+  P._autoSound = function () { if (/[?&]mute=1/.test(root.location.search)) return; this.soundOn = true; this.sfx.on = true; if (!this.bgm.on) { this.bgm.set(0); this.bgm.toggle(); } };   // ?mute=1 이면 켜지 않는다 (측정 봇·시험용)
   P.toggleSound = function () { this.soundOn = !this.soundOn; this.sfx.on = this.soundOn; if (this.bgm.on !== this.soundOn && this.screen !== 'title') this.bgm.toggle(); };
 
   /* 단축키 (PC): 1~7 소환, Q·W·E·R 탭, A·S·D 보이는 스킬 칸, Z·X 스킬 칸 넘기기, ←·→ 카메라, M 소리, 스페이스·엔터 시작/다시 하기 */
@@ -3089,6 +3110,7 @@
     /* 누르기: 버튼이면 바로 실행, 진행 막대면 그곳으로 이동, 전장이면 끌어서 카메라 옮기기 시작 */
     cv.addEventListener('pointerdown', function (e) {
       e.preventDefault(); var p = self._pos(e), x = p[0], y = p[1], m = self.miniBox; if (self.aim) self.aimPt = { x: x, y: y };
+      if (self.bgm.blocked) self.bgm.resume();   // 자동 재생이 막혔던 배경음: 첫 누르기에서 튼다
       if (self.screen === 'play' && self.tut) { self.sfx.unlock(); self._tutPointer(x, y); return; }   // 입문자 가이드: 하이라이트된 곳과 [건너뛰기]만 받는다
       if (self.screen === 'play' && (self.cards || self.modal || inBox(self.affBtn, x, y) || inBox(self.menuBtn, x, y))) { self.sfx.unlock(); self._tap(x, y); return; }   // 카드를 고르는 중, 상성 모달, [상성] 버튼
       if (self.screen === 'play' && x >= m.x - 6 && x <= m.x + m.w + 6 && y >= m.y - 6 && y <= m.y + m.h + 6) { self.drag = { mini: true, id: e.pointerId }; self._miniPan(x); return; }
@@ -3100,7 +3122,7 @@
       self._tap(x, y);
     });
     cv.addEventListener('pointermove', function (e) {
-      var p = self._pos(e); if (self.aim) self.aimPt = { x: p[0], y: p[1] };   // 조준 중: 가리키는 곳에 반경 원 (마우스는 움직이기만 해도, 터치는 누르고 있는 동안)
+      var p = self._pos(e); if (self.aim) self.aimPt = { x: p[0], y: p[1] }; if (self._raceHover) self._raceHover(p[0], p[1]);   // 진영 선택: 포인터를 대면 칼이 떨어진다   // 조준 중: 가리키는 곳에 반경 원 (마우스는 움직이기만 해도, 터치는 누르고 있는 동안)
       var d = self.drag; if (!d || d.id !== e.pointerId) return;
       if (d.mini) self._miniPan(p[0]);
       else if (d.slots) { var dx = p[0] - d.x; if (Math.abs(dx) > 8) d.moved = true; if (d.moved) { self.slotFirst = d.first; self.scrollSlots(-Math.round(dx / self.slotStep)); } }
@@ -3116,6 +3138,7 @@
     root.addEventListener('beforeunload', function (e) { if (self.screen === 'play' && !root.__noLeaveGuard) { e.preventDefault(); e.returnValue = ''; return ''; } });
     root.addEventListener('resize', function () { self._resize(); });
     root.addEventListener('keydown', function (e) {
+      if (self.bgm.blocked) self.bgm.resume();
       if (self.screen === 'play' && self.tut) { if (e.code === 'KeyM' && !e.repeat) { self.sfx.unlock(); self.toggleSound(); } return; }   // 입문자 가이드 중에는 단축키를 막는다 (소리 M 키만 받는다)
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); if (self.screen === 'play') self.panTo(self.cam.x + (e.key === 'ArrowLeft' ? -90 : 90)); return; }
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;

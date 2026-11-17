@@ -35,6 +35,40 @@
   /* 로딩 화면 한 장: 그림 진행률(바이트) + 효과음 진행률. 두 게임이 같이 쓴다.
      ctx 캔버스, W×H 화면 크기, assets, sfx(없어도 됨), failed 문구 */
   var MB = function (b) { return (b / 1048576).toFixed(1); };
+  /* 원본판(거울전쟁: 악령군, 2000) 로딩 화면의 느낌 (2026-11-17 사용자 요청, README 208): mshapedf.mwd 의 loading.mwi(640×480 RGB565)에서
+     여자의 눈 띠와 위아래 금장 테두리만 잘라 sim/loading-eyes.jpg(560×188)로 굽고, 위 판(원본은 "거울전쟁 Evil Force" 로고·저작권 — 빼고 이 게임 제목을 원본 로고처럼 푸른 빛으로),
+     아래 판("NOW LOADING" + 금테 막대)은 그 구성을 따라 그린다. 그림은 진행 막대보다 먼저 와야 해서 에셋 목록 밖에서 따로 받는다(34KB). opts = { title, sub } */
+  var eyesImg = null;
+  MWE.drawLoadingOrig = function (ctx, W, H, assets, sfx, opts) {
+    var o = opts || {}, p = o.p != null ? o.p : assets.progress(), T = Date.now() / 1000;   // o.p = 보여 줄 진행률 (디펜스는 70%에서 잠깐 멈춘다)
+    if (!eyesImg) { eyesImg = new Image(); eyesImg.src = (assets.base || '') + 'loading-eyes.jpg'; }
+    var panel = function (y0, y1) {                          // 짙은 붉은 돌판 + 회청색 테 (원본의 위·아래 판)
+      var g = ctx.createRadialGradient(W / 2, (y0 + y1) / 2, 10, W / 2, (y0 + y1) / 2, Math.max(W, y1 - y0) * 0.75);
+      g.addColorStop(0, '#3a1616'); g.addColorStop(0.55, '#220c0d'); g.addColorStop(1, '#0d0607'); ctx.fillStyle = g; ctx.fillRect(10, y0, W - 20, y1 - y0);
+      ctx.strokeStyle = '#59646c'; ctx.lineWidth = 3; ctx.strokeRect(8.5, y0 - 1.5, W - 17, y1 - y0 + 3); ctx.strokeStyle = '#1c2226'; ctx.lineWidth = 1; ctx.strokeRect(11.5, y0 + 1.5, W - 23, y1 - y0 - 3); };
+    ctx.fillStyle = '#20272c'; ctx.fillRect(0, 0, W, H);   // 바깥 회청색 틀
+    var bw = W, bh = Math.round(W * 188 / 560), by = Math.round(H * 0.45 - bh / 2), ok = eyesImg.complete && eyesImg.naturalWidth > 0;
+    panel(10, by + 8); panel(by + bh - 8, H - 10);
+    if (ok) ctx.drawImage(eyesImg, 0, by, bw, bh);
+    else { ctx.fillStyle = '#121519'; ctx.fillRect(0, by, bw, bh); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    // 위 판: 제목 (원본 로고의 푸른 붓글씨 느낌 — 푸른 빛 번짐)
+    var ty = Math.round((10 + by) / 2) - 10;
+    ctx.save(); ctx.font = 'bold 44px "Nanum Myeongjo","AppleMyungjo","Batang",serif'; ctx.shadowColor = '#2e6bff'; ctx.shadowBlur = 22 + 6 * Math.sin(T * 2);
+    ctx.fillStyle = '#9cc0ff'; ctx.fillText(o.title || '거울전쟁', W / 2, ty, W - 40); ctx.shadowBlur = 6; ctx.fillStyle = '#e8f0ff'; ctx.fillText(o.title || '거울전쟁', W / 2, ty, W - 40); ctx.restore();
+    ctx.font = 'italic bold 14px Georgia,"Times New Roman",serif'; ctx.fillStyle = '#7fa6f0'; ctx.fillText(o.sub || '', W / 2, ty + 36, W - 40);
+    // 아래 판: NOW LOADING + 금테 막대
+    var ly = by + bh + Math.min(70, Math.round((H - by - bh) * 0.3)), mw = Math.min(300, W - 70), mx = Math.round((W - mw) / 2);
+    ctx.font = 'bold 18px Georgia,"Times New Roman",serif'; ctx.fillStyle = '#000'; ctx.fillText('N O W   L O A D I N G', W / 2 + 1, ly + 1); ctx.fillStyle = '#a8a08a'; ctx.fillText('N O W   L O A D I N G', W / 2, ly);
+    if (assets.failed) { ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#e8b4a4'; ctx.fillText('그림을 불러오지 못했습니다: ' + assets.failed, W / 2, ly + 34, W - 30); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; return; }
+    var my = ly + 18; ctx.fillStyle = '#0b0705'; ctx.fillRect(mx, my, mw, 12);
+    var fg = ctx.createLinearGradient(0, my, 0, my + 12); fg.addColorStop(0, '#f1cf72'); fg.addColorStop(1, '#a8761f'); ctx.fillStyle = fg; ctx.fillRect(mx + 2, my + 2, Math.round((mw - 4) * p), 8);
+    ctx.strokeStyle = '#c99a2e'; ctx.lineWidth = 2; ctx.strokeRect(mx - 1, my - 1, mw + 2, 14);
+    ctx.font = '12px "IBM Plex Sans KR",sans-serif'; ctx.fillStyle = '#9b8f78';
+    ctx.fillText(Math.floor(p * 100) + '%  ·  ' + (assets.total ? MB(Math.min(assets.bytes, assets.total)) + ' / ' + MB(assets.total) + ' MB' : '파일 ' + assets.got + ' / ' + assets.need), W / 2, my + 32, W - 30);
+    if (sfx && sfx.total) { var q = sfx.progress(); ctx.fillStyle = '#6f6656'; ctx.font = '11px "IBM Plex Sans KR",sans-serif'; ctx.fillText('효과음 ' + (q >= 1 ? '준비됨' : MB(sfx.bytes) + ' / ' + MB(sfx.total) + ' MB (뒤에서 계속 받음)'), W / 2, my + 52, W - 30); }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  };
   MWE.drawLoading = function (ctx, W, H, assets, sfx) {
     var p = assets.progress(), y = Math.round(H * 0.46), bw = Math.min(420, W - 48), bx = Math.round((W - bw) / 2);
     ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H);

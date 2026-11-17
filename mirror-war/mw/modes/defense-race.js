@@ -1,0 +1,95 @@
+/* 거울전쟁 디펜스 — 진영 선택 화면 (2026-11-17 사용자 요청, README 209)
+   원본판(거울전쟁: 악령군, 2000)의 시나리오 진영 선택 화면을 옮겼다: 탁자 위에 펼친 지도와 원 셋(악령군·흑마술파·해방부대),
+   포인터를 원에 대면 칼이 떨어져 동전에 꽂히고 빛이 흐른다. 그림은 tools/racebuild.py 가 원본 title.mwi·knife.mws 에서 굽는다
+   (sim/race-bg.jpg = 배경 640×480 의 x 40~600, y 105~440 / sim/race-knife.png = 해방부대 칼 12장·이름표 12장·취소 6장).
+   지금은 해방부대만 고를 수 있다 — 흑마술파·악령군은 어둡게 두고 누르면 "개발 예정"을 띄운다.
+   흐름: 첫 장(공지) → 진영 선택(여기) → 스테이지 고르기. [취소]는 공지로 돌아간다. 스페이스·엔터 = 해방부대.
+   defense.js 쪽 연결: _drawOverlay 맨 앞(_raceShow → _drawRace), _tap 의 시작 화면 갈래(_raceTap), pointermove(_raceHover) */
+(function (root) {
+  'use strict';
+  var MWE = root.MWE, DG = MWE.DefenseGame, P = DG.prototype, CONFIG = DG.CONFIG;
+  var CROP = { x: 40, y: 105, w: 560, h: 318 };              // race-bg.jpg 가 원본 배경에서 잘린 자리 (그림은 335 줄 — 아래 17 줄은 원본 저작권 줄이 걸려 그리지 않는다)
+  var VIEW = { x: 92, w: 490 };                              // 화면 폭에 맞추는 가로 범위 (세 원과 [취소]까지 — 세로 화면에서 지도를 조금이라도 크게)
+  /* 원본 배경(640×480) 좌표. 이름표·취소는 배경 글자와 픽셀 대조로, 칼은 동전 가운데를 지도 원에 맞춰 구했다 (tools/racebuild.py 머리말) */
+  var RACES = [
+    { key: 'lib', name: '해방부대', on: true, c: [438, 243], knife: [394, -2], label: [383, 275, 95, 27] },
+    { key: 'black', name: '흑마술파', on: false, c: [287, 181], label: [252, 219, 80, 28] },
+    { key: 'evil', name: '악령군', on: false, c: [157, 259], label: [120, 290, 80, 28] }
+  ];
+  var CANCEL = [479, 277, 95, 79], RX = 56, RY = 45, FPS = 12, FALL = 0.16, GO = 0.75;
+  var imgs = null;
+  function inBox(b, x, y) { return x >= b[0] && x <= b[0] + b[2] && y >= b[1] && y <= b[1] + b[3]; }
+
+  P._raceShow = function () { return !!(CONFIG.PUSH && this.st && this.screen === 'title' && this.titleSeen && !this.raceOk); };
+  P._raceImgs = function () {
+    if (!imgs) { var b = (this.assets && this.assets.base) || ''; imgs = { bg: new Image(), sh: new Image() }; imgs.bg.src = b + 'race-bg.jpg'; imgs.sh.src = b + 'race-knife.png'; }
+    return imgs;
+  };
+  /* 화면 배치: 배경을 화면 폭에 맞추고, 칼이 위로 솟을 자리(원본 y −2 까지)를 남겨 세로 30% 쯤에 */
+  P._raceLay = function () { var s = this.W / VIEW.w, ih = Math.round(CROP.h * s), top = Math.max(Math.round(110 * s) + 70, Math.round(this.H * 0.44 - ih / 2)); return { s: s, x0: 0, y0: top, ih: ih }; };
+  P._raceToBg = function (x, y) { var L = this._raceLay(); return [x / L.s + VIEW.x, (y - L.y0) / L.s + CROP.y]; };
+  P._raceAt = function (x, y) {
+    var b = this._raceToBg(x, y), i;
+    if (inBox(CANCEL, b[0], b[1])) return 'cancel';
+    for (i = 0; i < RACES.length; i++) { var R = RACES[i], dx = (b[0] - R.c[0]) / RX, dy = (b[1] - R.c[1]) / RY; if (dx * dx + dy * dy <= 1 || inBox(R.label, b[0], b[1])) return R.key; }
+    return null;
+  };
+  P._raceHover = function (x, y) {
+    if (!this._raceShow()) return; var S = this.raceS || (this.raceS = {}); if (S.go) return;
+    var k = this._raceAt(x, y), R = RACES.filter(function (r) { return r.key === k; })[0];
+    var h = R && R.on ? k : k === 'cancel' ? 'cancel' : null;
+    if (h !== S.hover) { S.hover = h; S.t0 = Date.now(); }
+    if (this.cv) this.cv.style.cursor = k ? 'pointer' : '';
+  };
+  P._raceTap = function (x, y) {
+    var S = this.raceS || (this.raceS = {}), now = Date.now(); if (S.go) return;
+    var k = x < 0 ? 'lib' : this._raceAt(x, y);              // 스페이스·엔터 = 해방부대
+    if (k === 'cancel') { this.titleSeen = false; S.hover = null; if (this.cv) this.cv.style.cursor = ''; return; }
+    var R = RACES.filter(function (r) { return r.key === k; })[0]; if (!R) return;
+    if (!R.on) { S.msg = { txt: R.name + ' — 개발 예정입니다', t0: now, r: R }; return; }
+    if (S.hover !== k) { S.hover = k; S.t0 = now; }          // 터치: 누르면 칼이 떨어지고, 꽂힌 뒤 넘어간다
+    S.go = Math.max(now, S.t0 + FALL * 1000) + GO * 1000;
+  };
+  /* 매 프레임 (_drawOverlay 대신) */
+  P._drawRace = function () {
+    var ctx = this.ctx, W = this.W, H = this.H, I = this._raceImgs(), L = this._raceLay(), s = L.s, S = this.raceS || (this.raceS = {}), now = Date.now(), self = this;
+    if (S.go && now >= S.go) { S.go = 0; S.hover = null; this.raceOk = true; if (this.cv) this.cv.style.cursor = ''; return; }   // 다음 화면(스테이지 고르기)으로
+    var BX = function (bx) { return (bx - VIEW.x) * s; }, BY = function (by) { return L.y0 + (by - CROP.y) * s; };
+    // 탁자(짙은 나무) 바탕 — 배경 그림 가장자리의 어두운 나무색과 이어지게
+    var g = ctx.createRadialGradient(W / 2, L.y0 + L.ih / 2, 20, W / 2, L.y0 + L.ih / 2, H * 0.75); g.addColorStop(0, '#3a1d0c'); g.addColorStop(0.5, '#1d0d05'); g.addColorStop(1, '#070302');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if (I.bg.complete && I.bg.naturalWidth) {
+      ctx.drawImage(I.bg, VIEW.x - CROP.x, 0, VIEW.w, CROP.h, 0, L.y0, W, L.ih);
+      var fe = 26, ft = ctx.createLinearGradient(0, L.y0, 0, L.y0 + fe), fb = ctx.createLinearGradient(0, L.y0 + L.ih - fe, 0, L.y0 + L.ih);   // 위아래 가장자리를 바탕에 풀어 준다
+      ft.addColorStop(0, 'rgba(18,8,3,1)'); ft.addColorStop(1, 'rgba(18,8,3,0)'); fb.addColorStop(0, 'rgba(10,5,2,0)'); fb.addColorStop(1, 'rgba(10,5,2,1)');
+      ctx.fillStyle = ft; ctx.fillRect(0, L.y0, W, fe); ctx.fillStyle = fb; ctx.fillRect(0, L.y0 + L.ih - fe, W, fe);
+    }
+    // 아직 못 고르는 진영: 원을 어둡게 + "개발 예정"
+    RACES.forEach(function (R) { if (R.on) return; ctx.save(); ctx.fillStyle = 'rgba(8,4,2,.5)'; ctx.beginPath(); ctx.ellipse(BX(R.c[0]), BY(R.c[1]), RX * s, RY * s, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(0,0,0,.6)'; var tw = ctx.measureText('개발 예정').width + 10, ty = BY(R.c[1]);
+      ctx.fillRect(BX(R.c[0]) - tw / 2, ty - 8, tw, 16); ctx.fillStyle = '#c9b48a'; ctx.fillText('개발 예정', BX(R.c[0]), ty + 1); ctx.restore(); });
+    // 해방부대: 포인터를 대면 칼이 떨어져 꽂히고 빛이 흐른다 (원본 knife.mws 34~45, 이름표 46~57)
+    var sh = I.sh.complete && I.sh.naturalWidth ? I.sh : null;
+    if (sh && S.hover && S.hover !== 'cancel') { var R = RACES[0], el = (now - S.t0) / 1000, kx = BX(R.knife[0]), ky = BY(R.knife[1]);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, BY(14), W, H); ctx.clip();   // 프레임 맨 위 몇 줄의 점은 원본에서 화면 위끝 밖이라 안 보이던 것 — 잘라 낸다
+      if (el < FALL) { var f = el / FALL; ctx.save(); ctx.globalAlpha = 0.35 + 0.65 * f; ctx.drawImage(sh, 0, 0, 220, 320, kx, ky - (1 - f) * 110 * s, 220 * s, 320 * s); ctx.restore(); }
+      else { var fi = 1 + Math.floor((el - FALL) * FPS) % 11; ctx.drawImage(sh, fi * 220, 0, 220, 320, kx, ky, 220 * s, 320 * s);
+        if (el - FALL < 0.12) { ctx.save(); ctx.globalAlpha = 0.5 * (1 - (el - FALL) / 0.12); ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.ellipse(BX(R.c[0]), BY(R.c[1]), RX * s * 1.1, RY * s * 1.1, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }   // 꽂히는 순간 번쩍
+      ctx.restore(); var li = Math.floor(el * FPS) % 12; ctx.drawImage(sh, li * 100, 320, 100, 32, BX(R.label[0]), BY(R.label[1]), 100 * s, 32 * s); }
+    if (sh && S.hover === 'cancel') { var ci = Math.floor((now - S.t0) / 1000 * FPS) % 6; ctx.drawImage(sh, 1200 + ci * 96, 320, 96, 80, BX(CANCEL[0]), BY(CANCEL[1]), 96 * s, 80 * s); }
+    // 글자: 제목 · 안내 · 팬 게임 고지
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var hy = Math.max(30, Math.round(L.y0 - 110 * s - 40));
+    ctx.font = 'bold 26px sans-serif'; ctx.fillStyle = '#000'; ctx.fillText('진영을 고르세요', W / 2 + 1, hy + 1); ctx.fillStyle = '#ffd36e'; ctx.fillText('진영을 고르세요', W / 2, hy);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.fillText('지금은 해방부대로 플레이할 수 있습니다', W / 2, hy + 26, W - 20);
+    var by = Math.min(H - 40, L.y0 + L.ih + 34);
+    ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(S.go ? '해방부대 — 출정!' : '지도의 해방부대를 누르세요', W / 2, by, W - 20);
+    ctx.font = '10px sans-serif'; ctx.fillStyle = '#7b8397';
+    ctx.fillText('이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', W / 2, H - 30, W - 16);
+    ctx.fillText('원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', W / 2, H - 16, W - 16);
+    if (S.msg && now - S.msg.t0 < 1600) { var m = S.msg, a = Math.min(1, (1600 - (now - m.t0)) / 300), mx = BX(m.r.label[0] + m.r.label[2] / 2), my = BY(m.r.label[1]) + 40 * s;
+      ctx.globalAlpha = a; ctx.font = 'bold 12px sans-serif'; var mw = ctx.measureText(m.txt).width + 18; mx = Math.max(mw / 2 + 6, Math.min(W - mw / 2 - 6, mx));
+      ctx.fillStyle = 'rgba(14,10,6,.92)'; ctx.fillRect(mx - mw / 2, my - 12, mw, 24); ctx.strokeStyle = '#b08a3c'; ctx.lineWidth = 1; ctx.strokeRect(mx - mw / 2 + 0.5, my - 11.5, mw - 1, 23); ctx.fillStyle = '#ffe9b0'; ctx.fillText(m.txt, mx, my + 1); }
+    ctx.restore();
+  };
+})(window);

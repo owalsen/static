@@ -191,7 +191,8 @@
     this.el.loop = list.length < 2;                          // 한 곡뿐이면 되풀이, 여러 곡이면 'ended'에서 다음 곡
     var src = this.base + list[this.track % list.length];
     if (this.el.getAttribute('data-src') !== src) { this.el.src = src; this.el.setAttribute('data-src', src); }
-    var p = this.el.play(); if (p && p.catch) p.catch(function () {});
+    var p = this.el.play(); if (p && p.then) p.then(function () { self.blocked = false; }, function () { self.blocked = true; });   // blocked = 브라우저가 자동 재생을 막음 (사용자가 아직 누르지 않음) → resume()
   };
+  Bgm.prototype.resume = function () { if (this.on && this.el && this.el.paused) this._play(); };   // 첫 누르기에서 다시 시도
   MWE.Bgm = Bgm;
 })(window);
