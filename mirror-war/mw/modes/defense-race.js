@@ -20,6 +20,11 @@
   var imgs = null;
   function inBox(b, x, y) { return x >= b[0] && x <= b[0] + b[2] && y >= b[1] && y <= b[1] + b[3]; }
 
+  /* 메뉴 소리: 원본판 msdf.mwd 의 RIFF 448개 중 메뉴가 읽는 444~447(FUN_00401140 의 FUN_0051a420(0x1bc~0x1bf)) — 어느 것이 무엇인지는 실행 파일로 확인하지 못해
+     소리 모양으로 골랐다: 447 = 즉각적인 낮은 "쿵" + 1초 울림 → 칼이 꽂히는 소리(sim/menu-knife.wav), 444 = 0.2초 짧은 소리 → 출정 버튼(sim/menu-click.wav). 소리가 꺼져 있으면 안 낸다 */
+  var SND = {};
+  P._raceSnd = function (k) { if (!this.soundOn) return; var a = SND[k]; if (!a) { a = SND[k] = new Audio(((this.assets && this.assets.base) || '') + 'menu-' + k + '.wav'); a.volume = k === 'knife' ? 0.85 : 0.6; }
+    try { a.currentTime = 0; var p = a.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} };
   P._raceShow = function () { return !!(CONFIG.PUSH && this.st && this.screen === 'title' && this.titleSeen && !this.raceOk); };
   P._raceImgs = function () {
     if (!imgs) { var b = (this.assets && this.assets.base) || ''; imgs = { bg: new Image(), sh: new Image() }; imgs.bg.src = b + 'race-bg.jpg'; imgs.sh.src = b + 'race-knife.png'; }
@@ -38,7 +43,7 @@
     if (!this._raceShow()) return; var S = this.raceS || (this.raceS = {}); if (S.go) return;
     var k = this._raceAt(x, y), R = RACES.filter(function (r) { return r.key === k; })[0];
     var h = R && R.on ? k : k === 'cancel' ? 'cancel' : null;
-    if (h !== S.hover) { S.hover = h; S.t0 = Date.now(); }
+    if (h !== S.hover) { S.hover = h; S.t0 = Date.now(); S.landed = false; }
     if (this.cv) this.cv.style.cursor = k ? 'pointer' : '';
   };
   P._raceTap = function (x, y) {
@@ -47,8 +52,11 @@
     if (k === 'cancel') { this.titleSeen = false; S.hover = null; if (this.cv) this.cv.style.cursor = ''; return; }
     var R = RACES.filter(function (r) { return r.key === k; })[0]; if (!R) return;
     if (!R.on) { S.msg = { txt: R.name + ' — 개발 예정입니다', t0: now, r: R }; return; }
-    if (S.hover !== k) { S.hover = k; S.t0 = now; }          // 터치: 누르면 칼이 떨어지고, 꽂힌 뒤 넘어간다
-    S.go = Math.max(now, S.t0 + FALL * 1000) + GO * 1000;
+    if (x < 0) { if (S.hover !== k) { S.hover = k; S.t0 = now; S.landed = false; } S.go = Math.max(now, S.t0 + FALL * 1000) + GO * 1000; this._raceSnd('click'); return; }   // 키보드: 떨어뜨리고 바로 출정
+    // 터치 (2026-11-17 사용자 요청): 첫 누르기 = 칼이 떨어져 꽂힘(활성화), 꽂힌 뒤 한 번 더 누르면 출정. PC 는 포인터를 대면 이미 꽂혀 있으니 클릭 한 번에 출정
+    if (S.hover !== k) { S.hover = k; S.t0 = now; S.landed = false; return; }
+    if (now - S.t0 < FALL * 1000) return;                    // 떨어지는 중에 누른 것은 무시
+    S.go = now + 350; this._raceSnd('click');
   };
   /* 매 프레임 (_drawOverlay 대신) */
   P._drawRace = function () {
@@ -70,6 +78,7 @@
       ctx.fillRect(BX(R.c[0]) - tw / 2, ty - 8, tw, 16); ctx.fillStyle = '#c9b48a'; ctx.fillText('개발 예정', BX(R.c[0]), ty + 1); ctx.restore(); });
     // 해방부대: 포인터를 대면 칼이 떨어져 꽂히고 빛이 흐른다 (원본 knife.mws 34~45, 이름표 46~57)
     var sh = I.sh.complete && I.sh.naturalWidth ? I.sh : null;
+    if (S.hover && S.hover !== 'cancel' && !S.landed && now - S.t0 >= FALL * 1000) { S.landed = true; this._raceSnd('knife'); }   // 칼이 꽂히는 순간 "쿵"
     if (sh && S.hover && S.hover !== 'cancel') { var R = RACES[0], el = (now - S.t0) / 1000, kx = BX(R.knife[0]), ky = BY(R.knife[1]);
       ctx.save(); ctx.beginPath(); ctx.rect(0, BY(14), W, H); ctx.clip();   // 프레임 맨 위 몇 줄의 점은 원본에서 화면 위끝 밖이라 안 보이던 것 — 잘라 낸다
       if (el < FALL) { var f = el / FALL; ctx.save(); ctx.globalAlpha = 0.35 + 0.65 * f; ctx.drawImage(sh, 0, 0, 220, 320, kx, ky - (1 - f) * 110 * s, 220 * s, 320 * s); ctx.restore(); }
@@ -83,7 +92,7 @@
     ctx.font = 'bold 26px sans-serif'; ctx.fillStyle = '#000'; ctx.fillText('진영을 고르세요', W / 2 + 1, hy + 1); ctx.fillStyle = '#ffd36e'; ctx.fillText('진영을 고르세요', W / 2, hy);
     ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.fillText('지금은 해방부대로 플레이할 수 있습니다', W / 2, hy + 26, W - 20);
     var by = Math.min(H - 40, L.y0 + L.ih + 34);
-    ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(S.go ? '해방부대 — 출정!' : '지도의 해방부대를 누르세요', W / 2, by, W - 20);
+    ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(S.go ? '해방부대 — 출정!' : S.hover === 'lib' ? '한 번 더 누르면 해방부대로 출정합니다' : '지도의 해방부대를 누르세요', W / 2, by, W - 20);
     ctx.font = '10px sans-serif'; ctx.fillStyle = '#7b8397';
     ctx.fillText('이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', W / 2, H - 30, W - 16);
     ctx.fillText('원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', W / 2, H - 16, W - 16);
