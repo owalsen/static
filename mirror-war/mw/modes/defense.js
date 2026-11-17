@@ -443,7 +443,8 @@
     // 위쪽 표시 (y = SAFE.top)
     var ty = SAFE.top; this.narrow = true;
     this.topBox = { x: 8, y: ty, w: 168 };
-    this.soundBtn = { x: W - 44, y: ty, w: 36, h: 26 };
+    this.menuBtn = { x: W - 44, y: ty, w: 36, h: 26 };         // [설정] 버튼 (2026-11-17 사용자 요청): 소리·다시하기·처음으로 메뉴. 전에 소리 버튼이 있던 자리
+    this.soundBtn = { x: -99, y: -99, w: 0, h: 0 };            // 소리 켜고 끄기는 설정 메뉴 안으로 옮겼다 (메뉴를 그릴 때 위치를 잡는다)
     this.lookBtn = { x: W - 124, y: ty, w: 36, h: 26 };        // [레거시] 버튼: 원본 도트 그대로 그리기(레거시) ↔ 매끄러운 그리기 (2026-11-14 사용자 요청, L 키와 같다)
     this.affBtn = { x: W - 84, y: ty, w: 36, h: 26 };          // [상성] 버튼: 유닛 상성 모달 (소리 버튼 왼쪽)
     var wx = this.topBox.x + this.topBox.w + 6; this.waveBox = { x: wx, y: ty, w: W - 124 - 4 - wx, h: 26 }; this.miniBox = { x: wx + 4, y: ty + 32, w: W - 12 - (wx + 4), h: 14 };   // 진행 막대: 전장 전체를 한 줄로
@@ -2102,6 +2103,7 @@
     if (this.screen === 'play' && !this.cards && !this.modal) { this._drawInfo(); this._drawSkillInfo(); }   // 소환 버튼·스킬 칸을 길게 누르는 동안의 설명 카드
     if (this.screen !== 'play') this._drawOverlay();
     else if (this.cards) this._drawCards();
+    if (this.screen === 'play' && this.modal === 'menu') this._drawMenu();   // 설정 메뉴 (게임은 멈춰 있다)
     if (this.screen === 'play' && this.modal === 'aff') this._drawAff();   // 유닛 상성 모달 (게임은 멈춰 있다)
   };
 
@@ -2597,8 +2599,8 @@
     else { ctx.fillStyle = '#ffd36e'; ctx.fillText(this._fit(this.narrow ? '웨이브 ' + wv + '/' + C.WAVES.length + ' · 적 ' + left : '웨이브 ' + wv + ' / ' + C.WAVES.length + '   남은 적 ' + left, wb.w - 6), wb.x + wb.w / 2, wb.y + wb.h / 2); }
     this._drawMini();
     // 소리
-    var sb = this.soundBtn; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(sb.x, sb.y, sb.w, sb.h);
-    ctx.fillStyle = this.soundOn ? '#dfe6f5' : '#6f7687'; ctx.fillText(this.soundOn ? '소리' : '무음', sb.x + sb.w / 2, sb.y + sb.h / 2);
+    var sb = this.menuBtn; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = this.modal === 'menu' ? 'rgba(122,74,18,.9)' : 'rgba(0,0,0,.5)'; ctx.fillRect(sb.x, sb.y, sb.w, sb.h);
+    ctx.fillStyle = '#dfe6f5'; ctx.fillText('설정', sb.x + sb.w / 2, sb.y + sb.h / 2);
     var lb = this.lookBtn; ctx.fillStyle = this.look ? 'rgba(122,74,18,.9)' : 'rgba(0,0,0,.5)'; ctx.fillRect(lb.x, lb.y, lb.w, lb.h); ctx.fillStyle = this.look ? '#ffd36e' : '#6f7687'; ctx.fillText('HD', lb.x + lb.w / 2, lb.y + lb.h / 2);   // 켜짐(밝음) = 원본 도트 그대로
     var ab = this.affBtn; ctx.fillStyle = this.modal === 'aff' ? 'rgba(122,74,18,.9)' : 'rgba(0,0,0,.5)'; ctx.fillRect(ab.x, ab.y, ab.w, ab.h); ctx.fillStyle = '#ffd36e'; ctx.fillText('상성', ab.x + ab.w / 2, ab.y + ab.h / 2);   // 유닛 상성 모달 열기
 
@@ -2809,6 +2811,8 @@
   P._tap = function (x, y) {
     var i;
     this.sfx.unlock();                                       // 브라우저는 첫 터치 뒤에만 소리를 허락한다
+    if (this.screen === 'play' && this.modal === 'menu') { this._menuTap(x, y); return; }   // 설정 메뉴
+    if (this.screen === 'play' && !this.cards && this.menuBtn && inBox(this.menuBtn, x, y)) { this.modal = 'menu'; this.modalT = 0; this.aim = null; this.info = null; this.sinfo = null; this.sel = null; return; }
     if (inBox(this.soundBtn, x, y)) { this.toggleSound(); return; }
     if (this.lookBtn && inBox(this.lookBtn, x, y)) { this.toggleLook(); return; }
     if (this.screen === 'play' && this.modal) { if (this.modalT > 0.25) this.modal = null; return; }   // 상성 모달: 아무 곳이나 누르면 닫히고 게임이 이어진다
@@ -2949,6 +2953,30 @@
 
   /* 유닛 상성 모달 (2026-11-13): 오른쪽 위 [상성] 버튼으로 연다. 떠 있는 동안 게임은 멈추고, 아무 곳이나 누르면 닫힌다.
      원본 상성(unitdata 의 강한 상대 목록)은 고리 두 개다 — 화살표 방향으로 강하다. 아군 묶음은 초록, 적 묶음은 빨강. 묶음마다 대표 유닛 그림과 구성원 */
+  /* 설정 메뉴 (2026-11-17 사용자 요청): 오른쪽 위 [설정] 버튼 → 계속하기 · 소리 · 다시하기 · 처음으로. 열려 있는 동안 게임은 멈춘다 */
+  P._menuRows = function () { return [['resume', '계속하기'], ['sound', this.soundOn ? '소리 끄기' : '소리 켜기'], ['retry', '다시하기'], ['title', '처음으로']]; };
+  P._drawMenu = function () {
+    var ctx = this.ctx, W = this.W, H = this.H, rows = this._menuRows(), pw = Math.min(250, W - 40), rh = 44, ph = 52 + rows.length * (rh + 8) + 6, px = Math.round((W - pw) / 2), py = Math.round(Math.max(60, (H - ph) / 2 - 40));
+    ctx.fillStyle = 'rgba(4,6,10,.72)'; ctx.fillRect(0, 0, W, H);
+    this._plate(px, py, pw, ph, 8, false);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('설정', W / 2, py + 26);
+    this.menuBox = { x: px, y: py, w: pw, h: ph }; this.menuRowBoxes = [];
+    for (var i = 0; i < rows.length; i++) {
+      var b = { x: px + 14, y: py + 52 + i * (rh + 8), w: pw - 28, h: rh, act: rows[i][0] }, warn = b.act === 'title' || b.act === 'retry'; this.menuRowBoxes.push(b);
+      ctx.fillStyle = warn ? 'rgba(122,40,34,.55)' : 'rgba(0,0,0,.5)'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeStyle = warn ? '#ff9a8a' : '#c9b27a'; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+      ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = warn ? '#ffc4b8' : '#ffd36e'; ctx.fillText(rows[i][1], b.x + b.w / 2, b.y + b.h / 2);
+    }
+    ctx.textAlign = 'left';
+  };
+  P._menuTap = function (x, y) {
+    if (this.modalT < 0.15) return;
+    var B = this.menuRowBoxes || [], hit = null, i; for (i = 0; i < B.length; i++) if (inBox(B[i], x, y)) { hit = B[i].act; break; }
+    if (!hit) { if (!this.menuBox || !inBox(this.menuBox, x, y)) this.modal = null; return; }   // 판 밖을 누르면 닫는다
+    if (hit === 'sound') { this.toggleSound(); return; }
+    this.modal = null;
+    if (hit === 'retry') { if (CONFIG.PUSH && this.st) this.pickStage(this.stageI); else this.pickEnemy(this.enemy); }
+    else if (hit === 'title') { this.reset(); this.screen = 'title'; }
+  };
   P._drawAff = function () {
     var ctx = this.ctx, W = this.W, H = this.H, figs = this.assets.get('figs'), self = this, x0 = 8, w = W - 16, y0 = 44, foot = 78, h = H - y0 - 12, rh = Math.floor((h - 40 - foot) / 2), nw = Math.floor((w - 24 - 40) / 2), nh = Math.floor((rh - 44) / 2), r, k, AF = AFF[this.enemy] || AFF.evil, AFF_RINGS = AF.rings;
     ctx.fillStyle = 'rgba(4,6,10,.72)'; ctx.fillRect(0, 0, W, H);
@@ -3024,10 +3052,10 @@
     /* 누르기: 버튼이면 바로 실행, 진행 막대면 그곳으로 이동, 전장이면 끌어서 카메라 옮기기 시작 */
     cv.addEventListener('pointerdown', function (e) {
       e.preventDefault(); var p = self._pos(e), x = p[0], y = p[1], m = self.miniBox; if (self.aim) self.aimPt = { x: x, y: y };
-      if (self.screen === 'play' && (self.cards || self.modal || inBox(self.affBtn, x, y))) { self.sfx.unlock(); self._tap(x, y); return; }   // 카드를 고르는 중, 상성 모달, [상성] 버튼
+      if (self.screen === 'play' && (self.cards || self.modal || inBox(self.affBtn, x, y) || inBox(self.menuBtn, x, y))) { self.sfx.unlock(); self._tap(x, y); return; }   // 카드를 고르는 중, 상성 모달, [상성] 버튼
       if (self.screen === 'play' && x >= m.x - 6 && x <= m.x + m.w + 6 && y >= m.y - 6 && y <= m.y + m.h + 6) { self.drag = { mini: true, id: e.pointerId }; self._miniPan(x); return; }
       // 전장: 손을 뗄 때까지 지켜본다 — 6px 넘게 끌면 카메라 이동(그때부터 따라온다), 끌지 않고 떼면 탭(유닛 선택·회수 버튼)
-      if (self.screen === 'play' && y < self.H - self.hudH && !inBox(self.soundBtn, x, y) && !inBox(self.lookBtn, x, y)) { self.sfx.unlock(); self.drag = { field: true, x: x, y: y, cam: self.cam.x, moved: false, id: e.pointerId }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} return; }
+      if (self.screen === 'play' && y < self.H - self.hudH && !inBox(self.menuBtn, x, y) && !inBox(self.lookBtn, x, y)) { self.sfx.unlock(); self.drag = { field: true, x: x, y: y, cam: self.cam.x, moved: false, id: e.pointerId }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} return; }
       // 스킬 칸·소환 줄 위: 바로 누르지 않고, 손을 뗄 때까지 지켜본다 — 그대로 떼면 "누르기", 옆으로 끌면 "캐러셀 넘기기" (HUD 안이라 카메라 이동과 겹치지 않는다)
       if (self.screen === 'play' && inBox(self.slotArea, x, y)) { self.sfx.unlock(); self.drag = { slots: true, x: x, y: y, first: self.slotFirst, moved: false, id: e.pointerId, t0: Date.now() }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} return; }
       if (self.screen === 'play' && self.btnArea && y >= self.btnArea.y && y <= self.btnArea.y + self.btnArea.h) { self.sfx.unlock(); self.drag = { btn: true, x: x, y: y, first: self.btnFirst, moved: false, id: e.pointerId, t0: Date.now() }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} return; }
@@ -3060,7 +3088,7 @@
       if (kc && ti >= 0 && ti < CONFIG.TABS.length) { self.tab = ti; self.btnFirst = 0; }
       else if (kc === 'M') self.toggleSound();
       else if (kc === 'L') self.toggleLook();
-      else if (e.key === 'Escape') { self.aim = null; self.sel = null; }   // 조준·선택 취소
+      else if (e.key === 'Escape') { if (self.screen === 'play' && self.modal === 'menu') self.modal = null; else if (self.screen === 'play' && !self.cards && !self.modal && !self.aim && !self.sel) { self.modal = 'menu'; self.modalT = 0; } self.aim = null; self.sel = null; }   // Esc: 조준·선택이 있으면 그것만 취소, 없으면 설정 메뉴   // 조준·선택 취소
       else if (kc === 'G' && self.screen === 'play') self.selectBase(!self.selBase);   // 성 고르기/풀기
     });
     // 다른 탭으로 가면 멈춘다
