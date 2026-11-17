@@ -51,7 +51,7 @@
   var O = OriginalRules.prototype = Object.create(MockRules.prototype);
   O.buff = function (u, k) { var b = u.buffs[k]; return b && b.until > this.now ? b : null; };
   O.attackValue = function (a) {
-    var c = a.act, v = ((c.k1 * a.level) >> 3) + ((c.k2 * a.t.atk) >> 3), w = this.buff(a, "weapon");
+    var c = a.act, v = ((c.k1 * a.level) >> 3) + ((c.k2 * (a.atkOv != null ? a.atkOv : a.t.atk)) >> 3), w = this.buff(a, "weapon");   // atkOv = 유닛별 공격력 (디펜스 진영 설정, 예: 악령군 펜릴 35)
     if (w && WEAPON[w.arm]) v = (v * WEAPON[w.arm]) >> 3;                              // 무기 강화: 원본 배수 (FUN_004b83d0의 상태 6·9·10·0x22 = 이펙트 번호)
     if (this.buff(a, "meltw")) v = 1;                                                // 멜팅 웨폰: 공격값 1 (FUN_004b83d0 상태 0xD)
     if (this.buff(a, "berserk")) v = (v * 12) >> 3;                                   // 광폭화: 원본 ×12/8 (FUN_004b83d0)

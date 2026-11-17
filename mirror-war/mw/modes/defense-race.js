@@ -50,12 +50,15 @@
     var k = x < 0 ? (this.faction || 'lib') : this._raceAt(x, y);              // 스페이스·엔터 = 해방부대
     var R = RACES.filter(function (r) { return r.key === k; })[0]; if (!R) return;
     if (!R.on) { S.msg = { txt: R.name + ' — 개발 예정입니다', t0: now, r: R }; return; }
-    if (x < 0) { if (S.hover !== k) { S.hover = k; S.t0 = now; S.landed = false; } S.pick = k; S.go = Math.max(now, S.t0 + FALL * 1000) + GO * 1000; this._raceSnd('click'); return; }   // 키보드: 떨어뜨리고 바로 출정
+    if (x < 0) { if (S.hover !== k) { S.hover = k; S.t0 = now; S.landed = false; } S.pick = k; S.go = Math.max(now, S.t0 + FALL * 1000) + GO * 1000; this._raceSnd('click'); this._raceBgm(k); return; }   // 키보드: 떨어뜨리고 바로 출정
     // 터치 (2026-11-17 사용자 요청): 첫 누르기 = 칼이 떨어져 꽂힘(활성화), 꽂힌 뒤 한 번 더 누르면 출정. PC 는 포인터를 대면 이미 꽂혀 있으니 클릭 한 번에 출정
     if (S.hover !== k) { S.hover = k; S.t0 = now; S.landed = false; return; }
     if (now - S.t0 < FALL * 1000) return;                    // 떨어지는 중에 누른 것은 무시
-    S.pick = k; S.go = now + 350; this._raceSnd('click');
+    S.pick = k; S.go = now + 350; this._raceSnd('click'); this._raceBgm(k);
   };
+  /* 고른 진영의 배경음으로 바꾸는 것은 이 터치 안에서 한다 (2026-11-17: 휴대폰에서 악령군을 고르면 배경음이 끊겼다 —
+     setFaction 은 그리기 루프(_drawRace)에서 불려 터치 밖이고, 그때 곡 파일이 바뀌면 브라우저가 재생을 막을 수 있다. 해방부대는 같은 곡이라 문제가 안 보였다) */
+  P._raceBgm = function (k) { var F = DG.FACTIONS && DG.FACTIONS[k]; if (F && this.soundOn && this.bgm) { this.bgm.set(F.bgm); this.bgm.resume(); } };
   /* 매 프레임 (_drawOverlay 대신) */
   P._drawRace = function () {
     var ctx = this.ctx, W = this.W, H = this.H, I = this._raceImgs(), L = this._raceLay(), s = L.s, S = this.raceS || (this.raceS = {}), now = Date.now(), self = this;

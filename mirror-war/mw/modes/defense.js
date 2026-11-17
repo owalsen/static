@@ -187,7 +187,7 @@
                       한번 물러나면 거리가 기준 + keepBand 로 벌어질 때까지 그 자리를 지킨다(keepHold) — 물러났다가 곧바로 대열 자리로 돌아가 또 물러나는 것을 막는다.
          rangedStay   원거리 유닛은 근접 아군의 맨 앞(없으면 집결선)보다 rangedBehind px 뒤까지만 나아가고, 적이 사거리 + rangedNear px 안에 있는 동안은 대열 자리로 돌아가지 않고 선 자리에서 기다린다
                       — 닿지 않는 적에게 나갔다가(rstep) 자리로 돌아오기(hold)를 되풀이하던 것(원거리 방향 전환의 87%)을 막는다 */
-      keepAll: true, keepRange: 0.6, keepMax: 140, rangedStay: true, rangedBehind: 30, siegeZone: 400, lineUp: 60, lineReach: 140, coverTry: 2, coverRetry: 6, keepMax: 80, keepReset: 5, rangedGap: 60, rangedGapMin: 50, rangedFree: true, rangedNear: 140,
+      noRetreat: true,   /* 2026-11-17 사용자 요청: 원거리 공격 유닛이 뒤로 물러나는 로직(거리 유지 keep·근접 뒤 간격 rangedGap)을 끈다. 공격 없는 지원 유닛의 거리 유지·맞으면 도망(FLEE)은 그대로 */ keepAll: true, keepRange: 0.6, keepMax: 140, rangedStay: true, rangedBehind: 30, siegeZone: 400, lineUp: 60, lineReach: 140, coverTry: 2, coverRetry: 6, keepMax: 80, keepReset: 5, rangedGap: 60, rangedGapMin: 50, rangedFree: true, rangedNear: 140,
       /* 2026-11-13 3차 (사용자 규칙): calmSec — 원거리·마법 유닛은 주변(사거리 + rangedNear)에 적이 없는 채 calmSec 초가 지나야 대열 자리(근접 아군 뒤)로 돌아간다.
          근접 아군이 하나도 없으면(noMelee): 대열 전체를 noMeleeBack px 물리고, 열 간격을 noMeleeCol 배로 벌리고, 줄은 가장 빈 줄부터 채워 최대한 퍼진다.
          그 상태로 바뀌는 순간 regroupSec 초 동안은 (적이 regroupFight px 안에 붙지 않았다면) 싸우기보다 새 자리로 먼저 간다 — 자리를 잡은 뒤 공격 */
@@ -258,6 +258,8 @@
     CARDS: { trigger: 'adverse', first: 60, cool: 60, foeMin: 4, foeRatio: 1.2, pushSec: 20, pushPx: 150, baseHp: 0.7, stallFrom: 300, stallSec: 120, stallCool: 120, progPx: 30, progHp: 60, sec: 45, mana: 2, dmg: 0.5, radius: 0.3,
       wAdverse: { mana: 2, repair: 2, hero: 2, twin: 2, xp: 1, magic: 1, radius: 1 }, wStall: { magic: 3, radius: 3, hero: 2, twin: 1, mana: 1, xp: 1, repair: 1 } },   /* twin = 이중 소환: sec 초 동안 소환 한 번에 2기, 마나는 1기 값 (2026-11-17 사용자 요청, summon) */   // 카드가 나오는 때와 효과 (_cardCheck, 2026-11-15 사용자 요청). trigger 가 'adverse' 가 아니면 예전처럼 레벨업마다
     SIEGE: { dist: 400, capMul: 0.5, gapMul: 2.5 },   // 적 기지 포위: 맨 앞 3기가 기지 400px 안이면 웨이브 상한 ×0.5, 나오는 간격 ×2.5 (_lairSieged, 2026-11-15 사용자 결정)
+    REVIVE: { ids: [28, 29], sides: { 0: true, 1: false }, base: 14, cap: 33 },   // 해골전사·해골기사 부활 (_reviveRoll·_revive, 원본 해독 2026-11-17). 확률 = (min(레벨+14, 33)+1)%. 지금은 아군(악령군)만 — 적 해골에도 켜려면 sides[1] = true
+    SELF_COOL: { '이블 스피리츠 베리어': 20, '이블 스피리츠 댄싱': 20 },   // 자기 강화의 재사용 대기(초) — 악령술사·강신술사·사술사가 효과(7초)가 끝나자마자 다시 쓰지 않게 (2026-11-17 사용자 요청). 없으면 SKILL.cool(3초)
     ECAP_FORT: 0.25, ECAP_MIN: 8,   // 적 벙커가 하나 무너질 때마다 적 웨이브 상한(스테이지 ecap) −25%, 최소 8기 (ecapNow, 2026-11-15 사용자 결정)
     SLOT_ORDER: { band: 60, every: 1 },   // 스킬 칸 순서 = 시전자가 전장에 가까운 순 (_regroup, 2026-11-15 사용자 요청). null 이면 생긴 순서
     ALLY_CAP: 0,   // (적 웨이브 상한은 스테이지 ecap: 28·32·36·40 — 전장에 동시에 있는 웨이브 적 수, waveFoes)
@@ -366,7 +368,7 @@
     this.recallIcon = -1;                                    // 회수 팻말에 그릴 원작 리콜 아이콘 (넨 소환의 아이콘 번호)
     data.units.forEach(function (d) { (d.acts || []).forEach(function (a) { if (a && a.sup === 'recall' && a.icon >= 0 && self.recallIcon < 0) self.recallIcon = a.icon; }); });
     this.sfx = new MWE.Sfx(opts.base + 'sfx.js', data.sfx);
-    this.bgm = new MWE.Bgm(opts.base, [['bgm0.mp3', 'bgm0b.mp3', 'bgm0c.mp3'], ['bgm1.mp3', 'bgm1b.mp3', 'bgm1c.mp3'], ['bgm2.mp3', 'bgm2b.mp3', 'bgm2c.mp3']]);
+    this.bgm = new MWE.Bgm(opts.base, [['bgm0.mp3', 'bgm0b.mp3', 'bgm0c.mp3'], ['bgm1.mp3', 'bgm1b.mp3', 'bgm1c.mp3'], ['bgm2.mp3', 'bgm2b.mp3', 'bgm2c.mp3'], [MENU_BGM.file]]);   // 3 = 로딩·메뉴 곡 (MENU_BGM)
     this.soundOn = false; this.sfx.on = false;   // 소리는 꺼진 채로 시작한다 (오른쪽 위 [무음]을 누르면 켜짐). 2026-11-12 사용자 요청
 
     this.screen = 'loading';     // loading(불러오는 중) → title(시작 화면) → play(진행) → win / lose
@@ -386,15 +388,18 @@
     lib: { name: '해방부대', bgm: 0, base: 'base', baseName: '성', tabs: CONFIG.TABS, heroes: CONFIG.GROW.heroes, stages: CONFIG.STAGES },
     evil: { name: '악령군', bgm: 1, hud: 'hud1', base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
       tabs: [
-        { name: '근접', ids: [28, 43, 29, 35, 36, 30, 44] },    // 해골전사 늑대 해골기사 흡혈귀 늑대인간 듀라한 켈베로스
+        { name: '근접', ids: [28, 31, 43, 29, 35, 36, 30, 44] },    // 해골전사 좀비 늑대 해골기사 흡혈귀 늑대인간 듀라한 켈베로스 (좀비 2026-11-17 추가 — 기본 공격은 핸드 밤, 적 2기가 붙거나 체력 45% 이하면 자폭)
         { name: '원거리', ids: [46, 32, 39, 40, 45, 47] },      // 박쥐 유령 데몬 데빌 펜릴 드래곤
         { name: '마법', ids: [25, 33, 26, 27] },                // 악령술사 리치 강신술사 사술사
         { name: '암흑', ids: [38, 42, 41] }                     // 메두사 서큐버스 사탄
       ],
-      cost: { 28: 15, 43: 20, 29: 40, 35: 50, 36: 55, 30: 75, 44: 90, 46: 20, 32: 30, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 60, 26: 80, 27: 110, 38: 55, 42: 90, 41: 120 },
+      atk: { 45: 35, 47: 49 },        // 2026-11-17 사용자 요청: 고급 유닛 펜릴·드래곤의 공격력 +40%를 정수 상수로 (원본 25 → 35, 35 → 49). 아군일 때만 — 적 악령군의 펜릴·드래곤은 그대로. 공격값 식(k2 × 공격력 ÷ 8)에 이 값이 들어간다
+      splashPx: { 39: 50 },           // 2026-11-17 사용자 요청: 데몬의 파이어 볼을 스플래시로 — 맞은 곳 둘레 50px(원본 거리 약 700). 원본 파이어 볼은 반경 0(단일). 아군일 때만
+      speedAs: { 31: 28 },            // 2026-11-17 사용자 요청: 좀비 이동 속도 = 해골전사 (원본 좀비는 더 느리다). 아군일 때만
+      cost: { 28: 15, 31: 25, 43: 20, 29: 40, 35: 50, 36: 55, 30: 75, 44: 90, 46: 20, 32: 30, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 60, 26: 80, 27: 110, 38: 45, 42: 90, 41: 120 },
       heroes: ['사울리안', '스컬 크러셔', '노스페라투', '인시너레이터', '킹 오브 그리드', '실버린', '하이네', '그랭키리우스', '코빌리우스'],
       stages: [
-        Object.assign({}, CONFIG.STAGES[1], { name: '마녀의 숲', note: '쉬움', cap: 40, ecap: 28, waves: [0, 5], mul: 0.7, restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
+        Object.assign({}, CONFIG.STAGES[1], { name: '마녀의 숲', note: '쉬움', cap: 40, ecap: 28, waves: [0, 5], mul: 0.49,   /* 2026-11-17 사용자 요청: 너무 어렵다 — 적 수를 지금의 70%로 (0.7 → 0.49) */ restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
           lairLv: 1, lairMul: 0.7, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 3, trapEvery: 50, trapLv: 1, guards: [{ at: 'bottom', list: [[53, 2]] }, { at: 'top', list: [[53, 2]] }, { at: 'lair', list: [[54, 1], [53, 2]] }] }),   // 해방부대 2단계(흑마술파)의 틀에 해방부대 1단계의 쉬움 수치
         { name: '해방부대의 전초', cap: 45, ecap: 32, enemy: 'lib', note: '보통', waves: [0, 6], mul: 0.7, restMul: 1.8, loopRest: 30, loopLv: 0.34, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 4200, efort: { hp: 1000, lv: 2 },
           lairLv: 2, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 3, traps: 0, guards: [{ at: 'bottom', list: [[1, 2], [4, 1]] }, { at: 'top', list: [[1, 2], [5, 1]] }, { at: 'lair', list: [[3, 1], [1, 2], [12, 1]] }] },   // 해방부대 2단계(흑마술파의 길)와 같은 수치, 적만 해방부대. 덫은 없다(해방부대에 덫 행동이 없음)
@@ -630,6 +635,9 @@
     u.lookDir = 0; u.slotOf = null; u.slotA = null; u.slotAt = null; u.slotT = 0; u.apT = -9; u.skipUid = null; u.skipUntil = 0; this._setSide(u, side);
     this._applyType(u);
     if (side === 0 && this.allyLv) this._setLevel(u, 1 + this.allyLv);   // "전군 단련"으로 오른 만큼 높은 레벨로 나온다
+    if (side === 0 && this.fac && this.fac.atk && this.fac.atk[typeId] != null) u.atkOv = this.fac.atk[typeId];   // 진영의 유닛별 공격력 (악령군 펜릴 35·드래곤 49 — rules.attackValue 가 t.atk 대신 쓴다)
+    if (side === 0 && this.fac && this.fac.speedAs && this.types[this.fac.speedAs[typeId]]) u.speedPx = this.types[this.fac.speedAs[typeId]].walkPx * this.rules.tps * C.MOVE_SCALE * C.ALLY_MOVE_MUL;   // 이동 속도를 다른 유닛과 같게 (악령군 좀비 = 해골전사)
+    if (side === 0 && this.fac && this.fac.splashPx && this.fac.splashPx[typeId]) u.splashPx = this.fac.splashPx[typeId];   // 원본에 없는 스플래시 (악령군 데몬의 파이어 볼)
     // 마법 유닛이면 가진 마법마다 스킬 칸을 만들어 서로 가리키게 한다 (유닛 하나 ↔ 칸 여러 개)
     u.spawnId = typeId;                                      // 소환 버튼의 유닛 번호 (변형해도 그대로 — 회수 환급 계산용)
     u.slots = []; u.castSkill = function (i) { return self.castUnitSkill(u, i || 0); };
@@ -810,7 +818,7 @@
        묶음(group) = 같은 마법을 가진 SkillSlot 들 { act, kind, aimed, cost, slots[] }. **패널의 칸 하나 = 묶음 하나** ("라이트닝 썬더 ×3").
                     칸을 누르면 그 마법을 가진 유닛 중 준비된 한 기가 쓴다. this.groups = 처음 생긴 순서(자리가 바뀌지 않는다)
        자기에게만 거는 강화(a.self: 아이스 웨폰 등)는 묶음에 넣지 않는다 — 유닛이 알아서, 마나 없이 쓴다 (s.auto, _selfMagic) */
-  P._addSlot = function (u, act) { var s = new SkillSlot(u, act), tech = CONFIG.TECH[act.name]; if (act.self) { s.auto = true; s.cost = 0; }
+  P._addSlot = function (u, act) { var s = new SkillSlot(u, act), tech = CONFIG.TECH[act.name]; if (act.self) { s.auto = true; s.cost = 0; if (CONFIG.SELF_COOL[act.name]) s.cdMax = CONFIG.SELF_COOL[act.name]; }
     if (tech) { s.auto = true; s.tech = true; s.cost = 0; s.cdMax = tech.cool; s.cd = tech.first; }   // 기술: 알아서, 마나 없이, 자기 쿨타임으로 (_selfMagic)
     u.slots.push(s); this.slots.push(s); this._regroup(); return s; };
 
@@ -1420,7 +1428,9 @@
   /* 유닛 한 기의 행동: (쓰러짐·멈춤) → 공격 동작 진행 → 닿는 적이 있으면 공격 시작 → 옆줄의 적에게 다가가기 → 줄 서기 → 전진 */
   P._updateUnit = function (u, dt) {
     var R = this.rules, C = CONFIG, tps = R.tps;
-    if (u.state === 'dead') { u.deadT += dt; if (u.deadT > 1.2) u.fade = Math.min(1, u.fade + dt * 1.5); return; }
+    if (u.state === 'dead') { u.deadT += dt;
+      if (u.revive) { var dn = u.t.anim && u.t.anim.die ? u.t.anim.die.n : 8; if (u.deadT * tps >= 2 * dn - 1) this._revive(u); return; }   // 부활: 쓰러짐 dn 프레임 + 거꾸로 dn−1 프레임 뒤 (Unit.frameIndex)
+      if (u.deadT > 1.2) u.fade = Math.min(1, u.fade + dt * 1.5); return; }
     var ps = u.buffs.poison;                                 // 중독 (원본 FUN_00454580, 분석 8-26): 2틱마다 체력 −1, 1 밑으로는 안 내려간다 (12틱/초 → 초당 6)
     if (ps) { if (ps.until <= this.time) delete u.buffs.poison; else { u.poisonAcc = (u.poisonAcc || 0) + dt * tps / 2; while (u.poisonAcc >= 1) { u.poisonAcc -= 1; if (u.hp > 1) u.hp--; } } }
     if (u.stunUntil > this.time || u.holdUntil > this.time) { u.state = 'idle'; return; }   // 멈춤 스킬에 걸림
@@ -1476,7 +1486,7 @@
       }
     }
     // 마법 유닛의 거리 유지 (CONFIG.AI.keep): 적의 맨 앞 유닛과의 가로 거리가 keep − keepBand 보다 가까우면 뒤로 물러난다. 엔트(뿌리내림)·시전하러 가는 중은 제외
-    if (u.side === 0 && C.AI.keep > 0 && u.keeper && !u.castOrder && !u.rooted) {
+    if (u.side === 0 && C.AI.keep > 0 && u.keeper && !(u.act && C.AI.noRetreat) && !u.castOrder && !u.rooted) {   // noRetreat: 공격하는 원거리 유닛은 물러나지 않는다 (공격 없는 지원 유닛만 거리 유지)
       // 기준이 되는 적: 예전 방식 = 성에 가장 가까운 적(대열 앞으로 오는 적). 진격 방식 = 이 유닛의 앞쪽에 있는 가장 가까운 적 —
       // 성에 가장 가까운 적은 아군 원거리 유닛보다 뒤에 있을 수 있어, 그 적을 기준으로 물러나면 뒤로 갔다가 앞의 적에게 다시 다가가기를 되풀이한다 (2026-11-14 계측)
       var ff = C.PUSH ? (tgt && tgt.x >= u.x - 10 ? tgt : null) : this._frontFoe(), KR = u.keepR || C.AI.keep;
@@ -1492,7 +1502,7 @@
       if (dist > C.AI.regroupFight) { u.aiWhy = 'regroup'; this._holdStep(u, dt); if (u.state === 'idle') u.regroupUntil = 0; return; } }
     // 원거리 아군의 간격 (AI.rangedGap, 2026-11-14 사용자 지적 — 원거리가 근접 바로 뒤에 붙어 서서 교대하는 근접 유닛이 움직일 틈이 없었다):
     // 싸우는 근접 아군이 바로 앞에 있으면 그 뒤로 rangedGap px 떨어져 선다. 단, 물러나도 지금 적이 사거리 안에 남을 때만(사거리 − rangedGapMin 까지만 물러난다) — 못 쏘게 되지는 않는다
-    if (u.side === 0 && C.PUSH && C.AI.rangedGap > 0 && u.act && u.rangePx >= 80 && !u.air && tgt && !u.castOrder && !u.rooted) {
+    if (u.side === 0 && C.PUSH && C.AI.rangedGap > 0 && !C.AI.noRetreat && u.act && u.rangePx >= 80 && !u.air && tgt && !u.castOrder && !u.rooted) {
       var mf = this._meleeNear(u);
       if (mf != null) { var gback = u.x - (mf - Math.max(0, Math.min(C.AI.rangedGap, u.rangePx - C.AI.rangedGapMin)));
         if (gback > 8 && dist + gback <= u.rangePx - 2 && u.x - gback > C.BASE.front) { u.aiWhy = 'gap'; u.x -= Math.min(gback, this._speed(u) * dt); u.state = 'move'; u.walkT += dt; this._faceVec(u, -1, 0); return; } }
@@ -1807,7 +1817,8 @@
     if (!tgt || tgt.state === 'dead' || tgt.side === u.side) return;
     var dmg = R.damage(u, tgt, this.rng), arm = u.act.arm, def = arm >= 0 ? this.data.fx.arms[arm] : null;
     if (u.side === 1) tgt.__by = u.t.name;                  // 리포트: 아군을 마지막으로 친 적 (쓰러졌을 때 원인으로 센다 — 마법 피해는 마지막으로 친 적에게 넘어가는 근사)
-    if (def) this.shots.push({ x: u.x + u.dir * 14, y: u.y - u.headY * 0.6, tgt: tgt, dmg: dmg, arm: arm, def: def, dir: u.dir, t0: this.time, speed: 380 });
+    if (def) this.shots.push({ x: u.x + u.dir * 14, y: u.y - u.headY * 0.6, tgt: tgt, dmg: dmg, arm: arm, def: def, dir: u.dir, t0: this.time, speed: 380, src: u,   // src = 쏜 유닛 (스플래시 피해 계산용)
+      sr: Math.max(def.r > 0 ? def.r * CONFIG.RANGE_SCALE : 0, u.splashPx || 0) });   // 스플래시 반경 px: 원본 이펙트 반경(브레스) 또는 진영 설정(데몬)
     else { this._damage(tgt, dmg);
       // 중독 (원본 FUN_004ac6f0: 행동 종류 +0x3C == 1 = 전갈의 포이즌 테일 — 맞은 유닛에 중독, 지속 = 행동 +0x3E 틱. 면역 유닛(종류 +0x54) 제외). 피해는 _updateUnit
       if (u.act.type === 1 && tgt.state !== 'dead' && !tgt.t.immune) { if (!(tgt.buffs.poison && tgt.buffs.poison.until > this.time)) this._say(tgt.x, tgt.y - tgt.headY - 6, '중독', '#9be36a'); tgt.buffs.poison = { until: this.time + (u.act.dur || 160) / R.tps }; } }
@@ -1822,11 +1833,25 @@
     if (u.side === 0 && !u.act && !u.hero) u.fleeUntil = this.time + CONFIG.FLEE_SEC;   // 기본 공격이 없는 아군(성령사·사제·연금술사·소환사·공주 …)은 맞으면 아군 쪽으로 물러난다
     if (u.hp <= 0) {
       u.hp = 0; u.state = 'dead'; u.deadT = 0; u.fade = 0; u.buffs = {};
+      if (this._reviveRoll(u)) { u.revive = true; this.reviveN = (this.reviveN || 0) + 1; this._play(u.t.snd.die, 0.7); return; }   // 쓰러졌다가 다시 일어난다 (_revive) — 원본처럼 처치·손실에 세지 않고 스킬 칸도 그대로 둔다
       this._removeSlots(u);                                  // 마법 유닛이면 그 유닛의 스킬 칸도 함께 없앤다 → 소환 버튼이 다시 켜진다
       this._play(u.t.snd.die, 0.7);
       if (u.side === 0 && !u.fort) { this.rep.lost++; var bn = u.__by || '마법·기타'; this.rep.by[bn] = (this.rep.by[bn] || 0) + 1; }   // 리포트: 잃은 아군과 원인
       if (u.side === 1) { this.kills++; this._gainXp((u.t.lv && u.t.lv.exp || 1) * Math.max(CONFIG.GROW.xpMin, 1 - CONFIG.GROW.xpFall * Math.min(this.wave, CONFIG.WAVES.length - 1))); }   // 처치 = 경험치 (원작 유닛의 경험치 값)
     }
+  };
+
+  /* 부활 (CONFIG.REVIVE, 2026-11-17 사용자 요청 — 원본 해독: 어드밴스드 FUN_004b75e0 사망 직전 분기, 유닛 데이터 +0x58(원본판 +0x5C) = 1 인 해골전사·해골기사만).
+       치명타를 맞으면 rand%100 ≤ min(레벨 + base, cap) 이면 "부활 사망": 사망 동작을 끝까지 재생한 뒤 거꾸로 재생하고(FUN_00452f60) 체력을 가득 채워 일어난다(FUN_00453300 — +0x0A = +0x06).
+       본 월(78) 형태는 제외(원본 +0x5C ≠ 0x4E). 원본에는 횟수 제한이 없다 — 쓰러질 때마다 다시 굴린다. sides = 이 판정을 받는 편 */
+  P._reviveRoll = function (u) {
+    var R = CONFIG.REVIVE; if (!R || u.fort || u.inLair || !R.sides[u.side] || R.ids.indexOf(u.t.id) < 0) return false;
+    return Math.floor(this.rng.next() * 100) <= Math.min(R.cap, (u.level || 1) + R.base);
+  };
+  P._revive = function (u) {
+    u.revive = false; u.state = 'idle'; u.deadT = 0; u.fade = 0; u.hp = u.maxHp; u.cd = 0; u.at = 0; u.buffs = {}; u.stunUntil = 0; u.blockT = 0;
+    u.tgt = null; u.slotOf = null; u.slotA = null; u.slotAt = null; u.passY = null; u.coverOn = false; u.coverOf = null; u.hitT = null;
+    this._say(u.x, u.y - u.headY - 10, '부활', '#c9a7ff');
   };
 
   P._hitBase = function (dmg) { var df = this.forts && this.forts[0] ? this.garDef(this.forts[0]) : 0; if (df > 0) dmg = Math.max(Math.ceil(dmg * CONFIG.GAR_DEF_MIN), dmg - df);   // 수비대의 방어 보너스만큼 덜 받는다 (그래도 원래 피해의 GAR_DEF_MIN 은 받는다)
@@ -2145,12 +2170,22 @@
     t.stunUntil = T + CURSE.sec; t.curseUntil = t.stunUntil; t.curseFree = T + CURSE.sec + CURSE.gap; t.state = 'idle'; t.castOrder = null;
     this._say(t.x, t.y - t.headY - 6, '저주', '#c08cff');
   };
+  /* 기본 공격의 스플래시 (2026-11-17 사용자 요청: 펜릴·드래곤이 범위 피해를 주는지 검토 → 주지 않고 있었다).
+       원본: 발사체 이펙트 칸의 armData +0x3C 가 0 이 아니면 맞은 지점에서 그 반경 안의 적 유닛이 저마다 원본 피해 공식대로 맞는다(FUN_004b9590 의 범위 처리, 아이스 브레스 case 0x25).
+       반경 = 원본 거리 × RANGE_SCALE(0.07) — 드래곤 브레스 900 → 63px, 아이스 브레스 800 → 56px. 직접 맞은 대상은 빼고(이미 맞음), 쏜 유닛의 편이 아닌 유닛만 */
+  P._splash = function (u, main, x, y, r) {
+    var self = this, R = this.rules, n = 0;
+    this.units.forEach(function (o) { if (o === main || o.side === u.side || o.state === 'dead' || o.state === 'inside' || Math.hypot(o.x - x, o.y - y) > r) return;
+      if (u.side === 1) o.__by = u.t.name; self._damage(o, R.damage(u, o, self.rng)); n++; });
+    this.splashN = (this.splashN || 0) + n;
+  };
   P._updateShots = function (dt) {
     var keep = [];
     for (var i = 0; i < this.shots.length; i++) {
       var s = this.shots[i], t = s.tgt, tx = t.x, ty = t.y - t.headY * 0.5, dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy), step = s.speed * dt;
       if (d <= step || t.state === 'dead') {
-        if (t.state !== 'dead') { this._damage(t, s.dmg); if (s.def.hit.length) this._addEffect(tx, ty, s.arm, 0); this._shotStatus(t, s.arm); }
+        if (t.state !== 'dead') { this._damage(t, s.dmg); if (s.def.hit.length) this._addEffect(tx, ty, s.arm, 0); this._shotStatus(t, s.arm);
+          if (s.sr > 0 && s.src) this._splash(s.src, t, tx, t.y, s.sr); }   // 이펙트 칸에 원본 반경(armData +0x3C)이 있으면 둘레의 적도 맞는다 — 드래곤 브레스 900, 아이스 브레스 800 (2026-11-17)
         continue;
       }
       s.x += dx / d * step; s.y += dy / d * step; s.ang = Math.atan2(dy, dx); keep.push(s);
@@ -3065,7 +3100,7 @@
     if (bt.length) L.push('기술(자동): ' + bt.join(', '));
     // 사격 보너스 유닛(정령사·연금술사·마법전사·마법기사)은 혼자 넣으면 효과가 없다 — 쏘는 유닛(궁수·명궁·창검사·마법사·장로)과 함께여야 한다
     if (r.gar) { var gp = []; if (r.gar.cls >= 0) gp.push('성·벙커에 넣으면 사격'); else if (r.gar.bonus > 0) gp.push('쏘는 유닛과 함께 넣으면 사격 +' + r.gar.bonus); if (r.gar.def > 0) gp.push('성·벙커에 넣으면 건물 방어 +' + r.gar.def); L.push(gp.join(' · ')); }
-    return { name: t.name, cost: r.cost, stat: '체력 ' + t.maxHpAt(1 + (this.allyLv || 0)) + ' · 공격 ' + t.atk + ' · 방어 ' + t.def, desc: (MWE.UNIT_DESC && MWE.UNIT_DESC[t.id]) || '', lines: L };
+    return { name: t.name, cost: r.cost, stat: '체력 ' + t.maxHpAt(1 + (this.allyLv || 0)) + ' · 공격 ' + (this.fac && this.fac.atk && this.fac.atk[t.id] != null ? this.fac.atk[t.id] : t.atk) + ' · 방어 ' + t.def + (CONFIG.REVIVE && CONFIG.REVIVE.sides[0] && CONFIG.REVIVE.ids.indexOf(t.id) >= 0 ? ' · 부활 ' + (Math.min(CONFIG.REVIVE.cap, 1 + (this.allyLv || 0) + CONFIG.REVIVE.base) + 1) + '%' : ''), desc: (MWE.UNIT_DESC && MWE.UNIT_DESC[t.id]) || '', lines: L };
   };
   /* 마법 설명 카드의 내용 (스킬 칸을 길게 누르면): 손으로 쓴 설명(MWE.DEF_SKILL_DESC)의 {자리}를 CONFIG 값으로 채우고, 종류·마나·범위·시전 거리는 데이터에서 */
   P.skillInfo = function (g) {
@@ -3129,7 +3164,8 @@
     if (hit === 'sound') { this.toggleSound(); return; }
     this.modal = null;
     if (hit === 'retry') { if (CONFIG.PUSH && this.st) this.pickStage(this.stageI); else this.pickEnemy(this.enemy); }
-    else if (hit === 'title') { this.reset(); this.screen = 'title'; this.titleSeen = true; this.raceOk = false; if (this.raceS) this.raceS = null; }   // 처음으로 = 진영 선택부터 (2026-11-17 사용자 요청 — 설명은 첫 로딩 화면에만 있다)
+    else if (hit === 'title') { this.reset(); this.screen = 'title'; this.titleSeen = true; this.raceOk = false; if (this.raceS) this.raceS = null;
+      if (this.soundOn && this.bgm) { this.bgm.set(MENU_BGM.idx); this.bgm.resume(); } }   // 진영 선택으로 돌아가면 로딩·메뉴 곡 (2026-11-17 사용자 요청) — 진영을 다시 고르면 그 진영 곡   // 처음으로 = 진영 선택부터 (2026-11-17 사용자 요청 — 설명은 첫 로딩 화면에만 있다)
   };
   P._drawAff = function () {
     var ctx = this.ctx, W = this.W, H = this.H, figs = this.assets.get('figs'), self = this, x0 = 8, w = W - 16, y0 = 44, foot = 78, h = H - y0 - 12, rh = Math.floor((h - 40 - foot) / 2), nw = Math.floor((w - 24 - 40) / 2), nh = Math.floor((rh - 44) / 2), r, k, AF = this._aff(), AFF_RINGS = AF.rings;
@@ -3181,7 +3217,7 @@
   P.start = function () {
     if (this.assets.ready()) { this._pendStart = false; this.reset(); this.screen = 'play'; }
     else { this._pendStart = true; this.screen = 'loading'; }   // 고른 종족의 그림을 받는 중: 다 오면 _frame 이 시작한다
-    if (this.soundOn && !this.bgm.on) { this.bgm.set(this.fac.bgm || 0); this.bgm.toggle(); }
+    if (this.soundOn) { this.bgm.set(this.fac.bgm || 0); if (!this.bgm.on) this.bgm.toggle(); else this.bgm.resume(); }   // 시작 터치 안에서 그 진영 곡을 확실히 튼다 — 휴대폰은 터치 밖에서 곡을 바꿔 틀면 막힐 수 있다 (2026-11-17: 악령군 시작 때 배경음이 안 남)
     // 휴대폰: 전체 화면을 시도한다 (지원하지 않는 브라우저에서는 조용히 넘어간다). 세로 전용
     try { var el = document.documentElement, p = root.matchMedia && root.matchMedia('(pointer: coarse)').matches && el.requestFullscreen ? el.requestFullscreen() : null;
       var lock = function () { try { var o = root.screen && root.screen.orientation; if (o && o.lock) { var q = o.lock('portrait'); if (q && q.catch) q.catch(function () {}); } } catch (e2) {} };   // 세로 고정 (안드로이드 Chrome 전체 화면에서만 됨, iOS Safari 는 무시)
@@ -3206,7 +3242,9 @@
   P._loadGo = function () { if (this._loadGoT || this.assets.progress() < LOAD_HOLD.at) return false; this._loadGoT = Date.now(); this.sfx.unlock(); this._autoSound(); return true; };
   P._loadShowP = function () { var p = this.assets.progress(); if (!this._loadGoT) return Math.min(p, LOAD_HOLD.at); return Math.min(p, LOAD_HOLD.at + (1 - LOAD_HOLD.at) * Math.min(1, (Date.now() - this._loadGoT) / LOAD_HOLD.fillMs)); };
   P._loadHoldDone = function () { return !!this._loadGoT && this.assets.ready() && this._loadShowP() >= 1 && Date.now() - this._loadGoT >= LOAD_HOLD.fillMs + 150; };
-  P._autoSound = function () { if (/[?&]mute=1/.test(root.location.search)) return; this.soundOn = true; this.sfx.on = true; if (!this.bgm.on) { this.bgm.set(0); this.bgm.toggle(); } };   // ?mute=1 이면 켜지 않는다 (측정 봇·시험용)
+  /* 로딩·메뉴 곡 (2026-11-17 사용자 요청: 로딩 때 해방부대 01 대신 다른 곡) — 해방부대 02(바이올린). 진영을 고르면 그 진영 곡으로 바뀐다. 묶음 번호 3 (this.bgm 목록 끝) */
+  var MENU_BGM = { file: 'bgm0b.mp3', idx: 3 };   // 2026-11-17 사용자 지정: 바이올린이 나오는 해방부대 02 (처음엔 악령군 02였다)
+  P._autoSound = function () { if (/[?&]mute=1/.test(root.location.search)) return; this.soundOn = true; this.sfx.on = true; if (!this.bgm.on) { this.bgm.set(MENU_BGM.idx); this.bgm.toggle(); } };   // ?mute=1 이면 켜지 않는다 (측정 봇·시험용)
   /* 70% 에서 기다리는 동안 로딩 그림 위에 얹는 설명 판 (예전 시작 화면 첫 장의 글) */
   P._drawLoadIntro = function () {
     var ctx = this.ctx, W = this.W, H = this.H, G = '#c9d1e3', self = this, pulse = 0.5 + 0.5 * Math.sin(Date.now() / 260);
@@ -3238,7 +3276,7 @@
     /* 누르기: 버튼이면 바로 실행, 진행 막대면 그곳으로 이동, 전장이면 끌어서 카메라 옮기기 시작 */
     cv.addEventListener('pointerdown', function (e) {
       e.preventDefault(); var p = self._pos(e), x = p[0], y = p[1], m = self.miniBox; if (self.aim) self.aimPt = { x: x, y: y };
-      if (self.bgm.blocked) self.bgm.resume();   // 자동 재생이 막혔던 배경음: 첫 누르기에서 튼다
+      self.bgm.resume();   // 멈춰 있는 배경음(자동 재생이 막혔거나 다른 소리에 끊김)은 아무 누르기에서나 다시 튼다 (2026-11-17)
       if (self.screen === 'play' && self.tut) { self.sfx.unlock(); self._tutPointer(x, y); return; }   // 입문자 가이드: 하이라이트된 곳과 [건너뛰기]만 받는다
       if (self.screen === 'play' && (self.cards || self.modal || inBox(self.affBtn, x, y) || inBox(self.menuBtn, x, y))) { self.sfx.unlock(); self._tap(x, y); return; }   // 카드를 고르는 중, 상성 모달, [상성] 버튼
       if (self.screen === 'play' && x >= m.x - 6 && x <= m.x + m.w + 6 && y >= m.y - 6 && y <= m.y + m.h + 6) { self.drag = { mini: true, id: e.pointerId }; self._miniPan(x); return; }
@@ -3266,7 +3304,7 @@
     root.addEventListener('beforeunload', function (e) { if (self.screen === 'play' && !root.__noLeaveGuard) { e.preventDefault(); e.returnValue = ''; return ''; } });
     root.addEventListener('resize', function () { self._resize(); });
     root.addEventListener('keydown', function (e) {
-      if (self.bgm.blocked) self.bgm.resume();
+      self.bgm.resume();
       if (self.screen === 'play' && self.tut) { if (e.code === 'KeyM' && !e.repeat) { self.sfx.unlock(); self.toggleSound(); } return; }   // 입문자 가이드 중에는 단축키를 막는다 (소리 M 키만 받는다)
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); if (self.screen === 'play') self.panTo(self.cam.x + (e.key === 'ArrowLeft' ? -90 : 90)); return; }
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;

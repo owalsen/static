@@ -80,7 +80,9 @@
   P.frameIndex = function (fps) {
     fps = fps || 12;
     var A = this.t.anim;
-    if (this.state === 'dead') return A.die ? A.die.f[Math.min(A.die.n - 1, Math.floor(this.deadT * fps))] : -1;
+    if (this.state === 'dead') { if (!A.die) return -1; var dn = A.die.n, k = Math.floor(this.deadT * fps);
+      if (this.revive && k >= dn) k = Math.max(0, 2 * dn - 2 - k);   // 부활(해골전사·해골기사): 쓰러지는 프레임을 끝까지 본 뒤 같은 프레임을 거꾸로 — 원본 FUN_00452f60(+0x37A 1 → 2 → FUN_00453300)
+      return A.die.f[Math.min(dn - 1, k)]; }
     if (this.state === 'attack' && A.atk) return A.atk.f[this.row * A.atk.n + Math.min(A.atk.n - 1, Math.floor(this.at))];
     if (this.state === 'move') return A.walk.f[this.row * A.walk.n + Math.floor(this.walkT * fps) % A.walk.n];
     /* 방패 막기 (unitNN.mwa 레코드 2): 방패를 들어 올려 이벤트 프레임에서 멈추고, 효과가 이어지는 동안 서 있을 때 그 자세를 유지한다 */
