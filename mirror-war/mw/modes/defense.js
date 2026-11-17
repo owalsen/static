@@ -63,15 +63,17 @@
     /* 종족별 적 벙커 그림(MW_DEF)과 수비대(유닛 번호 4개: 원거리 2 · 근거리 1 · 공격 보조 1). 원작에서 건물 사격을 하는 유닛만 고를 수 있다(unitdata +0x2B2 무기 등급):
          악령군: 데몬·데빌(등급 2 = 파이어 볼) · 사술사(등급 3 = 건물 둘레 광역) · 펜릴(사격 피해 +12)
          흑마술파: 대마술사 ×2(등급 1 = 썬더 스톰 — 흑마술파의 원거리 등급은 대마술사뿐) · 흑기사(등급 5 = 둘레 광역) · 요마술사(+20) */
-    EFORT_SET: { evil: { key: 'efort1', name: '납골당', gar: [39, 40, 27, 45] }, dark: { key: 'efort2', name: '흉가', gar: [51, 51, 54, 50] }, both: { per: ['evil', 'dark'] } },   // per = 벙커마다 다른 종족 (EFORTS 순서대로)
+    EFORT_SET: { evil: { key: 'efort1', name: '납골당', gar: [39, 40, 27, 45] }, dark: { key: 'efort2', name: '흉가', gar: [51, 51, 54, 50] }, both: { per: ['evil', 'dark'] },
+      libA: { key: 'libFort2', name: '방어기지', gar: [4, 5, 12, 11] }, libB: { key: 'libFort1', name: '타워', gar: [5, 5, 13, 14] }, lib: { per: ['libA', 'libB'] } },   // per = 벙커마다 다른 종족 (EFORTS 순서대로). 해방부대가 적일 때(2026-11-17): 궁수·명궁(등급 4 = 활) · 마법사·장로(등급 0 = 파이어 볼) · 정령사 +8 · 연금술사 +20
     /* 적 벙커의 무기 등급 (원본 FUN_004d0a40 / FUN_004d1760 / FUN_004d2470, 분석 8-35):
          act·from = 쏘는 원본 행동과 그 행동을 가진 유닛, mod·step = 사격 틱 조건(tick % mod == 자리 × step), loop = 가동 중 되풀이하는 그림 수(MW_DEF.arm1·arm2·arm3)
          aoe = 건물 둘레 광역: 반경 (1000 + 건물 사거리 보정 × 10) × RANGE_SCALE, 지상 유닛만, 피해 = 유닛 공격력 + 사격 보너스 + 레벨 × 2 (상성이면 × 배수 ÷ 8) − 방어 */
-    EGARRISON: { 1: { act: 105, from: 51, mod: 32, step: 2, loop: 31 }, 2: { act: 15, from: 12, mod: 40, step: 4, loop: 10 }, 3: { aoe: true, mod: 48, step: 4, loop: 9 }, 5: { aoe: true, mod: 48, step: 4, loop: 1 } },
+    EGARRISON: { 4: { act: 4, from: 4, mod: 24, step: 1, loop: 16 }, 0: { act: 15, from: 12, mod: 40, step: 4, loop: 10 },   /* 4·0 = 해방부대 등급(활·파이어 볼, GARRISON 과 같은 값) — 해방부대가 적일 때 */ 1: { act: 105, from: 51, mod: 32, step: 2, loop: 31 }, 2: { act: 15, from: 12, mod: 40, step: 4, loop: 10 }, 3: { aoe: true, mod: 48, step: 4, loop: 9 }, 5: { aoe: true, mod: 48, step: 4, loop: 1 } },
     /* 적 기지(마굴) 수비대 (2026-11-14 사용자 요청): 시작부터 8명, 적 영웅급. 원작 건물 사격 규칙(8-35)대로 쏜다 — 사격 등급이 있는 유닛만 쏘고, 보너스 유닛은 사격 피해를 올린다.
        hero = 원작 영웅 기록의 이름(미션 파일, data.heroes — 그 영웅의 체력·공격·방어), 없으면 그 유닛을 영웅급 레벨(+ GROW.heroLv)로. 레벨 = 스테이지 lairLv (+ heroLv).
        공격력은 아군 성보다 높다: 영웅 수치(공격 26~80) + 레벨 +5 + dmgMul. 아무리 세도 마굴을 부수면 클리어 */
     LAIR_GAR: {
+      lib: [{ id: 20, hero: '피렌디아 림플라이' }, { id: 5 }, { id: 5 }, { id: 4 }, { id: 13 }, { id: 12 }, { id: 14 }, { id: 11 }],   // 해방부대 성: 활 3 · 파이어 볼 2 · 보너스 +20 +8. 기지 영웅 = 소환사 피렌디아(나르 소환)
       both: [{ id: 51, hero: '쿨구레루 데스모네' }, { id: 41 }, { id: 40 }, { id: 39 }, { id: 51 }, { id: 54 }, { id: 27 }, { id: 60 }],
       evil: [{ id: 41, hero: '사울리안' }, { id: 40 }, { id: 39 }, { id: 39 }, { id: 27 }, { id: 27 }, { id: 44 }, { id: 45 }],   // 원거리(파이어 볼) 4 · 둘레 광역 2 · 보너스 +8 +12
       dark: [{ id: 51, hero: '쿨구레루 데스모네' }, { id: 51 }, { id: 51 }, { id: 54 }, { id: 57 }, { id: 53 }, { id: 60 }, { id: 61 }]   // 원거리(썬더 스톰) 3 · 둘레 광역 3 · 보너스 +20 +15. 기지 영웅은 마법을 쓰는 쿨구레루(대마술사) — 이자비(흑기사)는 마법이 없어 길목에 선다
@@ -79,6 +81,7 @@
     /* 길목의 적 영웅 (2026-11-14 사용자 요청): 기지 안에는 가장 강한 영웅 한 명만 두고(LAIR_GAR 의 첫 칸), 나머지 영웅은 적 진영 길목(x)에 주둔 적군처럼 세운다 — 자리에서 GUARD.leash 안의 아군만 상대, 다시 채워지지 않는다.
        스테이지 heroPosts = 앞에서부터 몇 명을 세울지(난이도 조절). 수치는 원작 영웅 기록(체력·공격·방어), 레벨 = 적 벙커 수비대 레벨 */
     HERO_POSTS: {
+      lib: [{ id: 0, hero: '파인트 롤', x: 1400 }, { id: 3, hero: '벨리프 쇼링', x: 1160 }, { id: 6, hero: '다인 바운터', x: 1640 }, { id: 16, hero: '가웬 포라튼', x: 1300 }, { id: 1, hero: '문렙 선빌', x: 1520 }],
       evil: [{ id: 44, hero: '그랭키리우스', x: 1400 }, { id: 40, hero: '인시너레이터', x: 1160 }, { id: 30, hero: '코빌리우스', x: 1640 }],
       dark: [{ id: 57, hero: '카인 제틀링', x: 1400 }, { id: 53, hero: '산적짱', x: 1160 }, { id: 54, hero: '이자비', x: 1640 }, { id: 60, hero: '라미레스', x: 1300 }, { id: 61, hero: '네인 피리스', x: 1520 }],
       both: [{ id: 44, hero: '그랭키리우스', x: 1400 }, { id: 57, hero: '카인 제틀링', x: 1160 }, { id: 54, hero: '이자비', x: 1640 }, { id: 40, hero: '인시너레이터', x: 1300 }, { id: 53, hero: '산적짱', x: 1060 }, { id: 30, hero: '코빌리우스', x: 1520 }, { id: 41, hero: '사울리안', x: 1720 }, { id: 60, hero: '라미레스', x: 1240 }]
@@ -278,6 +281,19 @@
     ],
     ENEMY_DEFAULT: 'evil',
     ENEMIES: {
+      /* 해방부대가 적일 때 (2026-11-17, 악령군 2단계부터 — README 219). 흑마술파 표의 틀(웨이브마다 적 수·간격)을 따랐다. 공주(멀티 챠밍)·엔트·의적·도사·신수사는 뺐다. lair = 성 그림(setFaction 이 libBase 로 보관) */
+      lib: { name: '해방부대', lair: 'libBase', glow: '120,170,255', fig: 1, hpMul: 0.85, waves: [
+        { list: [[0, 3], [4, 1]], gap: 2.2, rest: 10 },
+        { list: [[0, 3], [4, 2], [7, 2]], gap: 1.9, rest: 10 },
+        { list: [[0, 4], [4, 3], [7, 2], [1, 1]], gap: 1.6, rest: 10 },
+        { list: [[0, 5], [4, 3], [7, 2], [1, 2], [2, 1], [11, 2]], gap: 1.5, rest: 7 },
+        { list: [[0, 5], [1, 4], [4, 3], [8, 3], [6, 2], [5, 2], [11, 2]], gap: 1.2, rest: 8 },
+        { list: [[0, 6], [1, 4], [5, 2], [2, 3], [8, 1], [6, 2], [15, 2], [11, 2], [7, 4]], gap: 1.1, rest: 8 },
+        { list: [[0, 6], [1, 5], [3, 1], [5, 3], [8, 3], [2, 1], [12, 2], [6, 2], [15, 2], [17, 1], [7, 2]], gap: 0.95, rest: 8 },
+        { list: [[0, 8], [1, 5], [3, 2], [4, 4], [2, 3], [8, 2], [11, 3], [17, 2], [12, 1], [14, 1], [22, 3], [7, 4]], gap: 0.9, rest: 9 },
+        { list: [[0, 8], [1, 7], [3, 3], [5, 4], [8, 4], [16, 2], [12, 3], [18, 2], [13, 2], [15, 2], [6, 3], [22, 3]], gap: 0.78, rest: 9 },
+        { list: [[0, 9], [1, 7], [3, 4], [5, 4], [2, 3], [8, 3], [16, 2], [13, 2], [12, 2], [19, 3], [20, 2], [18, 1], [15, 4], [22, 3]], gap: 0.76, rest: 0 }
+      ] },
       dark: { name: '흑마술파', lair: 'lair2', glow: '110,120,255', fig: 54, hpMul: 0.85, waves: [   // hpMul = 이 종족만의 체력 배수(ENEMY_HP_MUL 에 곱한다). 체력 합을 맞춰도 방어·원거리 비중이 높아 봇이 악령군보다 한 웨이브 일찍(8~9) 무너져서 0.85 (README 128)
         { list: [[52, 3], [55, 1]], gap: 2.2, rest: 10 },   // 2026-11-13 사용자 요청: 초반(1~3웨이브) 물량 1.4~2배 (2·4·7 → 4·7·10기), 간격은 줄여 웨이브 길이는 비슷하게
         { list: [[52, 3], [55, 2], [68, 2]], gap: 1.9, rest: 10 },
@@ -380,7 +396,8 @@
       stages: [
         Object.assign({}, CONFIG.STAGES[1], { name: '마녀의 숲', note: '쉬움', cap: 40, ecap: 28, waves: [0, 5], mul: 0.7, restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
           lairLv: 1, lairMul: 0.7, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 3, trapEvery: 50, trapLv: 1, guards: [{ at: 'bottom', list: [[53, 2]] }, { at: 'top', list: [[53, 2]] }, { at: 'lair', list: [[54, 1], [53, 2]] }] }),   // 해방부대 2단계(흑마술파)의 틀에 해방부대 1단계의 쉬움 수치
-        { name: '해방부대의 전초', note: '보통', soon: true, enemyName: '해방부대', fig: 0 },
+        { name: '해방부대의 전초', cap: 45, ecap: 32, enemy: 'lib', note: '보통', waves: [0, 6], mul: 0.7, restMul: 1.8, loopRest: 30, loopLv: 0.34, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 4200, efort: { hp: 1000, lv: 2 },
+          lairLv: 2, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 3, traps: 0, guards: [{ at: 'bottom', list: [[1, 2], [4, 1]] }, { at: 'top', list: [[1, 2], [5, 1]] }, { at: 'lair', list: [[3, 1], [1, 2], [12, 1]] }] },   // 해방부대 2단계(흑마술파의 길)와 같은 수치, 적만 해방부대. 덫은 없다(해방부대에 덫 행동이 없음)
         { name: '흑마술의 탑', note: '어려움', soon: true, enemyName: '흑마술파', fig: 54 },
         { name: '거울의 끝', note: '매우 어려움', soon: true, enemyName: '흑마술파 + 해방부대', fig: 51 }
       ] }
@@ -410,7 +427,7 @@
   P.setFaction = function (key) {
     var F = FACTIONS[key], M = root.MW_DEF || {}; if (!F) return false;
     this.faction = key; this.fac = F; CONFIG.TABS = F.tabs; CONFIG.STAGES = F.stages;
-    this.bld = Object.assign({}, M); this.bld.base = M[F.base] || M.base; if (F.fortPic && M[F.fortPic]) { this.bld.fort1 = M[F.fortPic]; this.bld.fort2 = M[F.fortPic]; }
+    this.bld = Object.assign({}, M, { libBase: M.base, libFort1: M.fort1, libFort2: M.fort2 }); this.bld.base = M[F.base] || M.base;   // lib* = 해방부대가 적일 때 쓰는 원래 성·벙커 그림 if (F.fortPic && M[F.fortPic]) { this.bld.fort1 = M[F.fortPic]; this.bld.fort2 = M[F.fortPic]; }
     if (F.hud && !this.assets.img[F.hud]) this.assets.load(F.hud, F.hud + '.png');   // 아래 패널 스킨: 그 진영의 원작 HUD 그림 (악령군 = evil.img → hud1.png, 해방부대와 같은 배치)
     this._buildRoster(); this._buildHeroes(); this.tab = 0; this.btnFirst = 0; this._loadCleared();
     this.setStage(0); this._layout && this.W && this._resize();
@@ -1129,7 +1146,7 @@
         self._say(o.x, o.y - o.headY - 6, '해제', '#9fd8ff'); });
       this._addEffect(dc.x, dc.y, a.arm, 0); ok = true;
     } else if (s.kind === 'weaken' && foe) {                 // 범위 안 적의 공격(멜팅 웨폰)·방어(멜팅 아머)를 무너뜨린다 — 수치는 원본 규칙이 buffs를 보고 적용
-      foesAt(foe, S.radius).forEach(function (o) { o.buffs[a.sup] = { arm: a.arm, until: self.time + (a.dur || 600) / tps }; self._say(o.x, o.y - o.headY - 6, '약화', '#c7a0ff'); });
+      foesAt(foe, S.radius).forEach(function (o) { o.buffs[a.sup] = { arm: a.arm, until: self.time + (a.dur || 600) / tps }; self._say(o.x, o.y - o.headY - 6, a.sup === 'melta' ? '방어력 0' : a.sup === 'meltw' ? '공격력 1' : '약화', '#c7a0ff'); });   // 무엇이 걸렸는지 알려 준다 (2026-11-17 사용자 요청 — 진영 공통. 원본 규칙: 멜팅 아머 = 방어값 0, 멜팅 웨폰 = 공격값 1)
       this._addEffect(foe.x, foe.y, a.arm, 0); ok = true;
     } else if (s.kind === 'stun' && foe) {                   // 범위 안의 적을 잠시 멈춘다
       if (u.side === 0 && a.races && !this._raceFoes(a, foe, S.radius * (1 + this.radiusUp)).length) { this._say(foe.x, foe.y - 12, '대상 없음', '#c9d1e3'); return false; }   // 걸어가서 쓰는 사이에 대상이 사라졌을 때도 헛쓰지 않는다
@@ -1216,7 +1233,7 @@
     // 사라질 것 정리: 쓰러진 뒤 다 흐려진 유닛, 끝난 이펙트·글자
     var T = this.time;
     this.units = this.units.filter(function (u) { return !(u.state === 'dead' && u.fade >= 1); });
-    this.effects = this.effects.filter(function (e) { return (T - e.t0) * 15 < e.f.length; });
+    this.effects = this.effects.filter(function (e) { return (T - e.t0) * (e.fps || 15) < e.f.length; });
     this.texts = this.texts.filter(function (t) { return T - t.t0 < 0.8; });
 
     // 승패
@@ -2116,12 +2133,24 @@
   P._say = function (x, y, s, col) { this.texts.push({ x: x, y: y, s: s, t0: this.time, col: col }); };
 
   /* 발사체: 대상을 향해 날아가 닿으면 피해 + 명중 이펙트 */
+  /* 발사체가 맞았을 때 걸리는 상태 (원본 FUN_004b87d0, 분석 8-45 — 2026-11-17 사용자 결정으로 반영):
+       이펙트 칸 17 이블 스피리츠 어택(악령술사) → 중독: 원본 지속 160틱(13.3초), 2틱마다 체력 −1 (기존 중독 처리 그대로)
+       이펙트 칸 18 이블 스피리츠 커스(강신술사·사술사·다크로드) → 저주 묶임: 원본은 240틱(20초) 동안 묶이지만 디펜스는 CURSE.sec(2.5초)만 (사용자: 커스는 짧게).
+         풀린 뒤 CURSE.gap 초 동안은 다시 걸리지 않는다(여러 기가 번갈아 쏴서 영영 묶이는 일 방지). 면역 유닛·석화 중인 유닛에는 안 걸린다(원본 조건). 멈춤은 석화와 같은 stunUntil, 그림은 회색 대신 저주 기운(칸 18) */
+  var CURSE = { sec: 2.5, gap: 6 };
+  P._shotStatus = function (t, arm) {
+    if (arm !== 17 && arm !== 18 || t.state === 'dead' || t.t.immune || t.isFort) return; var T = this.time, tps = this.rules.tps;
+    if (arm === 17) { if (!(t.buffs.poison && t.buffs.poison.until > T)) this._say(t.x, t.y - t.headY - 6, '중독', '#9be36a'); t.buffs.poison = { until: T + 160 / tps }; return; }
+    if (t.stunUntil > T || (t.curseFree || 0) > T) return;   // 석화·저주 중이거나 방금 풀린 유닛
+    t.stunUntil = T + CURSE.sec; t.curseUntil = t.stunUntil; t.curseFree = T + CURSE.sec + CURSE.gap; t.state = 'idle'; t.castOrder = null;
+    this._say(t.x, t.y - t.headY - 6, '저주', '#c08cff');
+  };
   P._updateShots = function (dt) {
     var keep = [];
     for (var i = 0; i < this.shots.length; i++) {
       var s = this.shots[i], t = s.tgt, tx = t.x, ty = t.y - t.headY * 0.5, dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy), step = s.speed * dt;
       if (d <= step || t.state === 'dead') {
-        if (t.state !== 'dead') { this._damage(t, s.dmg); if (s.def.hit.length) this._addEffect(tx, ty, s.arm, 0); }
+        if (t.state !== 'dead') { this._damage(t, s.dmg); if (s.def.hit.length) this._addEffect(tx, ty, s.arm, 0); this._shotStatus(t, s.arm); }
         continue;
       }
       s.x += dx / d * step; s.y += dy / d * step; s.ang = Math.atan2(dy, dx); keep.push(s);
@@ -2129,8 +2158,12 @@
     this.shots = keep;
   };
 
+  /* 땅에 그리는 이펙트 (2026-11-17 사용자 지적: 흑마술파 어쓰 퀘이크가 안 보인다). 이펙트 칸 33 = arm29.mww 7장 — 검은 땅 갈라짐이라 빛 더하기(lighter)로 그리면 안 보였고, 7장만 0.47초에 지나갔다.
+     원본 순서표(arm 파일 머리 끝 20칸): 0 1 2 3 4 5 6 6 6 6 6 6 6 6 5 4 3 2 1 0 — 갈라지고(7틱) 벌어진 채 8틱 있다가 닫힌다, 틱 = 1/12초. 보통 합성으로, 유닛 아래(땅)에 그린다. shake = 화면 흔들림(초, 디펜스 고유) */
+  var GROUND_FX = { 33: { seq: [0, 1, 2, 3, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 5, 4, 3, 2, 1, 0], shake: 0.9 } };
   P._addEffect = function (x, y, arm, delay) {
-    var d = this.data.fx.arms[arm], fr = d && (d.hit.length ? d.hit : d.fly.length ? d.fly : d.seq);   // seq = 순간이동 이펙트의 틱 순서표
+    var d = this.data.fx.arms[arm], fr = d && (d.hit.length ? d.hit : d.fly.length ? d.fly : d.seq), G = GROUND_FX[arm];   // seq = 순간이동 이펙트의 틱 순서표
+    if (G && d && d.hit.length) { this.effects.push({ x: x, y: y, f: G.seq.map(function (k) { return d.hit[k]; }), t0: this.time + (delay || 0), add: false, fps: 12, ground: true }); if (G.shake) this.shakeUntil = this.time + G.shake; return; }
     if (fr && fr.length) this.effects.push({ x: x, y: y, f: fr, t0: this.time + (delay || 0), add: !d.dir });
   };
 
@@ -2146,7 +2179,7 @@
     this._drawGround();
     // 전장 층: 여기서부터는 전장 좌표로 그린다 (카메라만큼 왼쪽으로 밀고, 아래 패널 영역은 잘라낸다)
     var camX = Math.round(this.cam.x), vx0 = camX - 120, vx1 = camX + W + 120, i;
-    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H - this.hudH); ctx.clip(); ctx.translate(-camX, 0);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H - this.hudH); ctx.clip(); ctx.translate(-camX, 0); if (this.shakeUntil > this.time) ctx.translate(Math.round(Math.sin(this.time * 70) * 2), Math.round(Math.cos(this.time * 53) * 2));   // 어쓰 퀘이크: 전장이 살짝 흔들린다
     this._drawBases();
     if (!CONFIG.PUSH) this._drawRally();                     // 집결선 표시 (유닛보다 먼저 = 바닥에). 진격 방식에는 집결선이 없다
     this._drawTraps();                                       // 덫 (바닥, 유닛보다 먼저)
@@ -2154,9 +2187,10 @@
     var L = this.units.filter(function (u) { return u.x > vx0 && u.x < vx1; }).sort(function (a, b) { return a.y - b.y; });
     this._drawForts('bottom');                               // 아래쪽 벙커도 유닛보다 먼저(뒤에) 그린다 — 2026-11-17 사용자 지적: 전에는 유닛 뒤에 그려서(벙커가 앞) 지나가는 유닛이 벙커 밑으로 들어가 잘려 보였다
     this._drawEForts('bottom');
+    for (i = 0; i < this.effects.length; i++) if (this.effects[i].ground) this._drawEffect(this.effects[i]);   // 땅 이펙트(어쓰 퀘이크의 갈라짐)는 유닛 아래
     for (i = 0; i < L.length; i++) this._drawUnit(L[i]);
     for (i = 0; i < this.shots.length; i++) this._drawShot(this.shots[i]);
-    for (i = 0; i < this.effects.length; i++) this._drawEffect(this.effects[i]);
+    for (i = 0; i < this.effects.length; i++) if (!this.effects[i].ground) this._drawEffect(this.effects[i]);
     this._drawTexts();
     ctx.restore();
     this._drawAim();                                         // 조준 중: 시전 거리 띠 + 반경 원
@@ -2378,12 +2412,13 @@
     if (wb && wb.until > T) this._loopFx(wb.arm, x, y);
     ctx.save(); ctx.translate(x, y + drop); if (u.mir) ctx.scale(-1, 1);
     if (this.look && u.state !== 'dead') { ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = CONFIG.LOOK.outline * this.rs; }   // 어두운 번짐 테두리
-    if (u.stunUntil > T) ctx.drawImage(this._stoneSprite(this.assets.get(f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
+    if (u.stunUntil > T && !(u.curseUntil > T)) ctx.drawImage(this._stoneSprite(this.assets.get(f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
     else ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]);
     if (this.look && u.hitT != null && T - u.hitT < CONFIG.LOOK.flash && u.state !== 'dead') { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = CONFIG.LOOK.flashAlpha * (1 - (T - u.hitT) / CONFIG.LOOK.flash);   // 맞으면 번쩍
       ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
     ctx.restore();
     if (u.state !== 'dead') { if (u === this.sel) { ctx.globalAlpha = 0.775 + 0.225 * Math.sin(T * 7.54); this._ring(u, x, y + 2, 28, 1, 1); ctx.globalAlpha = 1; } }   // 원의 앞쪽 반 (발을 덮는다) ctx.globalAlpha = 1;
+    if (u.curseUntil > T && u.state !== 'dead') { var cf = this.data.fx.arms[18]; cf = cf && cf.fly; if (cf && cf.length) this._fxFrame(cf[Math.floor(T * 12) % cf.length], x, y - u.headY * 0.5, true); }   // 저주: 몸에 저주 기운이 붙는다 (원본 FUN_004f7490)
     if (sb && sb.until > T) { var sd = this.data.fx.arms[sb.arm], si = sd ? MWE.shieldFrame(sd, sb, u.t, T) : -1;   // 파운틴 베리어: 시전 동작은 한 번, 그 뒤 물줄기 유지 (render/assets.js)
       if (si >= 0) this._fxFrame(si, x, y - (sb.arm === 7 || sb.arm === 43 ? u.headY : u.headY >> 1), !sd.dir); }
     var hb = u.buffs.haste; if (hb && hb.until > T && u.state !== 'dead') this._loopFx(44, x, y - u.headY);   // 가속: 머리 위 (원본 FUN_004f7490과 같은 자리)
@@ -2606,7 +2641,7 @@
   };
 
   P._drawEffect = function (e) {
-    var k = Math.floor((this.time - e.t0) * 15); if (k < 0 || k >= e.f.length) return;
+    var k = Math.floor((this.time - e.t0) * (e.fps || 15)); if (k < 0 || k >= e.f.length) return;
     this._fxFrame(e.f[k], e.x, e.y, e.add);
   };
 
@@ -3001,6 +3036,12 @@
       [{ n: '흡혈귀류', fig: 35, ally: 1, m: '흡혈귀·늑대인간·메두사' }, { n: '전사·도둑류', fig: 52, m: '전사·흑전사·흑기사·도둑·대도·마기사' }, { n: '악마류', fig: 39, ally: 1, m: '데몬·데빌·사탄·서큐버스' }, { n: '짐승·벌레류', fig: 66, m: '구렁이·드래곤·개미·거미·전갈 (언데드에 강함)' }]],
     open: [0, 1],
     foot: ['상성이 맞으면 피해가 1.125~1.5배가 됩니다 (유닛 설명 카드의 "강함")', '지상 근접 유닛은 공중 유닛(마녀·드래곤)을 공격할 수 없습니다', '악령술사·강신술사·사술사는 상성이 없습니다'] };
+  /* 악령군 대 해방부대: 해방부대 쪽 표(AFF.evil)를 뒤집은 것. 흡혈귀류 → 전사류 → 악마류 → 격투류 → 흡혈귀류 / 언데드 → 마법사류 → 짐승류 → 성직·소환류 → 언데드 */
+  AFF['evil:lib'] = { name: { 0: '전사류', 7: '격투류', 11: '마법사류', 17: '성직·소환류' }, fam: [[0, [0, 1, 2, 3, 4, 5, 6]], [7, [7, 8, 9, 10]], [11, [11, 12, 13, 14, 15, 16]], [17, [17, 18, 19, 20, 21, 22, 23, 24]]],
+    rings: [
+      [{ n: '흡혈귀류', fig: 35, ally: 1, m: '흡혈귀·늑대인간·메두사' }, { n: '전사류', fig: 0, m: '전사·기사·창기사·성기사·궁수·명궁·창검사' }, { n: '악마류', fig: 39, ally: 1, m: '데몬·데빌·사탄·서큐버스' }, { n: '격투류', fig: 8, m: '격투가·무도가·도사·의적' }],
+      [{ n: '언데드', fig: 28, ally: 1, m: '해골전사·해골기사·듀라한·유령·리치' }, { n: '마법사류', fig: 12, m: '정령사·마법사·장로·연금술사·마법전사·마법기사' }, { n: '짐승류', fig: 43, ally: 1, m: '늑대·켈베로스·펜릴·박쥐·드래곤' }, { n: '성직·소환류', fig: 19, m: '성령사·사제·주교·소환사·엔젤 나이트' }]],
+    foot: ['상성이 맞으면 피해가 1.125~1.5배가 됩니다 (유닛 설명 카드의 "강함")', '지상 근접 유닛은 공중 유닛(엔젤 나이트)을 공격할 수 없습니다', '성령사·사제의 마법은 언데드를 멈춥니다'] };
   P._aff = function () { return AFF[this.faction + ':' + this.enemy] || AFF[this.enemy] || AFF.evil; };
   Object.keys(AFF).forEach(function (k) { var A = AFF[k]; A.famOf = {}; A.repOf = {}; A.fam.forEach(function (q) { q[1].forEach(function (id) { A.famOf[id] = A.name[q[0]]; A.repOf[id] = q[0]; }); }); });   // 적 유닛 → 묶음 이름·대표 유닛
   P.unitInfo = function (r) {
@@ -3008,7 +3049,7 @@
     var kind = !basic ? '지원(공격 없음)' : rng >= 80 ? '원거리' : '근접';
     L.push((air ? '공중 유닛 · ' : '') + kind + (basic ? (rng >= 80 || air ? ' · 공중 공격 가능' : ' · 공중 공격 불가') : ''));
     var AF = this._aff(), AFF_NAME = AF.name, AFF_FAM = AF.famOf;
-    var grp = null; for (var k in AFF_NAME) if ((t.aff || []).indexOf(+k) >= 0) grp = AFF_NAME[k];
+    var grp = null; AF.fam.forEach(function (q) { if (q[1].some(function (id) { return (t.aff || []).indexOf(id) >= 0; })) grp = AFF_NAME[q[0]]; });   // 그 묶음의 어느 유닛에든 강하면 (전에는 대표 유닛만 봐서 늑대류 → 성직·소환류가 빠졌다)
     if (grp) L.push('강함: ' + grp + ' ×' + (t.affMul / 8).toFixed(2).replace(/0$/, ''));
     // 약함: 이 게임에 나오는 적 중 이 유닛을 상성으로 잡는 적 (원본 aff — 적의 강한 상대 목록에 이 유닛이 있다). 짧게 세 이름까지
     var weak = [], seen = {}, self = this; C.WAVES.forEach(function (wv) { wv.list.forEach(function (e) { var et = self.types[e[0]]; if (!et || (et.aff || []).indexOf(t.id) < 0 || !basicAct(et)) return; var rep = self.types[AF.repOf[et.id]], fam = rep && (rep.aff || []).indexOf(t.id) >= 0 ? AFF_FAM[et.id] : et.name; if (!seen[fam]) { seen[fam] = 1; weak.push(fam); } }); });   // 강함과 같은 묶음 이름으로

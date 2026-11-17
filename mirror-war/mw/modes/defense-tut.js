@@ -17,12 +17,13 @@
    defense.js 쪽 연결: pickStage(i, true) → _tutWant, _frame(멈춤·_tutTick), update(웨이브·카드·기습 등 끔), _damage(아군은 죽지 않음), _gainXp, draw(_tutDraw), pointerdown(_tutPointer), keydown */
 (function (root) {
   'use strict';
-  var MWE = root.MWE, DG = MWE.DefenseGame, P = DG.prototype, CONFIG = DG.CONFIG, KEY = 'mwdef.tut';
+  var MWE = root.MWE, DG = MWE.DefenseGame, P = DG.prototype, CONFIG = DG.CONFIG, KEY0 = 'mwdef.tut';
   function inBox(b, x, y) { return b && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h; }
   function grow(b, p) { return b ? { x: b.x - p, y: b.y - p, w: b.w + p * 2, h: b.h + p * 2 } : null; }
 
-  P._tutSeen = function () { try { return root.localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
-  P._tutWanted = function (i) { var q = root.location.search; if (i !== 0 || this.faction !== 'lib' || this._tutDone || /[?&]tut=0/.test(q)) return false; return /[?&]tut=1/.test(q) || !this._tutSeen(); };
+  P._tutKey = function () { return KEY0 + (this.faction === 'lib' ? '' : '.' + this.faction); };   // 본 기록은 진영마다 따로 (해방부대 것을 봐도 악령군 가이드는 뜬다 — 2026-11-17 사용자 요청)
+  P._tutSeen = function () { try { return root.localStorage.getItem(this._tutKey()) === '1'; } catch (e) { return false; } };
+  P._tutWanted = function (i) { var q = root.location.search; if (i !== 0 || !ALL[this.faction] || (this._tutDoneF || {})[this.faction] || /[?&]tut=0/.test(q)) return false; return /[?&]tut=1/.test(q) || !this._tutSeen(); };
 
   /* ── 찾기 도우미 ── */
   P._tutRos = function (name) { var out = null; this.roster.forEach(function (list, ti) { list.forEach(function (r, i) { if (!out && r.t.name === name) out = { ti: ti, i: i, r: r }; }); }); return out; };
@@ -53,16 +54,16 @@
   P._tutBuffed = function (k) { var T = this.time; return this._tutAllies().filter(function (u) { return u.buffs && u.buffs[k] && u.buffs[k].until > T; }).length; };
   /* 아군을 기준 유닛 둘레(뒤쪽 60px 안)로 모은다 — 강화 마법은 시전자 둘레에 공격 아군이 2기 이상 있어야 쓴다 */
   P._tutHuddle = function (w) { var k = 0; this._tutAllies().forEach(function (u) { if (u === w) return; u.x = w.x - 18 - (k % 3) * 18; u.y = w.y + ((k % 2) ? 14 : -14); u.castOrder = null; u.state = 'idle'; k++; }); };
-  P._tutMelee = function () { return this._tutAlly('전사') || this._tutAllies().filter(function (u) { return u.act && u.rangePx < 80; })[0] || this._tutAllies()[0]; };
+  P._tutMelee = function () { return this._tutAlly(this.tut && this.tut.melee || '전사') || this._tutAllies().filter(function (u) { return u.act && u.rangePx < 80; })[0] || this._tutAllies()[0]; };
 
   /* ── 단계 표 ── */
   function summonActs(name, why) {
     return [
-      { text: function (g) { return '아래 탭에서 [' + CONFIG.TABS[g._tutRos(name).ti].name + ']을 누르세요.'; }, box: function (g) { return g._tutTabBox(name); }, skip: function (g) { return g.tab === g._tutRos(name).ti; }, ok: function (g) { return g.tab === g._tutRos(name).ti; } },
-      { text: '[' + name + ']를 눌러 소환하세요. ' + why, box: function (g) { return g._tutBtnBox(name); }, pre: function (g) { g.tut.n0 = g._tutAllies().length; }, ok: function (g) { return g._tutAllies().length > g.tut.n0; }, run: 0.9, after: name + ' 소환!' }
+      { text: function (g) { return '아래에서 [' + CONFIG.TABS[g._tutRos(name).ti].name + '] 탭을 누르세요.'; }, box: function (g) { return g._tutTabBox(name); }, skip: function (g) { return g.tab === g._tutRos(name).ti; }, ok: function (g) { return g.tab === g._tutRos(name).ti; } },
+      { text: '[' + name + '] 버튼을 눌러 소환하세요. ' + why, box: function (g) { return g._tutBtnBox(name); }, pre: function (g) { g.tut.n0 = g._tutAllies().length; }, ok: function (g) { return g._tutAllies().length > g.tut.n0; }, run: 0.9, after: name + ' 소환!' }
     ];
   }
-  var STEPS = [
+  var LIB_STEPS = [
     { title: '입문자 가이드', acts: [
       { text: '거울전쟁 디펜스에 오신 것을 환영합니다. 유닛을 소환하고 마법을 써서 적 기지를 무너뜨리면 승리합니다. 기본 조작을 차례로 익혀 봅시다.', btn: '시작' } ] },
     { title: '유닛 생산', acts: [].concat(
@@ -106,20 +107,69 @@
         ok: function (g) { return g.modal === 'aff'; } },
       { text: function (g) { return '상성 표입니다. ' + g.types[g.tut.affId].name + '에게는 ' + g.tut.counter + ' 쪽이 유리합니다. 아무 곳이나 눌러 닫으세요.'; }, free: true, ok: function (g) { return !g.modal; } },
       { text: function (g) { return '[' + CONFIG.TABS[g._tutRos(g.tut.counter).ti].name + '] 탭을 누르세요.'; }, box: function (g) { return g._tutTabBox(g.tut.counter); }, skip: function (g) { return g.tab === g._tutRos(g.tut.counter).ti; }, ok: function (g) { return g.tab === g._tutRos(g.tut.counter).ti; } },
-      { text: function (g) { return '상성이 유리한 [' + g.tut.counter + ']를 소환하세요. 유리한 유닛은 더 큰 피해를 줍니다.'; }, box: function (g) { return g._tutBtnBox(g.tut.counter); }, pre: function (g) { g.tut.n0 = g._tutAllies().length; },
+      { text: function (g) { return '상성이 유리한 [' + g.tut.counter + '] 버튼을 눌러 소환하세요. 유리한 유닛은 더 큰 피해를 줍니다.'; }, box: function (g) { return g._tutBtnBox(g.tut.counter); }, pre: function (g) { g.tut.n0 = g._tutAllies().length; },
         ok: function (g) { return g._tutAllies().length > g.tut.n0; }, run: 4, hold: 260, after: '소환 버튼을 길게 누르면 유닛 설명과 상성을 볼 수 있습니다.' } ] },
     { title: '가이드 끝', acts: [
       { text: '여기까지입니다. 유닛을 모아 적 벙커를 부수고, 맨 오른쪽의 적 기지를 무너뜨리면 승리합니다. 이제 해골 들판을 시작합니다.', btn: '시작하기' } ] }
   ];
-  DG.TUT_STEPS = STEPS;
+  /* 악령군 가이드 (2026-11-17 사용자 요청: 진영마다 쉬움 단계에 가이드). 해방부대 것과 같은 틀 — 유닛·마법만 악령군 것 */
+  var EVIL_STEPS = [
+    { title: '악령군 가이드', acts: [
+      { text: '악령군으로 오신 것을 환영합니다. 악령군은 값싼 언데드를 쏟아 내고, 악마와 짐승으로 밀어붙입니다. 기본 조작을 차례로 익혀 봅시다.', btn: '시작' } ] },
+    { title: '유닛 생산', acts: [].concat(
+      summonActs('해골기사', '마나를 쓰고, 마굴 앞에서 나와 스스로 싸웁니다.'),
+      summonActs('데몬', '멀리서 불덩이를 던지는 원거리 유닛입니다.'),
+      summonActs('리치', '범위 공격 마법 다크 썬더를 씁니다.'),
+      summonActs('메두사', '적을 돌로 만듭니다.'),
+      summonActs('서큐버스', '적을 매혹하고 아군을 치유합니다.')) },
+    { title: '마굴에 병력 배치', acts: [
+      { text: '마굴을 눌러 고르세요. 마굴 안에 넣은 데몬·데빌·사탄은 안에서 적을 쏩니다.', cam: 0, box: function (g) { return g._baseBox(g.forts[0]); }, do: function (g) { g.selectFort(g.forts[0]); g.camGoal = null; }, ok: function (g) { return g.selBase; } },
+      { text: '[원거리] 탭을 누르세요.', cam: 0, box: function (g) { return g._tutTabBox('데몬'); }, skip: function (g) { return g.tab === g._tutRos('데몬').ti; }, ok: function (g) { return g.tab === g._tutRos('데몬').ti; } },
+      { text: '마굴을 고른 동안 [데몬]을 누르면 전장이 아니라 마굴 안에 배치됩니다.', cam: 0, box: function (g) { return g._tutBtnBox('데몬'); }, pre: function (g) { g.tut.n0 = g.garrison.length; if (!g.selBase) g.selectFort(g.forts[0]); },
+        ok: function (g) { return g.garrison.length > g.tut.n0; }, run: 4, after: '적이 다가오면 마굴 안의 데몬이 불덩이를 쏩니다.',
+        post: function (g) { var id = g.tut.foeId, x = CONFIG.BASE.front + 330; g._tutFoe(id, x, 1); g._tutFoe(id, x + 30, 3); } } ] },
+    { title: '서큐버스 — 다크 힐링', acts: [
+      { text: '해골기사가 다쳤습니다. 스킬 칸의 [다크 힐링]을 누르세요. 주변의 다친 아군을 치유합니다.', box: function (g) { return g._tutSlotBox('다크 힐링'); },
+        pre: function (g) { g._tutClearFoes(); var w = g._tutMelee(), c = g._tutAlly('서큐버스'); if (w) { w.hp = Math.max(1, Math.round(w.maxHp * 0.4)); g.tut.hp0 = w.hp; g._tutNear(c, w.x, 70); } },
+        ok: function (g) { var w = g._tutMelee(); return !w || w.hp > g.tut.hp0; }, run: 1.6, after: '체력이 회복됐습니다. 마법은 마나를 쓰고 재사용 대기가 있습니다.' } ] },
+    { title: '메두사 — 스톤 게이즈', acts: [
+      { text: '적이 왔습니다. [스톤 게이즈]를 누르세요. 조준 없이, 가장 가까운 적 하나를 돌로 만듭니다.', box: function (g) { return g._tutSlotBox('스톤 게이즈'); },
+        pre: function (g) { var w = g._tutMelee(), id = g.tut.foeId; if (w) { w.hp = w.maxHp; g._tutHuddle(w); g.tut.stone = [g._tutFoe(id, w.x + 46, 0), g._tutFoe(id, w.x + 74, 1)]; g.tut.stone[0].y = w.y; } },
+        ok: function (g) { return (g.tut.stone || []).some(function (e) { return e.stunUntil > g.time; }); }, run: 2.6, after: '돌이 된 적은 한동안 움직이지도 공격하지도 못합니다.' } ] },
+    { title: '리치 — 다크 썬더', acts: [
+      { text: '적이 한데 몰려옵니다. [다크 썬더]를 누르세요. 찍은 곳 둘레의 적을 한꺼번에 공격합니다.', box: function (g) { return g._tutSlotBox('다크 썬더'); },
+        pre: function (g) { g._tutClearFoes(); var x = g._tutFront() + 150, id = g.tut.foeId, m = g.rows.length >> 1; [[0, m], [22, m - 1], [18, m + 1], [44, m], [40, m - 1], [-14, m + 1]].forEach(function (e) { g._tutFoe(id, x + e[0], e[1]); }); g._tutNear(g._tutAlly('리치'), x, 150); },
+        ok: function (g) { return !!g.aim; } },
+      { text: '적이 가장 많이 모인 곳을 누르세요. 원 안의 적이 모두 맞습니다.', box: function (g) { return g._tutPtBox(g._tutMid(g._tutFoes()), 46); },
+        do: function (g) { var p = g._tutMid(g._tutFoes()); if (p) g._aimCast(p.x, p.y); }, ok: function (g) { return !g.aim; }, run: 3, after: '범위 마법은 적이 뭉쳐 있을 때 쓰면 좋습니다.' } ] },
+    { title: '서큐버스 — 챠밍', acts: [
+      { text: '[챠밍]을 누르세요. 적 하나를 우리 편으로 만듭니다.', box: function (g) { return g._tutSlotBox('챠밍'); },
+        pre: function (g) { if (g._tutFoes().length < 2) { var x = g._tutFront() + 120, m = g.rows.length >> 1; g._tutFoe(g.tut.foeId, x, m); g._tutFoe(g.tut.foeId, x + 26, m + 1); } var p = g._tutMid(g._tutFoes()); if (p) g._tutNear(g._tutAlly('서큐버스'), p.x, 150); },
+        ok: function (g) { return !!g.aim; } },
+      { text: '매혹할 적을 누르세요.', box: function (g) { return g._tutUnitBox(g._tutFoes()[0]); },
+        do: function (g) { var e = g._tutFoes()[0]; if (e) g._aimCast(e.x, e.y - e.headY * 0.5); }, ok: function (g) { return !g.aim; }, run: 3, after: '매혹된 적은 우리 편이 되어 싸웁니다. 영웅에게는 통하지 않습니다.' } ] },
+    { title: '상성', acts: [
+      { text: '새로운 적이 나타났습니다. 적마다 약한 상대가 있습니다. 위쪽의 [상성] 버튼을 누르세요.', box: function (g) { return g.affBtn; },
+        pre: function (g) { g._tutClearFoes(); g.units = g.units.filter(function (u) { return !(u.charmed && u.side === 0); }); var x = g._tutFront() + 230, m = g.rows.length >> 1; [[0, m], [26, m - 1], [30, m + 1]].forEach(function (e) { g._tutFoe(g.tut.affId, x + e[0], e[1]); }); },
+        ok: function (g) { return g.modal === 'aff'; } },
+      { text: function (g) { return '상성 표입니다. ' + g.types[g.tut.affId].name + '에게는 ' + g.tut.counter + ' 쪽이 유리합니다. 아무 곳이나 눌러 닫으세요.'; }, free: true, ok: function (g) { return !g.modal; } },
+      { text: function (g) { return '[' + CONFIG.TABS[g._tutRos(g.tut.counter).ti].name + '] 탭을 누르세요.'; }, box: function (g) { return g._tutTabBox(g.tut.counter); }, skip: function (g) { return g.tab === g._tutRos(g.tut.counter).ti; }, ok: function (g) { return g.tab === g._tutRos(g.tut.counter).ti; } },
+      { text: function (g) { return '상성이 유리한 [' + g.tut.counter + '] 버튼을 눌러 소환하세요. 유리한 유닛은 더 큰 피해를 줍니다.'; }, box: function (g) { return g._tutBtnBox(g.tut.counter); }, pre: function (g) { g.tut.n0 = g._tutAllies().length; },
+        ok: function (g) { return g._tutAllies().length > g.tut.n0; }, run: 4, hold: 260, after: '소환 버튼을 길게 누르면 유닛 설명과 상성을 볼 수 있습니다.' } ] },
+    { title: '가이드 끝', acts: [
+      { text: '여기까지입니다. 유닛을 모아 적 벙커를 부수고, 맨 오른쪽의 적 기지를 무너뜨리면 승리합니다. 이제 마녀의 숲을 시작합니다.', btn: '시작하기' } ] }
+  ];
+  var ALL = { lib: LIB_STEPS, evil: EVIL_STEPS }, MELEE = { lib: '전사', evil: '해골기사' }, STEPS = LIB_STEPS;   // STEPS = 지금 도는 가이드 (_tutBegin 이 진영 것으로 바꾼다)
+  DG.TUT_STEPS = LIB_STEPS; DG.TUT_ALL = ALL;
 
   /* ── 진행 ── */
   P._tutBegin = function () {
-    var self = this, w0 = this._stageWaves && this._stageWaves[0];
-    this.tut = { si: 0, ai: -1, phase: 'wait', pause: true, runT: 0, t: 0, hold: 200, foeId: w0 ? w0.list[0][0] : 28, affId: 35, counter: '격투가', n0: 0, hp0: 0 };
+    var self = this, w0 = this._stageWaves && this._stageWaves[0]; STEPS = ALL[this.faction] || LIB_STEPS;
+    this.tut = { si: 0, ai: -1, phase: 'wait', pause: true, runT: 0, t: 0, hold: 200, foeId: w0 ? w0.list[0][0] : 28, affId: 35, counter: '격투가', n0: 0, hp0: 0, melee: MELEE[this.faction] || '전사' };
     // 상성 단계에 쓸 적과 그 적에게 유리한 값싼 일반 유닛 (없으면 그 단계는 뺀다)
-    var pick = null; [35, 36, 39, 43].forEach(function (id) { if (pick || !self.types[id]) return; var best = null;
-      self.roster.forEach(function (list) { list.forEach(function (r) { if (r.magic || r.t.name === '전사' || (r.t.aff || []).indexOf(id) < 0) return; if (!best || r.cost < best.cost) best = r; }); });
+    var cand = this.faction === 'lib' ? [35, 36, 39, 43] : [], T0 = this.tut; if (!cand.length) (this._stageWaves || []).forEach(function (w) { w.list.forEach(function (e) { if (e[0] !== T0.foeId && cand.indexOf(e[0]) < 0) cand.push(e[0]); }); });   // 다른 진영: 이 스테이지 웨이브에 나오는 적(그림이 이미 와 있다) 중에서
+    var pick = null; cand.forEach(function (id) { if (pick || !self.types[id]) return; var best = null;
+      self.roster.forEach(function (list) { list.forEach(function (r) { if (r.magic || r.t.name === T0.melee || (r.t.aff || []).indexOf(id) < 0) return; if (!best || r.cost < best.cost) best = r; }); });
       if (best) pick = [id, best.t.name]; });
     if (pick) { this.tut.affId = pick[0]; this.tut.counter = pick[1]; } else this.tut.noAff = true;
     this.units = this.units.filter(function (u) { return u.side !== 1 || u.x > CONFIG.WORLD_W * 0.55; });   // 길목의 적은 치운다 (적 기지 쪽 수비대는 멀어서 그대로)
@@ -141,8 +191,8 @@
     this._regroup && this.groups.length;   // (칸 순서는 그대로 — 상자는 매 프레임 다시 구한다)
   };
   P._tutEnd = function () {
-    try { root.localStorage.setItem(KEY, '1'); } catch (e) {}
-    this.tut = null; this._tutWant = false; this._tutDone = true; this.modal = null; this.aim = null; this.slotSortAt = null;   // 칸 줄 세우기를 다시 켠다
+    try { root.localStorage.setItem(this._tutKey(), '1'); } catch (e) {}
+    this.tut = null; this._tutWant = false; (this._tutDoneF || (this._tutDoneF = {}))[this.faction] = true; this.modal = null; this.aim = null; this.slotSortAt = null;   // 칸 줄 세우기를 다시 켠다
     this.pickStage(this.stageI);                             // 연출을 지우고 1단계를 처음부터
   };
   /* 매 프레임 (멈춰 있을 때도): 보여 주는 시간 재기, 아군이 너무 멀리 나가지 않게, 카메라 */
