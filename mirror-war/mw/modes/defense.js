@@ -500,6 +500,7 @@
     this.texts = [];             // 떠오르는 숫자·글자 (피해량 등)
     this.baseHp = C.BASE.hp; this.baseHit = 0; this.baseHurtT = null;
     this.mana = C.MANA.start; this.manaMax = C.MANA.max; this.manaRegen = C.MANA.regen;
+    this.rep = { sum: {}, mana: 0, lost: 0, by: {}, forts: [], cards: [], end: 0 }; this.reportOpen = false;   // 끝난 뒤 리포트에 쓸 집계 (2026-11-17)
     this.xp = 0; this.plv = 1; this.allyLv = 0; this.xpBuffs = []; this.gameT0 = this.time; this.tb = {}; this.frontHist = []; this.frontAt = null; this.cardNext = null; this.stallNext = null; this.progAt = null; this.cardWhy = ''; this.cardKind = ''; this.dmgUp = 0; this.radiusUp = 0; this.cards = null; this.cardT = 0; this.pendingLv = 0;   // 성장: 경험치·플레이어 레벨·아군 추가 레벨·마법 강화, 고르는 중인 카드
     this.roster.forEach(function (list) { list.forEach(function (r) { r.wait = 0; }); });   // 소환 버튼별 남은 대기 시간
     this.flash = 0;
@@ -629,6 +630,7 @@
     if (why) { var msg = why === 'cap' ? '아군은 ' + this.allyCap() + '기까지' : why === 'max' ? '마법 유닛은 ' + CONFIG.MAX_MAGIC + '기까지' : why === 'nogar' ? '건물에 배치할 수 없는 유닛' : why === 'castle' ? '방어 보너스 유닛은 성에만 배치' : why === 'full' ? '성이 가득 찼습니다' : '';
       if (msg) this._say(this.cam.x + this.W / 2, this.laneY - 120, msg, '#ffb36a'); return false; }
     this.mana -= r.cost; r.wait = r.cd;
+    var rs = this.rep.sum[r.id] || (this.rep.sum[r.id] = { n: 0, name: r.t.name, pid: r.t.pid }); rs.n++; this.rep.mana += r.cost;   // 리포트: 소환 집계
     if (this.selBase) { this._garrison(r); return true; }
     var u = this.spawn(r.id, 0);
     this._play(u.t.snd.ready, 0.8);                          // 원본 등장 음성
@@ -1164,8 +1166,8 @@
 
     // 승패
     if (this.baseHp > 0 && this.baseHp < CONFIG.BASE.hp && CONFIG.BASE.regen && this.time - (this.baseHurtT == null ? -99 : this.baseHurtT) >= CONFIG.BASE.regenWait) this.baseHp = Math.min(CONFIG.BASE.hp, this.baseHp + CONFIG.BASE.regen * dt);   // 기지 자연 회복
-    if (this.baseHp <= 0) { this.baseHp = 0; this.screen = 'lose'; }
-    else if (C.PUSH ? this.lairHp <= 0 : (this.wave >= C.WAVES.length && !this._alive(1).length)) { this.screen = 'win';   // 진격 방식: 마굴을 부수면 승리
+    if (this.baseHp <= 0) { this.baseHp = 0; this.screen = 'lose'; this.rep.end = this.time - this.gameT0; }
+    else if (C.PUSH ? this.lairHp <= 0 : (this.wave >= C.WAVES.length && !this._alive(1).length)) { this.screen = 'win'; this.rep.end = this.time - this.gameT0; this.rep.forts.push([this.rep.end, '적 기지(마굴)']);   // 진격 방식: 마굴을 부수면 승리
       if (this.st) { this.cleared[this.stageI] = 1; try { root.localStorage.setItem('mwdef.cleared', JSON.stringify(this.cleared)); } catch (e) {} } }
   };
 
@@ -1272,6 +1274,7 @@
   /* 카드 i를 고른다 → 효과 적용, 게임 재개. 레벨이 한꺼번에 여러 번 올랐으면 이어서 다음 카드 */
   P.pickCard = function (i) {
     var c = this.cards && this.cards[i], G = CONFIG.GROW, self = this; if (!c) return false;
+    this.rep.cards.push(c.name);                             // 리포트: 고른 카드
     if (c.kind === 'lv') this._levelAll(G.lvStep);
     else if (c.kind === 'hero') this.spawnHero(c.hero);
     else if (c.kind === 'xp') this.xpBuffs.push(this.time + G.xpSec);   // 60초 동안 (여러 장이면 겹친다)
@@ -1727,6 +1730,7 @@
     if (tgt && tgt.isFort) { if (!tgt.dead) { if (tgt.enemy) this._hitEFort(tgt, R.attackValue(u), u); else this._hitFort(tgt, R.attackValue(u)); } return; }
     if (!tgt || tgt.state === 'dead' || tgt.side === u.side) return;
     var dmg = R.damage(u, tgt, this.rng), arm = u.act.arm, def = arm >= 0 ? this.data.fx.arms[arm] : null;
+    if (u.side === 1) tgt.__by = u.t.name;                  // 리포트: 아군을 마지막으로 친 적 (쓰러졌을 때 원인으로 센다 — 마법 피해는 마지막으로 친 적에게 넘어가는 근사)
     if (def) this.shots.push({ x: u.x + u.dir * 14, y: u.y - u.headY * 0.6, tgt: tgt, dmg: dmg, arm: arm, def: def, dir: u.dir, t0: this.time, speed: 380 });
     else { this._damage(tgt, dmg);
       // 중독 (원본 FUN_004ac6f0: 행동 종류 +0x3C == 1 = 전갈의 포이즌 테일 — 맞은 유닛에 중독, 지속 = 행동 +0x3E 틱. 면역 유닛(종류 +0x54) 제외). 피해는 _updateUnit
@@ -1744,6 +1748,7 @@
       u.hp = 0; u.state = 'dead'; u.deadT = 0; u.fade = 0; u.buffs = {};
       this._removeSlots(u);                                  // 마법 유닛이면 그 유닛의 스킬 칸도 함께 없앤다 → 소환 버튼이 다시 켜진다
       this._play(u.t.snd.die, 0.7);
+      if (u.side === 0 && !u.fort) { this.rep.lost++; var bn = u.__by || '마법·기타'; this.rep.by[bn] = (this.rep.by[bn] || 0) + 1; }   // 리포트: 잃은 아군과 원인
       if (u.side === 1) { this.kills++; this._gainXp((u.t.lv && u.t.lv.exp || 1) * Math.max(CONFIG.GROW.xpMin, 1 - CONFIG.GROW.xpFall * Math.min(this.wave, CONFIG.WAVES.length - 1))); }   // 처치 = 경험치 (원작 유닛의 경험치 값)
     }
   };
@@ -2044,6 +2049,7 @@
     F.hp = 0; F.dead = true; var R = this.rows;
     F.garrison.forEach(function (m, k) { var o = self.spawn(m.r.id, 1); self._setLevel(o, F.lv); o.hp = o.maxHp; o.x = F.x + 10 + k * 8; o.y = self.laneY + R[F.at === 'bottom' ? R.length - 1 - k : k]; });
     F.garrison = []; F.weapons = {};
+    this.rep.forts.push([this.time - this.gameT0, '적 ' + F.name]);
     this._say(F.x, Math.min(F.y, this.laneY) - 150, '적 ' + F.name + ' 파괴 — 수비대가 밖으로 나왔습니다', '#ffd36e'); this.flash = 0.15;
     for (var e = 0; e < 4; e++) this._addEffect(F.x - 30 + this.rng.next() * 70, F.y - 20 - this.rng.next() * 60, 5, e * 0.1);
   };
@@ -2728,40 +2734,59 @@
   P._fit = function (str, w) { var ctx = this.ctx; if (ctx.measureText(str).width <= w) return str; while (str.length > 1 && ctx.measureText(str + '…').width > w) str = str.slice(0, -1); return str + '…'; };
 
   /* 시작 / 승리 / 패배 화면. 줄마다 [글, 글자 크기, 색, 위 여백]. 화면보다 긴 줄은 띄어쓰기에서 꺾어 여러 줄로 (세로 모드는 가로가 좁다) */
+  P._mmss = function (t) { t = Math.max(0, Math.round(t || 0)); var m = Math.floor(t / 60), s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; };
+  /* 끝난 뒤 리포트 (2026-11-17 사용자 요청): 플레이 시간·웨이브·처치/손실·소환 TOP3·적 기지 파괴 시각·고른 카드, 졌을 때는 아군을 쓰러뜨린 적 TOP3 */
+  P._drawReport = function () {
+    var ctx = this.ctx, W = this.W, H = this.H, R = this.rep, win = this.screen === 'win', figs = this.assets.get('figs'), self = this, x0 = 14, w = W - 28, y = 46, k;
+    this._plate(8, 30, W - 16, H - 60, 8, false);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = win ? '#8fe89a' : '#ff9a8a';
+    ctx.fillText('스테이지 ' + (this.stageI + 1) + ' · ' + this.st.name + ' — ' + (win ? '클리어' : '패배'), W / 2, y + 6); y += 30;
+    var sec = function (t) { ctx.textAlign = 'left'; ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText(t, x0 + 6, y); ctx.fillStyle = 'rgba(255,233,176,.25)'; ctx.fillRect(x0 + 6, y + 9, w - 12, 1); y += 22; };
+    var kv = function (a, b) { ctx.textAlign = 'left'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(a, x0 + 10, y); ctx.textAlign = 'right'; ctx.fillStyle = '#e8ecf6'; ctx.fillText(b, x0 + w - 10, y); y += 19; };
+    sec('이번 판'); kv('플레이 시간', this._mmss(R.end)); kv('도달 웨이브', Math.min(this.wave + 1, CONFIG.WAVES.length) + ' / ' + CONFIG.WAVES.length); kv('처치 / 잃은 아군', this.kills + ' / ' + R.lost);
+    var all = Object.keys(R.sum).map(function (id) { return R.sum[id]; }).sort(function (a, b) { return b.n - a.n; }), tot = all.reduce(function (n, q) { return n + q.n; }, 0);
+    y += 4; sec('소환 ' + tot + '기 · 마나 ' + Math.round(R.mana));
+    if (!all.length) { kv('소환한 유닛', '없음'); }
+    all.slice(0, 3).forEach(function (q) { var t = self.types[Object.keys(self.types).filter(function (id) { return self.types[id].name === q.name; })[0]];
+      if (figs && q.pid != null) ctx.drawImage(figs, q.pid * 36, 0, 36, 43, x0 + 10, y - 14, 24, 29);
+      ctx.textAlign = 'left'; ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#e8ecf6'; ctx.fillText(q.name, x0 + 42, y); ctx.textAlign = 'right'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(q.n + '기 (' + Math.round(q.n / tot * 100) + '%)', x0 + w - 10, y); y += 32; });
+    y += 2; sec('적 기지');
+    if (!R.forts.length) kv('무너뜨린 곳', '없음'); R.forts.forEach(function (f) { kv(f[1], self._mmss(f[0]) + ' 파괴'); });
+    if (R.cards.length) { y += 4; sec('고른 카드 ' + R.cards.length + '장'); ctx.textAlign = 'left'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9d1e3'; this._wrap(R.cards.join(' · '), w - 20).slice(0, 3).forEach(function (ln) { ctx.fillText(ln, x0 + 10, y); y += 16; }); y += 4; }
+    if (!win) { var by = Object.keys(R.by).map(function (n) { return [n, R.by[n]]; }).sort(function (a, b) { return b[1] - a[1]; }); if (by.length) { y += 4; sec('아군을 가장 많이 쓰러뜨린 적');
+      by.slice(0, 3).forEach(function (e) { kv(e[0], e[1] + '기 (' + Math.round(e[1] / Math.max(1, R.lost) * 100) + '%)'); }); ctx.textAlign = 'left'; ctx.font = '10px sans-serif'; ctx.fillStyle = '#7b8397'; ctx.fillText('마지막으로 친 적 기준의 추정입니다', x0 + 10, y); y += 14; } }
+    var bw = Math.min(170, W - 60); this.repBack = { x: Math.round((W - bw) / 2), y: H - 30 - 54, w: bw, h: 40 };
+    this._plate(this.repBack.x, this.repBack.y, bw, 40, 7, true); ctx.textAlign = 'center'; ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('돌아가기', W / 2, this.repBack.y + 21); ctx.textAlign = 'left';
+  };
   P._drawOverlay = function () {
     var ctx = this.ctx, W = this.W, H = this.H, sc = this.screen, G = '#9aa3b8', items;
     ctx.fillStyle = 'rgba(5,7,12,.78)'; ctx.fillRect(0, 0, W, H);
     var push = CONFIG.PUSH && this.st;
+    if (this.reportOpen && push && (sc === 'win' || sc === 'lose')) { this._drawReport(); return; }
     var FAN = [['이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', 10, '#7b8397', 22], ['원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', 10, '#7b8397', 4]];   // 팬 게임 고지 (사용자 2026-11-12 확정 문구)
     if (sc === 'title' && push && this.titleSeen) items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], ['스테이지를 고르세요', 16, '#fff', 18], ['@stage', CONFIG.STAGES.length * 54 - 8, '', 10]].concat(FAN);   // 둘째 장: 스테이지 고르기
     else if (sc === 'title') items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], [push ? '적 기지(마굴)까지 밀고 들어가 무너뜨리세요' : '적군을 막아 성을 지키세요', 14, '#dfe6f5', 14],
-      ['탭을 골라 해방부대 유닛을 소환합니다', 12, G, 12],
-      ['소환 버튼을 길게 누르면 그 유닛의 설명이 나옵니다', 12, G, 6],
-      ['오른쪽 위 [상성] 버튼으로 유닛 상성을 볼 수 있습니다', 12, G, 6],
-      ['마법 유닛을 소환하면 그 마법이 스킬 칸에 생깁니다 — 같은 마법은 한 칸(×유닛 수), 많으면 좌우로 넘기기', 12, G, 6],
-      ['마법도 마나를 씁니다 — 소환과 마법 중 어디에 쓸지 고르세요', 12, G, 6],
-      ['적을 쓰러뜨려 경험치가 차면 전군 레벨이 오릅니다 — 아군이 불리하거나 전선이 막히면 카드 3장 중 하나를 고릅니다', 12, G, 6],   // 2026-11-16: 레벨업은 자동(185), 카드는 불리·교착일 때만(188)이라 문구를 맞췄다
-      ['적에게 쓰는 마법은 칸을 누른 뒤 전장에서 쓸 곳을 누릅니다', 12, G, 6],
-      ['전장의 마법 유닛을 누르면 [회수] 버튼 — 남은 체력만큼 마나를 돌려받습니다', 12, G, 6],
-      ['성을 눌러 고른 동안 궁수·명궁·창검사·마법사·장로를 소환하면 성에 들어가 적을 쏩니다 (4명까지)', 12, G, 6],
-      ['전장은 좌우로 깁니다 — 화면을 끌거나 위쪽 막대를 눌러 둘러보세요', 12, G, 6]].concat(push ? [
-      ['적 진영의 벙커 두 곳은 수비대가 지키며 쏩니다 — 그 앞을 지나가는 아군은 멈춰서 벙커를 칩니다', 12, G, 6], ['화면을 눌러 계속', 16, '#fff', 18]] : [
+      ['탭에서 유닛을 소환하세요 — 길게 누르면 설명, [상성]에서 상성 확인', 12, G, 12],
+      ['마법은 칸을 누른 뒤 전장에서 쓸 곳을 누릅니다 (마나는 소환과 공유)', 12, G, 6],
+      ['적을 잡으면 전군 레벨업 — 불리하면 카드 3장 중 하나를 고릅니다', 12, G, 6],   // 2026-11-17: 소개 글이 길어 줄였다 (사용자 요청). 마법 유닛·회수·성 배치 설명은 뺐다
+      ['전장은 좌우로 깁니다 — 화면을 끌어 둘러보세요', 12, G, 6]].concat(push ? [
+      ['벙커 수비대가 쏩니다 — 지나가는 아군은 멈춰서 벙커를 칩니다', 12, G, 6], ['화면을 눌러 계속', 16, '#fff', 18]] : [
       ['상대할 적군을 고르세요', 16, '#fff', 18], ['@enemy', 40, '', 8]]).concat([
       // 팬 게임 고지 (사용자 2026-11-12 확정 문구) — 전장 시뮬 페이지 하단과 같은 문장
       ['이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', 10, '#7b8397', 22],
       ['원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', 10, '#7b8397', 4]]);
     else if (sc === 'win' && push) { var nx = CONFIG.STAGES[this.stageI + 1];
-      items = [['스테이지 ' + (this.stageI + 1) + ' 클리어!', 28, '#8fe89a', 0], ['적 기지를 무너뜨렸습니다   ·   처치 ' + this.kills + '   ·   성 ' + Math.ceil(this.baseHp), 14, '#dfe6f5', 14],
-        [nx ? '다음: ' + (this.stageI + 2) + '. ' + nx.name + ' (' + nx.note + ')' : '모든 스테이지를 깼습니다!', 13, nx ? '#9aa3b8' : '#ffd36e', 14], ['@endbtns', 46, '', 14]]; }
+      items = [['스테이지 ' + (this.stageI + 1) + ' 클리어!', 28, '#8fe89a', 0], ['적 기지를 무너뜨렸습니다   ·   처치 ' + this.kills + '   ·   성 ' + Math.ceil(this.baseHp), 14, '#dfe6f5', 14], ['플레이 시간 ' + this._mmss(this.rep.end), 13, '#ffe9b0', 6],
+        [nx ? '다음: ' + (this.stageI + 2) + '. ' + nx.name + ' (' + nx.note + ')' : '모든 스테이지를 깼습니다!', 13, nx ? '#9aa3b8' : '#ffd36e', 14], ['@repbtn', 34, '', 12], ['@endbtns', 46, '', 10]]; }
     else if (sc === 'win') items = [['스테이지 클리어!', 28, '#8fe89a', 0], ['처치 ' + this.kills + '   ·   남은 기지 체력 ' + Math.ceil(this.baseHp), 14, '#dfe6f5', 14], ['화면을 눌러 처음으로', 16, '#fff', 22]];
-    else if (push) items = [['게임 오버', 28, '#ff7a6a', 0], ['스테이지 ' + (this.stageI + 1) + ' · ' + this.st.name + '에서 성이 무너졌습니다', 14, '#dfe6f5', 14], ['적 기지 ' + Math.ceil(Math.max(0, this.lairHp)) + ' / ' + this.lairMax + ' 남음', 12, '#9aa3b8', 6], ['@endbtns', 46, '', 22]];
+    else if (push) items = [['게임 오버', 28, '#ff7a6a', 0], ['스테이지 ' + (this.stageI + 1) + ' · ' + this.st.name + '에서 성이 무너졌습니다', 14, '#dfe6f5', 14], ['적 기지 ' + Math.ceil(Math.max(0, this.lairHp)) + ' / ' + this.lairMax + ' 남음', 12, '#9aa3b8', 6], ['플레이 시간 ' + this._mmss(this.rep.end) + '   ·   웨이브 ' + Math.min(this.wave + 1, CONFIG.WAVES.length), 13, '#ffe9b0', 6], ['@repbtn', 34, '', 14], ['@endbtns', 46, '', 10]];
     else items = [['게임 오버', 28, '#ff7a6a', 0], ['웨이브 ' + Math.min(this.wave + 1, CONFIG.WAVES.length) + ' 에서 기지가 무너졌습니다', 14, '#dfe6f5', 14], ['화면을 눌러 처음으로', 16, '#fff', 22]];
     var lines = [], total = 0, maxW = W - 28, self = this;
     items.forEach(function (it) { ctx.font = (it[1] <= 10 ? '' : 'bold ') + it[1] + 'px sans-serif';
       self._wrap(it[0], maxW).forEach(function (ln, k) { var gap = k ? 3 : it[3], lh = Math.round(it[1] * 1.25); lines.push([ln, it[1], it[2], gap, lh]); total += gap + lh; }); });
     var y = Math.max(8, Math.round((H - total) / 2));
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    this.enemyBtns = null; this.stageBtns = null; this.endBtns = null;
+    this.enemyBtns = null; this.stageBtns = null; this.endBtns = null; this.repBtn = null;
     lines.forEach(function (l) { y += l[3];
       if (l[0] === '@enemy') {   // 적 종족 버튼 (시작 화면): 대표 유닛 그림 + 이름. 지금 고른(직전에 한) 종족은 밝게
         var keys = Object.keys(CONFIG.ENEMIES).sort(function (a, b) { return a === CONFIG.ENEMY_DEFAULT ? -1 : b === CONFIG.ENEMY_DEFAULT ? 1 : 0; }), bw = Math.min(150, Math.floor((W - 36) / keys.length)), bh = l[4], x0 = Math.round(W / 2 - (bw * keys.length + 12 * (keys.length - 1)) / 2), figs = self.assets.get('figs');
@@ -2772,6 +2797,8 @@
           ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9b0'; ctx.fillText(E.name, cx + 34, b.y + bh / 2 + 1); ctx.textAlign = 'center';
           return b; });
         y += l[4]; return; }
+      if (l[0] === '@repbtn') { var rbw = Math.min(190, W - 60); self.repBtn = { x: Math.round((W - rbw) / 2), y: y, w: rbw, h: l[4] };
+        self._plate(self.repBtn.x, self.repBtn.y, rbw, l[4], 7, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('리포트 보기', W / 2, y + l[4] / 2 + 1); y += l[4]; return; }
       if (l[0] === '@endbtns') {   // 스테이지가 끝난 화면의 선택지: 이기면 [다음 스테이지] [처음 화면], 지면 [다시 도전] [처음 화면] (마지막 스테이지를 이기면 [처음 화면]만)
         var win = sc === 'win', defs = win ? (CONFIG.STAGES[self.stageI + 1] ? [['next', '다음 스테이지 ▶'], ['title', '처음 화면']] : [['title', '처음 화면']]) : [['retry', '다시 도전'], ['title', '처음 화면']];
         var ebw = Math.min(150, Math.floor((W - 36 - 12 * (defs.length - 1)) / defs.length)), ex0 = Math.round(W / 2 - (ebw * defs.length + 12 * (defs.length - 1)) / 2);
@@ -2826,6 +2853,8 @@
       for (i = 0; i < (this.enemyBtns || []).length; i++) if (inBox(this.enemyBtns[i], x, y)) { this.pickEnemy(this.enemyBtns[i].key); break; }
       return; }
     if ((this.screen === 'win' || this.screen === 'lose') && CONFIG.PUSH && this.st) {   // 스테이지가 끝난 화면: 버튼만 누를 수 있다 (아무 데나 눌러 넘어가지 않게). 스페이스·엔터 = 첫 버튼
+      if (this.reportOpen) { if (x < 0 || inBox(this.repBack || { x: 0, y: 0, w: 0, h: 0 }, x, y)) this.reportOpen = false; return; }   // 리포트 화면: [돌아가기]만
+      if (this.repBtn && x >= 0 && inBox(this.repBtn, x, y)) { this.reportOpen = true; return; }
       var eb = (this.endBtns || []).filter(function (b) { return x < 0 || inBox(b, x, y); })[0]; if (!eb) return;
       if (eb.act === 'next') this.pickStage(this.stageI + 1); else if (eb.act === 'retry') this.pickStage(this.stageI); else { this.reset(); this.screen = 'title'; }
       return; }
