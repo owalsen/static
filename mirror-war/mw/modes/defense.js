@@ -253,7 +253,7 @@
          lairLv = 적 기지 수비대 레벨(LAIR_GAR), traps·trapEvery·trapLv = 덫(TRAPS), guards = 주둔 적군(GUARD) */
     SURGE: { from: 14, ratio: 2, fill: 0.6, min: 6, max: 16, gap: 0.25, cool: 70, first: 60, siege: 400, times: 6 },   // times = 한 판에 반격하는 횟수 상한 (끝없이 막히지 않게)   // 적의 반격 (_updateSurge, 2026-11-14 사용자 요청). 처음 값(1.8·0.75·24·50초)은 1단계가 900초 안에 안 끝났다 — 반격 12번, 첫 벙커 앞에서 고였다
     CARDS: { trigger: 'adverse', first: 60, cool: 60, foeMin: 4, foeRatio: 1.2, pushSec: 20, pushPx: 150, baseHp: 0.7, stallFrom: 300, stallSec: 120, stallCool: 120, progPx: 30, progHp: 60, sec: 45, mana: 2, dmg: 0.5, radius: 0.3,
-      wAdverse: { mana: 2, repair: 2, hero: 2, xp: 1, magic: 1, radius: 1 }, wStall: { magic: 3, radius: 3, hero: 2, mana: 1, xp: 1, repair: 1 } },   // 카드가 나오는 때와 효과 (_cardCheck, 2026-11-15 사용자 요청). trigger 가 'adverse' 가 아니면 예전처럼 레벨업마다
+      wAdverse: { mana: 2, repair: 2, hero: 2, twin: 2, xp: 1, magic: 1, radius: 1 }, wStall: { magic: 3, radius: 3, hero: 2, twin: 1, mana: 1, xp: 1, repair: 1 } },   /* twin = 이중 소환: sec 초 동안 소환 한 번에 2기, 마나는 1기 값 (2026-11-17 사용자 요청, summon) */   // 카드가 나오는 때와 효과 (_cardCheck, 2026-11-15 사용자 요청). trigger 가 'adverse' 가 아니면 예전처럼 레벨업마다
     SIEGE: { dist: 400, capMul: 0.5, gapMul: 2.5 },   // 적 기지 포위: 맨 앞 3기가 기지 400px 안이면 웨이브 상한 ×0.5, 나오는 간격 ×2.5 (_lairSieged, 2026-11-15 사용자 결정)
     ECAP_FORT: 0.25, ECAP_MIN: 8,   // 적 벙커가 하나 무너질 때마다 적 웨이브 상한(스테이지 ecap) −25%, 최소 8기 (ecapNow, 2026-11-15 사용자 결정)
     SLOT_ORDER: { band: 60, every: 1 },   // 스킬 칸 순서 = 시전자가 전장에 가까운 순 (_regroup, 2026-11-15 사용자 요청). null 이면 생긴 순서
@@ -634,6 +634,7 @@
     if (this.selBase) { this._garrison(r); this.selBase = false; return true; }   // 건물에 한 명 넣으면 건물 선택은 풀린다 (2026-11-17 사용자 요청 — 계속 선택돼 있으면 다음 소환도 건물 배치인지 전장 소환인지 헷갈린다). 더 넣으려면 건물을 다시 누른다
     var u = this.spawn(r.id, 0);
     this._play(u.t.snd.ready, 0.8);                          // 원본 등장 음성
+    if (this.tb && this.time < (this.tb.twin || 0) && !(CONFIG.MAX_MAGIC > 0 && r.magic && this.magicCount() >= CONFIG.MAX_MAGIC) && !(this.allyCap() && this.allyCount() >= this.allyCap())) { this.spawn(r.id, 0); rs.n++; }   // 이중 소환 카드: 한 기 더 (마나·대기시간은 한 번만, 아군 상한·마법 유닛 한도는 지킨다)
     return true;
   };
 
@@ -1117,10 +1118,12 @@
     if (this._pendStart && this.assets.ready()) { this._pendStart = false; this.reset(); this.screen = 'play'; }   // 적 종족을 고른 뒤 그림을 기다리던 시작
     // 바닥 조각을 0.5초마다 다시 그린다: 큰 이펙트 시트(나누기 전 arms.png 는 2,150만 픽셀)를 펼칠 때 아이폰에서 보조 캔버스가 비워져 전장 바닥만 검게 나오던 문제의 복구 (448×192 한 장이라 비용은 작다)
     else if (this.ground && this.terrain && this.time - this._groundAt > 0.5) this._makeGround();
-    if (this.screen === 'play' && !this.paused && !this.cards && !this.modal) this.update(dt);   // 카드를 고르는 동안과 상성 모달이 떠 있는 동안은 멈춘다
+    if (this.screen === 'play' && this._tutWant && !this.tut && this._tutBegin) { this._tutWant = false; this._tutBegin(); }   // 입문자 가이드 시작 (판이 준비된 뒤)
+    var tutHold = this.screen === 'play' && this.tut && this.tut.pause; if (this.screen === 'play' && this.tut && !this.paused) this._tutTick(dt);   // 가이드: 누르기를 기다리는 동안은 멈춘다
+    if (this.screen === 'play' && !this.paused && !this.cards && !this.modal && !tutHold) this.update(dt);   // 카드를 고르는 동안과 상성 모달이 떠 있는 동안은 멈춘다
     if (this.cards) this.cardT += dt;
     if (this.modal) this.modalT += dt;
-    if (!(this.screen === 'play' && (this.cards || this.modal))) this.time += dt;   // 카드·모달로 멈춘 동안에는 게임 시간도 멈춘다 — 전에는 시간만 흘러 강화·석화·쿨타임이 그동안 닳았다 (2026-11-13)
+    if (!(this.screen === 'play' && (this.cards || this.modal || tutHold))) this.time += dt;   // 카드·모달로 멈춘 동안에는 게임 시간도 멈춘다 — 전에는 시간만 흘러 강화·석화·쿨타임이 그동안 닳았다 (2026-11-13)
     this.draw();
   };
 
@@ -1129,7 +1132,7 @@
     this.rules.now = this.time;                              // 강화(buffs)의 남은 시간을 규칙이 알 수 있게
     this._frontStep(dt);
     // 마나 회복, 버튼 대기 시간, 스킬 쿨타임
-    this._timedFx(); this._cardCheck();                     // 카드: 시간 제한 효과 맞추기, 불리함·교착이면 카드 (CONFIG.CARDS)
+    this._timedFx(); if (!this.tut) this._cardCheck();                     // 카드: 시간 제한 효과 맞추기, 불리함·교착이면 카드 (CONFIG.CARDS)
     this.mana = Math.min(this.manaMax, this.mana + this.regenNow() * dt);
     this.roster.forEach(function (list) { list.forEach(function (r) { r.wait = Math.max(0, r.wait - dt); }); });
     this._updateSlots(dt);
@@ -1138,7 +1141,7 @@
     if (this.sel && !this._recallable(this.sel)) this.sel = null;   // 고른 유닛이 쓰러지거나 사라지면 선택도 사라진다
     this._scrollBtns(0);                                     // 탭·유닛 수가 바뀌어도 소환 캐러셀이 범위 밖에 남지 않게
 
-    this._updateWave(dt);
+    if (!this.tut) this._updateWave(dt);   // 입문자 가이드 중에는 적이 나오지 않는다 (연출로 세운 적만)
     // 유닛 행동. 걷는 유닛은 **실제로 움직인 방향**을 본다 (8방향) — 줄을 바꾸거나 대열 자리로 대각선·세로로 갈 때 몸은 옆을 본 채 미끄러지던 것을 고침
     for (i = 0; i < this.units.length; i++) { var mu = this.units[i], px = mu.x, py = mu.y; this._updateUnit(mu, dt);
       if (mu.state === 'move') { var mdx = mu.x - px, mdy = mu.y - py; if (mdx * mdx + mdy * mdy > 0.01) this._faceVec(mu, mdx, mdy); } }
@@ -1147,14 +1150,14 @@
     this._updateGarrison();
     this._updateEForts();
     this._spread(dt);
-    this._updateTraps(dt);
+    if (!this.tut) { this._updateTraps(dt);
     this._updateSortie();
     this._updateLairHero(dt);
     this._updateAmbush(dt);
     this._updateSurge(dt);
     this._updateFlank(dt);
     this._enemyMagic(dt);
-    this._selfMagic();
+    this._selfMagic(); }   // 가이드 중에는 끈다 (아군 자동 시전도 — 플레이어가 직접 눌러 보게)
     this._holdSlot(); this._holdBtn();
     this._updateCamera(dt);
 
@@ -1186,6 +1189,7 @@
   P._topH = function () { return 56; };   // 2026-11-13: 수비대 현황 줄을 뺐다(사용자 요청) — 수비대는 건물 가장자리의 실루엣으로 보인다   // 위 왼쪽 상자(기지·마나·경험치 [+ 수비대])의 높이
   P._xpNeed = function () { var G = CONFIG.GROW; return Math.round(G.base * Math.pow(G.grow, this.plv - 1)); };
   P._gainXp = function (n) {
+    if (this.tut) return;                                    // 입문자 가이드 중에는 경험치 없음 (레벨업·카드가 끼지 않게)
     var T = this.time; this.xpBuffs = (this.xpBuffs || []).filter(function (u) { return u > T; });
     n *= 1 + this.xpBuffs.length * CONFIG.GROW.xpGain;        // "배움의 기운" 카드: 걸려 있는 장 수만큼 (한 장에 xpSec 초)
     this.xp += n;
@@ -1248,7 +1252,7 @@
   };
   /* 카드 3장을 낸다 (서로 다른 종류, 무작위 — 종류마다 무게 GROW.cardW, 없으면 1). 게임은 멈춘다 */
   P._offerCards = function () {
-    var G = CONFIG.GROW, self = this, pool = (G.autoLv ? [] : ['lv']).concat(['mana', 'magic', 'radius', 'xp']), out = [];   // 레벨업이 자동이면 "전군 단련" 카드는 나오지 않는다
+    var G = CONFIG.GROW, self = this, pool = (G.autoLv ? [] : ['lv']).concat(['mana', 'magic', 'radius', 'xp']).concat(CONFIG.CARDS && CONFIG.CARDS.trigger === 'adverse' ? ['twin'] : []), out = [];   // 레벨업이 자동이면 "전군 단련" 카드는 나오지 않는다
     var free = this.heroDefs.filter(function (h) { return !self.units.some(function (u) { return u.hero === h && u.state !== 'dead'; }); }); if (free.length && this.wave + 1 >= G.heroFromWave) pool.push('hero');   // 영웅은 한 명씩만 — 전장에 없는 영웅 중에서 무작위
     if (this.baseHp < CONFIG.BASE.hp * 0.9) pool.push('repair');
     var K = CONFIG.CARDS, tm = K && K.trigger === 'adverse', W8 = tm ? (this.cardKind === 'stall' ? K.wStall : K.wAdverse) : (G.cardW || {}), pick = [];   // 무게대로 겹치지 않게 3장 (형편마다 무게가 다르다)
@@ -1263,6 +1267,7 @@
       else if (tm && k === 'magic') { c.name = '마법 증폭'; c.desc = K.sec + '초 동안 범위 공격 마법의 피해 +' + Math.round(K.dmg * 100) + '%'; c.tag = K.sec + '초 · 피해 +' + Math.round(K.dmg * 100) + '%'; }
       else if (tm && k === 'radius') { c.name = '마법 확산'; c.desc = K.sec + '초 동안 적에게 쓰는 마법의 범위 +' + Math.round(K.radius * 100) + '%'; c.tag = K.sec + '초 · 범위 +' + Math.round(K.radius * 100) + '%'; }
       else if (k === 'mana') { c.name = '마나의 샘'; c.desc = '마나 회복 +' + G.manaRegen + '/초, 최대 마나 +' + G.manaMax; c.tag = '회복 ' + (+self.regenNow().toFixed(1)) + ' → ' + (+(self.regenNow() + G.manaRegen).toFixed(1)); }
+      else if (k === 'twin') { c.name = '이중 소환'; c.desc = K.sec + '초 동안 유닛을 소환하면 2기가 나옵니다 (마나는 1기 값, 아군 상한까지)'; c.tag = K.sec + '초 · 소환 ×2'; }
       else if (k === 'xp') { c.name = '배움의 기운'; c.desc = G.xpSec + '초 동안 경험치 +' + Math.round(G.xpGain * 100) + '%'; c.tag = G.xpSec + '초 · 경험치 +' + Math.round(G.xpGain * 100) + '%'; }
       else if (k === 'magic') { c.name = '마법 증폭'; c.desc = '범위 공격 마법의 피해 +' + Math.round(G.dmg * 100) + '%'; c.tag = '피해 +' + Math.round((self.dmgUp + G.dmg) * 100) + '%'; }
       else if (k === 'radius') { c.name = '마법 확산'; c.desc = '적에게 쓰는 마법의 범위 +' + Math.round(G.radius * 100) + '%'; c.tag = '범위 +' + Math.round((self.radiusUp + G.radius) * 100) + '%'; }
@@ -1280,7 +1285,7 @@
     if (c.kind === 'lv') this._levelAll(G.lvStep);
     else if (c.kind === 'hero') this.spawnHero(c.hero);
     else if (c.kind === 'xp') this.xpBuffs.push(this.time + G.xpSec);   // 60초 동안 (여러 장이면 겹친다)
-    else if (CONFIG.CARDS && CONFIG.CARDS.trigger === 'adverse' && (c.kind === 'mana' || c.kind === 'magic' || c.kind === 'radius')) { this.tb = this.tb || {}; this.tb[c.kind] = Math.max(this.tb[c.kind] || 0, this.time) + CONFIG.CARDS.sec; this._timedFx(); }   // 시간 제한 (같은 카드를 또 고르면 시간이 이어 붙는다)
+    else if (CONFIG.CARDS && CONFIG.CARDS.trigger === 'adverse' && (c.kind === 'mana' || c.kind === 'magic' || c.kind === 'radius' || c.kind === 'twin')) { this.tb = this.tb || {}; this.tb[c.kind] = Math.max(this.tb[c.kind] || 0, this.time) + CONFIG.CARDS.sec; this._timedFx(); }   // 시간 제한 (같은 카드를 또 고르면 시간이 이어 붙는다)
     else if (c.kind === 'mana') { this.manaRegen += G.manaRegen; this.manaMax += G.manaMax; }
     else if (c.kind === 'magic') this.dmgUp += G.dmg;
     else if (c.kind === 'radius') this.radiusUp += G.radius;
@@ -1741,7 +1746,7 @@
 
   P._damage = function (u, dmg) { u.hitT = this.time;
     if (u.state === 'dead') return;
-    dmg = dmg > 0 ? Math.max(1, Math.round(dmg)) : 0;        // 정수로: "마법 증폭"(×1.3) 뒤 124.80000000000001 같은 긴 소수가 그대로 뜨던 버그 (2026-11-12)
+    dmg = dmg > 0 ? Math.max(1, Math.round(dmg)) : 0; if (this.tut && u.side === 0) dmg = Math.min(dmg, Math.max(0, u.hp - 1));   // 입문자 가이드: 아군은 죽지 않는다   // 정수로: "마법 증폭"(×1.3) 뒤 124.80000000000001 같은 긴 소수가 그대로 뜨던 버그 (2026-11-12)
     this._say(u.x, u.y - u.headY - 6, dmg > 0 ? String(dmg) : 'miss', u.side === 1 ? '#ffe9a8' : '#ff9a8a');
     if (dmg <= 0) return;
     u.hp -= dmg;
@@ -2113,6 +2118,7 @@
     else if (this.cards) this._drawCards();
     if (this.screen === 'play' && this.modal === 'menu') this._drawMenu();   // 설정 메뉴 (게임은 멈춰 있다)
     if (this.screen === 'play' && this.modal === 'aff') this._drawAff();   // 유닛 상성 모달 (게임은 멈춰 있다)
+    if (this.screen === 'play' && this.tut) this._tutDraw();   // 입문자 가이드: 덮개·하이라이트·설명 창 (맨 위)
   };
 
   /* 바닥 무늬 만들기: 원본 맵에서 장애물 없는 평지 한 조각(GW × GH)을 떠 온다.
@@ -2430,7 +2436,7 @@
       if (c.kind === 'hero' && por && por.naturalWidth) { var id = c.unit.pid, pw = aw - 2, ph = Math.round(pw * 160 / 120); ctx.drawImage(por, (id % 12) * 120, Math.floor(id / 12) * 160, 120, 160, b.x + 13, ay + 1 - Math.round((ph - ah) * 0.18), pw, ph); }
       else if (c.kind === 'lv') { [0, 1, 4].forEach(function (pid, k) { ctx.drawImage(figs, pid * 36, 0, 36, 43, Math.round(cx - 46 + k * 30), ay + 18, 34, 41); }); }
       else if (c.kind === 'repair') { var bp = self.bld.pics && self.bld.base ? self.bld.pics[self.bld.base.pic] : null; if (bp) { var k2 = Math.min((aw - 6) / bp[2], (ah - 6) / bp[3]); ctx.drawImage(self.assets.get('defense'), bp[0], bp[1], bp[2], bp[3], Math.round(cx - bp[2] * k2 / 2), Math.round(ay + ah / 2 - bp[3] * k2 / 2), Math.round(bp[2] * k2), Math.round(bp[3] * k2)); } }
-      else { var ic = icoOf(c.kind === 'mana' ? '말다 소환' : c.kind === 'magic' ? '라이트닝 썬더' : c.kind === 'xp' ? '천리안' : '나르 소환'), fi = ic * 2 + 1, s2 = 1.5; if (ic >= 0) ctx.drawImage(icons, (fi % D.cols) * D.w, Math.floor(fi / D.cols) * D.h, D.w, D.h, Math.round(cx - D.w * s2 / 2), Math.round(ay + ah / 2 - D.h * s2 / 2), Math.round(D.w * s2), Math.round(D.h * s2)); }
+      else { var ic = icoOf(c.kind === 'mana' ? '말다 소환' : c.kind === 'magic' ? '라이트닝 썬더' : c.kind === 'xp' ? '천리안' : c.kind === 'twin' ? '넨 소환' : '나르 소환'), fi = ic * 2 + 1, s2 = 1.5; if (ic >= 0) ctx.drawImage(icons, (fi % D.cols) * D.w, Math.floor(fi / D.cols) * D.h, D.w, D.h, Math.round(cx - D.w * s2 / 2), Math.round(ay + ah / 2 - D.h * s2 / 2), Math.round(D.w * s2), Math.round(D.h * s2)); }
       ctx.restore();
       if (c.kind === 'hero') { var HB = root.MW && root.MW.hpbar, st = HB && HB.frames[7]; if (st) ctx.drawImage(self.assets.get('hpbar'), st[0], st[1], st[2], st[3], b.x + 15, ay + 3, st[2], st[3]); }   // 영웅 별
       ctx.textAlign = 'center'; ctx.font = 'bold 13px sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.9)'; var nm = self._fit(c.name, b.w - 12); ctx.strokeText(nm, cx, ay + ah + 16); ctx.fillStyle = '#ffe9b0'; ctx.fillText(nm, cx, ay + ah + 16);
@@ -2591,7 +2597,7 @@
     ctx.textAlign = 'left'; ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('Lv ' + this.plv, T.x + 8, T.y + 49);
     this._bar(bx, T.y + 46, bw, 6, this.xp / this._xpNeed(), '#e6c476'); ctx.font = 'bold 12px sans-serif';
     // 걸려 있는 카드 효과와 남은 초: 위 왼쪽 상자 바로 아래에 작게 (전투 줄을 가리지 않게)
-    var tbs = [], tnow = this.time, B0 = this.tb || {}; [['mana', '마나×' + ((CONFIG.CARDS || {}).mana || 2)], ['magic', '증폭'], ['radius', '확산']].forEach(function (e) { if (tnow < (B0[e[0]] || 0)) tbs.push(e[1] + ' ' + Math.ceil(B0[e[0]] - tnow)); });
+    var tbs = [], tnow = this.time, B0 = this.tb || {}; [['mana', '마나×' + ((CONFIG.CARDS || {}).mana || 2)], ['magic', '증폭'], ['radius', '확산'], ['twin', '이중']].forEach(function (e) { if (tnow < (B0[e[0]] || 0)) tbs.push(e[1] + ' ' + Math.ceil(B0[e[0]] - tnow)); });
     (this.xpBuffs || []).filter(function (u) { return u > tnow; }).forEach(function (u) { tbs.push('경험치 ' + Math.ceil(u - tnow)); });
     if (tbs.length) { ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left'; var tl = tbs.join(' · '), tw0 = ctx.measureText(tl).width + 10; ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(T.x, T.y + this._topH() + 2, tw0, 15); ctx.fillStyle = '#ffd36e'; ctx.fillText(tl, T.x + 5, T.y + this._topH() + 10); ctx.font = 'bold 12px sans-serif'; }
     // 성 안의 유닛(수비대): 작은 그림을 자리 순서대로
@@ -3054,7 +3060,7 @@
     this._stageWaves = E.waves.slice(a[0], a[1]).map(function (w) { return { list: w.list.map(function (e) { return [e[0], Math.max(1, Math.round(e[1] * mul))]; }), gap: w.gap / mul, rest: w.rest }; });
     return this.setEnemy(S.enemy);
   };
-  P.pickStage = function (i) { if (this.setStage(i)) this.start(); };
+  P.pickStage = function (i) { if (!this.setStage(i)) return; this.tut = null; this._tutWant = !!(this._tutWanted && this._tutWanted(i)); this.start(); };   // 1단계를 처음 고르면 입문자 가이드 (defense-tut.js, 2026-11-17)
   P.start = function () {
     if (this.assets.ready()) { this._pendStart = false; this.reset(); this.screen = 'play'; }
     else { this._pendStart = true; this.screen = 'loading'; }   // 고른 종족의 그림을 받는 중: 다 오면 _frame 이 시작한다
@@ -3083,6 +3089,7 @@
     /* 누르기: 버튼이면 바로 실행, 진행 막대면 그곳으로 이동, 전장이면 끌어서 카메라 옮기기 시작 */
     cv.addEventListener('pointerdown', function (e) {
       e.preventDefault(); var p = self._pos(e), x = p[0], y = p[1], m = self.miniBox; if (self.aim) self.aimPt = { x: x, y: y };
+      if (self.screen === 'play' && self.tut) { self.sfx.unlock(); self._tutPointer(x, y); return; }   // 입문자 가이드: 하이라이트된 곳과 [건너뛰기]만 받는다
       if (self.screen === 'play' && (self.cards || self.modal || inBox(self.affBtn, x, y) || inBox(self.menuBtn, x, y))) { self.sfx.unlock(); self._tap(x, y); return; }   // 카드를 고르는 중, 상성 모달, [상성] 버튼
       if (self.screen === 'play' && x >= m.x - 6 && x <= m.x + m.w + 6 && y >= m.y - 6 && y <= m.y + m.h + 6) { self.drag = { mini: true, id: e.pointerId }; self._miniPan(x); return; }
       // 전장: 손을 뗄 때까지 지켜본다 — 6px 넘게 끌면 카메라 이동(그때부터 따라온다), 끌지 않고 떼면 탭(유닛 선택·회수 버튼)
@@ -3109,6 +3116,7 @@
     root.addEventListener('beforeunload', function (e) { if (self.screen === 'play' && !root.__noLeaveGuard) { e.preventDefault(); e.returnValue = ''; return ''; } });
     root.addEventListener('resize', function () { self._resize(); });
     root.addEventListener('keydown', function (e) {
+      if (self.screen === 'play' && self.tut) { if (e.code === 'KeyM' && !e.repeat) { self.sfx.unlock(); self.toggleSound(); } return; }   // 입문자 가이드 중에는 단축키를 막는다 (소리 M 키만 받는다)
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); if (self.screen === 'play') self.panTo(self.cam.x + (e.key === 'ArrowLeft' ? -90 : 90)); return; }
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       var kc = /^Key[A-Z]$/.test(e.code) ? e.code.charAt(3) : null;   // 한글 입력 상태와 상관없이 자판 위치로
