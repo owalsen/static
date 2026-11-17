@@ -219,7 +219,7 @@
     /* 적 레벨: 웨이브가 진행될수록 적이 높은 레벨로 나온다 — 레벨 = start + perWave × (웨이브 − 1). 원본 성장 규칙 그대로 체력(+hpGrow)·공격(k1 × 레벨)·방어(defGrow × 레벨)가 함께 오른다.
        체력 배수만 올리는 것보다 낫다: 초반은 그대로 두고 후반만 어려워지며, "전군 단련"으로 오르는 아군 레벨과 짝이 맞는다 (2026-11-12 사용자 제안) */
     ENEMY_LV: { start: 1, perWave: 0.7 },   // 2026-11-13: 1 → 0.7 (10웨이브에 레벨 7). 1일 때 봇이 6~7웨이브에서 무너졌다 (README 105)
-    SKILL_OFF: { '넨 소환': 1, '헤이스트': 1, '엔트 변형': 1 },   // 엔트 변형: 스킬 칸에서 뺌 — 알아서 변형한다 (CONFIG.ENT)
+    SKILL_OFF: { '넨 소환': 1, '헤이스트': 1, '엔트 변형': 1, '박쥐 변신': 1 },   /* 박쥐 변신(흡혈귀): 디펜스에 대응 형태가 없다 — 악령군을 아군으로 열면서 스킬 칸에서 뺐다 (2026-11-17) */   // 엔트 변형: 스킬 칸에서 뺌 — 알아서 변형한다 (CONFIG.ENT)
       // 헤이스트(마녀): 원작은 자기 전용인데 디펜스에서는 주변 적 전부가 60초 동안 공격 대기 없이 쳐서 흑마술파 8웨이브가 무너졌다 — 2026-11-13 사용자 결정으로 제외 (README 128)
       // 디펜스에서 뺀 마법 (원본 행동 이름). 넨 소환 = 아군 텔레포트(리콜): 2026-11-12 사용자 요청으로 제외 — 코드(recall)는 남겨 둔다
     TECH: { '암살': { cool: 20, first: 4 } },
@@ -329,34 +329,24 @@
     this.enemy = CONFIG.ENEMY_DEFAULT; CONFIG.WAVES = CONFIG.ENEMIES[this.enemy].waves;   // 적 종족 (시작 화면에서 고른다 — setEnemy)
     this.map = new MWE.GameMap(data.map2);                   // 배경으로 쓸 원본 맵 (평지가 있는 2인용 맵)
 
-    var parentOf = {}; data.units.forEach(function (d) { (d.up || []).forEach(function (x) { if (parentOf[x] == null) parentOf[x] = d.id; }); });   // 전직 대상 → 원래 유닛
-    // 소환 목록: 탭마다 { 유닛 종류, 마나 값, 다시 소환까지(초), 마법 유닛인가 }
-    this.roster = CONFIG.TABS.map(function (tab) { return tab.ids.map(function (id) {
-      var t = self.types[id], cost = summonCost(self.types, parentOf, id);
-      return { id: id, t: t, cost: cost, cd: Math.max(1, Math.min(8, cost / 20)), magic: skillsOf(t).some(function (a) { return !CONFIG.TECH[a.name]; }), tech: skillsOf(t).some(function (a) { return !!CONFIG.TECH[a.name]; }) || bodyTechs(t).length > 0, wait: 0, gar: garInfo(id) };
-    }); });
+    this.faction = 'lib'; this.fac = FACTIONS.lib;          // 내 진영 (setFaction — 진영 선택 화면에서 고른다)
+    this._buildRoster();
     this.tab = 0;
 
     // 그림: 필요한 것만 불러온다 (배경 타일, 이펙트, 스킬 아이콘, 유닛 작은 그림, 건물, 쓰는 유닛의 스프라이트)
     var A = this.assets = new MWE.Assets(opts.base);
     A.load('tiles', this.map.keys.tiles + '.png').load('acticons', 'acticons.png').load('figs', 'figs.png').load('defense', 'defense.png').load('hpbar', 'hpbar.png').load('portraits', 'portraits.png').load('hud0', 'hud0.png').load('hudwin', 'hudwin.png');   // 원작 체력 바 틀·숫자, 초상화(영웅 카드) (bar.spr, helpnum.mwl → tools/hpbarbuild.js)
-    this.bld = root.MW_DEF || {};                            // 건물 그림 위치표 { base, lair } (sim/defense.js)
+    this.bld = root.MW_DEF || {};                            // 건물 그림 위치표 { base, lair } (sim/defense.js). 내 진영이 바뀌면 base·fort1·fort2 를 그 진영 건물로 바꾼 사본을 쓴다 (setFaction)
     this._usedUnitIds().forEach(function (id) { A.load('u' + id, self.types[id].img); });
     // 이펙트 시트: 여러 장 중 이 게임이 쓰는 이펙트 칸의 것만 미리 받는다 (쓰는 유닛들의 모든 행동 + 순간이동·가속·회수 이펙트). 빠진 것이 있으면 그릴 때 그 장을 받는다 (_fxFrame)
     var armIds = { 3: 1, 21: 1, 44: 1 }; armIds[CONFIG.RECALL.fxArm] = 1;
     this._usedUnitIds().forEach(function (id) { self.types[id].acts.forEach(function (a) { if (a && a.arm >= 0) armIds[a.arm] = 1; }); });
     this.fxSheets = {}; Object.keys(armIds).forEach(function (k) { var d = data.fx.arms[k]; (d && d.sheets || []).forEach(function (n) { self._loadFxSheet(n); }); });
     this.terrain = null;                                     // 그림이 다 오면 만든다
-    this.st = null; this.stageI = 0; this.cleared = {}; try { this.cleared = JSON.parse(root.localStorage.getItem('mwdef.cleared') || '{}') || {}; } catch (e) { this.cleared = {}; }   // 깬 스테이지 (이 브라우저에만 기억)
+    this.st = null; this.stageI = 0; this.cleared = {}; this._loadCleared();   // 깬 스테이지 (이 브라우저에만 기억)
     if (CONFIG.PUSH) this.setStage(0);                       // 진격 방식은 스테이지로 진행한다
 
-    // 원작 영웅: 기본 유닛 종류를 물려받고 이름·초상화·수치만 영웅 기록의 것으로 바꾼 종류를 만든다
-    this.heroDefs = [];
-    (data.heroes || []).forEach(function (h) { if (CONFIG.GROW.heroes.indexOf(h.name) < 0) return; var base = self.types[h.type]; if (!base) return;
-      var G = CONFIG.GROW, t = Object.create(base); t.name = h.name; t.job = base.name; t.pid = h.pid;
-      t.hp = base.hp; t.atk = Math.min(G.heroCap.atk, Math.max(h.atk, Math.round(base.atk * G.heroAtk))); t.def = Math.min(G.heroCap.def, Math.max(h.def, Math.round(base.def * G.heroDef)));
-      t.maxHpAt = function (L) { return base.maxHpAt(Math.max(1, L - G.heroLv)); };   // 체력 = 같은 레벨(추가 heroLv 빼고)의 일반 유닛과 같다. 추가 레벨은 공격·방어 식에만 (2026-11-14 사용자 요청)
-      self.heroDefs.push({ name: h.name, t: t, base: base, rec: h }); });
+    this._buildHeroes();
     this.recallIcon = -1;                                    // 회수 팻말에 그릴 원작 리콜 아이콘 (넨 소환의 아이콘 번호)
     data.units.forEach(function (d) { (d.acts || []).forEach(function (a) { if (a && a.sup === 'recall' && a.icon >= 0 && self.recallIcon < 0) self.recallIcon = a.icon; }); });
     this.sfx = new MWE.Sfx(opts.base + 'sfx.js', data.sfx);
@@ -369,6 +359,63 @@
     requestAnimationFrame(function loop(ts) { requestAnimationFrame(loop); self._frame(ts); });
   }
   var P = DefenseGame.prototype;
+
+  /* ───────── 내 진영 (2026-11-17 사용자 요청, README 215·216) ─────────
+     FACTIONS[key] = { name, bgm(배경음 묶음), base(내 기지 그림 = MW_DEF 의 키)·baseName, fortPic·fortNames(내 벙커 그림·이름), tabs(소환 탭), heroes(영웅 카드), stages(스테이지 4개),
+                       cost(유닛 → 소환 마나; 없으면 원본 금 값에서 계산), garCls(성 사격 등급 바꿔 읽기) }
+     해방부대 것은 CONFIG 의 원래 값(TABS·STAGES·GROW.heroes) 그대로다. 진영을 바꾸면 CONFIG.TABS·CONFIG.STAGES 를 그 진영 것으로 갈아 끼운다(CONFIG.WAVES 와 같은 방식).
+     악령군: 원본 생산비가 금이 아니라 영혼(cost[0], 1~30)이라 마나 값을 따로 정했다(체력·공격을 해방부대 유닛과 견주어). 다크로드(영웅격)·도펠갱거(메타몰포시스 미구현)·디아블로·좀비(기본 공격 없음)는 뺐다.
+       성 사격: 데몬·데빌·사탄(원본 등급 2 = 파이어 볼)을 등급 0(마법사의 파이어 볼)으로 읽는다. 스테이지는 1단계(대 흑마술파)만 열려 있다 — 2~4단계는 soon(개발 예정) */
+  var FACTIONS = {
+    lib: { name: '해방부대', bgm: 0, base: 'base', baseName: '성', tabs: CONFIG.TABS, heroes: CONFIG.GROW.heroes, stages: CONFIG.STAGES },
+    evil: { name: '악령군', bgm: 1, base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
+      tabs: [
+        { name: '근접', ids: [28, 43, 29, 35, 36, 30, 44] },    // 해골전사 늑대 해골기사 흡혈귀 늑대인간 듀라한 켈베로스
+        { name: '원거리', ids: [46, 32, 39, 40, 45, 47] },      // 박쥐 유령 데몬 데빌 펜릴 드래곤
+        { name: '마법', ids: [25, 33, 26, 27] },                // 악령술사 리치 강신술사 사술사
+        { name: '암흑', ids: [38, 42, 41] }                     // 메두사 서큐버스 사탄
+      ],
+      cost: { 28: 15, 43: 20, 29: 40, 35: 50, 36: 55, 30: 75, 44: 90, 46: 20, 32: 30, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 60, 26: 80, 27: 110, 38: 55, 42: 90, 41: 120 },
+      heroes: ['사울리안', '스컬 크러셔', '노스페라투', '인시너레이터', '킹 오브 그리드', '실버린', '하이네', '그랭키리우스', '코빌리우스'],
+      stages: [
+        Object.assign({}, CONFIG.STAGES[1], { name: '마녀의 숲', note: '쉬움', cap: 40, ecap: 28, waves: [0, 5], mul: 0.7, restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
+          lairLv: 1, lairMul: 0.7, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 3, trapEvery: 50, trapLv: 1, guards: [{ at: 'bottom', list: [[53, 2]] }, { at: 'top', list: [[53, 2]] }, { at: 'lair', list: [[54, 1], [53, 2]] }] }),   // 해방부대 2단계(흑마술파)의 틀에 해방부대 1단계의 쉬움 수치
+        { name: '해방부대의 전초', note: '보통', soon: true, enemyName: '해방부대', fig: 0 },
+        { name: '흑마술의 탑', note: '어려움', soon: true, enemyName: '흑마술파', fig: 54 },
+        { name: '거울의 끝', note: '매우 어려움', soon: true, enemyName: '흑마술파 + 해방부대', fig: 51 }
+      ] }
+  };
+  DefenseGame.FACTIONS = FACTIONS;
+  P._clKey = function () { return 'mwdef.cleared' + (this.faction === 'lib' ? '' : '.' + this.faction); };   // 깬 스테이지는 진영마다 따로 기억한다
+  P._loadCleared = function () { try { this.cleared = JSON.parse(root.localStorage.getItem(this._clKey()) || '{}') || {}; } catch (e) { this.cleared = {}; } };
+  P._nextStage = function () { var S = CONFIG.STAGES[this.stageI + 1]; return S && !S.soon ? S : null; };
+  /* 소환 목록: 탭마다 { 유닛 종류, 마나 값, 다시 소환까지(초), 마법 유닛인가 } */
+  P._buildRoster = function () {
+    var self = this, F = this.fac, data = this.data, parentOf = {}; data.units.forEach(function (d) { (d.up || []).forEach(function (x) { if (parentOf[x] == null) parentOf[x] = d.id; }); });   // 전직 대상 → 원래 유닛
+    this.roster = CONFIG.TABS.map(function (tab) { return tab.ids.map(function (id) {
+      var t = self.types[id], cost = (F.cost && F.cost[id]) || summonCost(self.types, parentOf, id);
+      return { id: id, t: t, cost: cost, cd: Math.max(1, Math.min(8, cost / 20)), magic: skillsOf(t).some(function (a) { return !CONFIG.TECH[a.name]; }), tech: skillsOf(t).some(function (a) { return !!CONFIG.TECH[a.name]; }) || bodyTechs(t).length > 0, wait: 0, gar: garInfo(id, F.garCls) };
+    }); });
+  };
+  /* 원작 영웅: 기본 유닛 종류를 물려받고 이름·초상화·수치만 영웅 기록의 것으로 바꾼 종류를 만든다 (내 진영의 영웅 목록) */
+  P._buildHeroes = function () {
+    var self = this, list = this.fac.heroes || [], seen = {}; this.heroDefs = [];
+    (this.data.heroes || []).forEach(function (h) { if (list.indexOf(h.name) < 0 || seen[h.name]) return; var base = self.types[h.type]; if (!base) return; seen[h.name] = 1;
+      var G = CONFIG.GROW, t = Object.create(base); t.name = h.name; t.job = base.name; t.pid = h.pid;
+      t.hp = base.hp; t.atk = Math.min(G.heroCap.atk, Math.max(h.atk, Math.round(base.atk * G.heroAtk))); t.def = Math.min(G.heroCap.def, Math.max(h.def, Math.round(base.def * G.heroDef)));
+      t.maxHpAt = function (L) { return base.maxHpAt(Math.max(1, L - G.heroLv)); };   // 체력 = 같은 레벨(추가 heroLv 빼고)의 일반 유닛과 같다. 추가 레벨은 공격·방어 식에만 (2026-11-14 사용자 요청)
+      self.heroDefs.push({ name: h.name, t: t, base: base, rec: h }); });
+  };
+  /* 내 진영을 바꾼다: 탭·스테이지·기지 그림·영웅·깬 기록·배경음. 그 진영 1단계로 맞추고 필요한 그림을 받기 시작한다 */
+  P.setFaction = function (key) {
+    var F = FACTIONS[key], M = root.MW_DEF || {}; if (!F) return false;
+    this.faction = key; this.fac = F; CONFIG.TABS = F.tabs; CONFIG.STAGES = F.stages;
+    this.bld = Object.assign({}, M); this.bld.base = M[F.base] || M.base; if (F.fortPic && M[F.fortPic]) { this.bld.fort1 = M[F.fortPic]; this.bld.fort2 = M[F.fortPic]; }
+    this._buildRoster(); this._buildHeroes(); this.tab = 0; this.btnFirst = 0; this._loadCleared();
+    this.setStage(0); this._layout && this.W && this._resize();
+    if (this.bgm) this.bgm.set(F.bgm);
+    return true;
+  };
   /* 수비 건물(성 + 벙커)은 this.forts 에 있다: { key, name, B(건물 그림 정보), x, y(기준점), cap, garrison[], weapons{} }. 고른 건물 = this.selFort.
      예전 코드가 쓰던 selBase·garrison·weapons 는 "지금 고른 건물(없으면 성)"을 가리키는 이름으로 남긴다 */
   P._fort = function () { return this.selFort || (this.forts && this.forts[0]) || { garrison: [], weapons: { 0: { phase: -1, c: 0 }, 4: { phase: -1, c: 0 } }, cap: 0 }; };
@@ -467,8 +514,8 @@
                                  // 2026-11-13: 따로 있던 [성 배치] 토글(garOn)을 없애고 성 선택으로 합쳤다 — 켜 둔 줄 모르고 계속 성에만 넣는 일을 막는다
     // 수비 건물: 성(자리 0) + 벙커. garrison = 안의 유닛 { r(소환 목록 항목), u(피해 계산용 Unit), cls, bonus } — 순서 = 자리 번호. weapons = 건물 무기 상태(phase -1 없음 / 0 전개 중 / 2 가동, c = 그림 카운터)
     var D0 = this.bld, self0 = this, mk = function (key, name, B, x, yOf, cap) { var f = { key: key, name: name, B: B, x: x, cap: cap, garrison: [], weapons: { 0: { phase: -1, c: 0 }, 4: { phase: -1, c: 0 } }, isFort: key !== 'base', hp: 0, maxHp: 0, dead: false, hit: 0 }; Object.defineProperty(f, 'y', { get: yOf }); return f; };   // y 는 그때그때 계산 (화면 크기가 바뀌면 전투 줄 위치가 바뀐다)
-    this.forts = []; if (D0.base) this.forts.push(mk('base', '성', D0.base, C.BASE.x, function () { return self0.laneY + 44; }, Math.min(C.GAR_MAX, D0.base.cap)));
-    for (var fi = 0; fi < C.FORTS.length; fi++) { var fc = C.FORTS[fi]; if (D0[fc.key]) (function (fc) { var f = mk(fc.key, fc.name, D0[fc.key], fc.x, fc.at === 'bottom' ? function () { return self0.H - self0.hudH - C.FORT_DOWN; } : function () { return self0.laneY + self0.rows[0] - C.FORT_UP; }, Math.min(fc.cap, D0[fc.key].cap)); f.at = fc.at; f.hp = f.maxHp = fc.hp; self0.forts.push(f); })(fc); }
+    this.forts = []; if (D0.base) this.forts.push(mk('base', this.fac.baseName || '성', D0.base, C.BASE.x, function () { return self0.laneY + 44; }, Math.min(C.GAR_MAX, D0.base.cap)));
+    for (var fi = 0; fi < C.FORTS.length; fi++) { var fc = C.FORTS[fi]; if (D0[fc.key]) (function (fc) { var f = mk(fc.key, (self0.fac.fortNames || {})[fc.key] || fc.name, D0[fc.key], fc.x, fc.at === 'bottom' ? function () { return self0.H - self0.hudH - C.FORT_DOWN; } : function () { return self0.laneY + self0.rows[0] - C.FORT_UP; }, Math.min(fc.cap, D0[fc.key].cap)); f.at = fc.at; f.hp = f.maxHp = fc.hp; self0.forts.push(f); })(fc); }
     // 적 벙커 (진격 방식): 시작부터 수비대가 가득. 무기는 이미 전개된 상태(phase 2)로 시작한다
     this.eforts = []; this.egarTick = 0; var ES0 = C.EFORT_SET[this.enemy], EF = this.st && this.st.efort || C.EFORT;
     if (C.PUSH && ES0) C.EFORTS.forEach(function (ef, efi) { var ES = ES0.per ? C.EFORT_SET[ES0.per[efi % ES0.per.length]] : ES0; if (!D0[ES.key]) return;
@@ -530,9 +577,9 @@
     var t = types[id], top = id, upSum = 0, guard = 0; while (parentOf[top] != null && guard++ < 6) { upSum += types[top].upGold || 0; top = parentOf[top]; }   // 전직 사슬을 거슬러 올라간다 (사제 ← 성령사)
     return Math.max(15, Math.round(t.cost[3] * CONFIG.COST_PER_GOLD / 5) * 5, Math.round((types[top].cost[3] * CONFIG.COST_PER_GOLD + upSum * CONFIG.COST_PER_UP) / 5) * 5);
   }
-  function garInfo(id) {
+  function garInfo(id, map) {   // map = 등급 바꿔 읽기 (악령군: 데몬류의 등급 2 → 0)
     var d = root.MW_DEF && root.MW_DEF.units && root.MW_DEF.units[id]; if (!d) return null;
-    var cls = CONFIG.GARRISON.classes[d.cls] ? d.cls : -1;
+    var c0 = map && map[d.cls] != null ? map[d.cls] : d.cls, cls = CONFIG.GARRISON.classes[c0] ? c0 : -1;
     return cls >= 0 || d.bonus > 0 || d.def > 0 ? { cls: cls, bonus: d.bonus, def: d.def || 0 } : null;   // def = 건물 방어 보너스 (원본 unitdata +0x2B6: 전사·기사 계열)
   }
 
@@ -1171,7 +1218,7 @@
     if (this.baseHp > 0 && this.baseHp < CONFIG.BASE.hp && CONFIG.BASE.regen && this.time - (this.baseHurtT == null ? -99 : this.baseHurtT) >= CONFIG.BASE.regenWait) this.baseHp = Math.min(CONFIG.BASE.hp, this.baseHp + CONFIG.BASE.regen * dt);   // 기지 자연 회복
     if (this.baseHp <= 0) { this.baseHp = 0; this.screen = 'lose'; this.rep.end = this.time - this.gameT0; }
     else if (C.PUSH ? this.lairHp <= 0 : (this.wave >= C.WAVES.length && !this._alive(1).length)) { this.screen = 'win'; this.rep.end = this.time - this.gameT0; this.rep.forts.push([this.rep.end, '적 기지(마굴)']);   // 진격 방식: 마굴을 부수면 승리
-      if (this.st) { this.cleared[this.stageI] = 1; try { root.localStorage.setItem('mwdef.cleared', JSON.stringify(this.cleared)); } catch (e) {} } }
+      if (this.st) { this.cleared[this.stageI] = 1; try { root.localStorage.setItem(this._clKey(), JSON.stringify(this.cleared)); } catch (e) {} } }
   };
 
   /* 웨이브 알림을 띄운다: "웨이브 N" + 이 웨이브에 처음 나오는 적 종류 (작은 그림과 이름) */
@@ -2783,7 +2830,7 @@
     var push = CONFIG.PUSH && this.st;
     if (this.reportOpen && push && (sc === 'win' || sc === 'lose')) { this._drawReport(); return; }
     var FAN = [['이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', 10, '#7b8397', 22], ['원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', 10, '#7b8397', 4]];   // 팬 게임 고지 (사용자 2026-11-12 확정 문구)
-    if (sc === 'title' && push && this.titleSeen) items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], ['스테이지를 고르세요', 16, '#fff', 18], ['@stage', CONFIG.STAGES.length * 54 - 8, '', 10]].concat(FAN);   // 둘째 장: 스테이지 고르기
+    if (sc === 'title' && push && this.titleSeen) items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], [(this.fac.name || '') + ' — 스테이지를 고르세요', 16, '#fff', 18], ['@stage', CONFIG.STAGES.length * 54 - 8, '', 10]].concat(FAN);   // 둘째 장: 스테이지 고르기
     else if (sc === 'title') items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], [push ? '적 기지(마굴)까지 밀고 들어가 무너뜨리세요' : '적군을 막아 성을 지키세요', 14, '#dfe6f5', 14],
       ['탭에서 유닛을 소환하세요 — 길게 누르면 설명, [상성]에서 상성 확인', 12, G, 12],
       ['마법은 칸을 누른 뒤 전장에서 쓸 곳을 누릅니다 (마나는 소환과 공유)', 12, G, 6],
@@ -2794,7 +2841,7 @@
       // 팬 게임 고지 (사용자 2026-11-12 확정 문구) — 전장 시뮬 페이지 하단과 같은 문장
       ['이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', 10, '#7b8397', 22],
       ['원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', 10, '#7b8397', 4]]);
-    else if (sc === 'win' && push) { var nx = CONFIG.STAGES[this.stageI + 1];
+    else if (sc === 'win' && push) { var nx = this._nextStage();
       items = [['스테이지 ' + (this.stageI + 1) + ' 클리어!', 28, '#8fe89a', 0], ['적 기지를 무너뜨렸습니다   ·   처치 ' + this.kills + '   ·   성 ' + Math.ceil(this.baseHp), 14, '#dfe6f5', 14], ['플레이 시간 ' + this._mmss(this.rep.end), 13, '#ffe9b0', 6],
         [nx ? '다음: ' + (this.stageI + 2) + '. ' + nx.name + ' (' + nx.note + ')' : '모든 스테이지를 깼습니다!', 13, nx ? '#9aa3b8' : '#ffd36e', 14], ['@repbtn', 34, '', 12], ['@endbtns', 46, '', 10]]; }
     else if (sc === 'win') items = [['스테이지 클리어!', 28, '#8fe89a', 0], ['처치 ' + this.kills + '   ·   남은 기지 체력 ' + Math.ceil(this.baseHp), 14, '#dfe6f5', 14], ['화면을 눌러 처음으로', 16, '#fff', 22]];
@@ -2819,19 +2866,21 @@
       if (l[0] === '@repbtn') { var rbw = Math.min(190, W - 60); self.repBtn = { x: Math.round((W - rbw) / 2), y: y, w: rbw, h: l[4] };
         self._plate(self.repBtn.x, self.repBtn.y, rbw, l[4], 7, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('리포트 보기', W / 2, y + l[4] / 2 + 1); y += l[4]; return; }
       if (l[0] === '@endbtns') {   // 스테이지가 끝난 화면의 선택지: 이기면 [다음 스테이지] [처음 화면], 지면 [다시 도전] [처음 화면] (마지막 스테이지를 이기면 [처음 화면]만)
-        var win = sc === 'win', defs = win ? (CONFIG.STAGES[self.stageI + 1] ? [['next', '다음 스테이지 ▶'], ['title', '처음 화면']] : [['title', '처음 화면']]) : [['retry', '다시 도전'], ['title', '처음 화면']];
+        var win = sc === 'win', defs = win ? (self._nextStage() ? [['next', '다음 스테이지 ▶'], ['title', '처음 화면']] : [['title', '처음 화면']]) : [['retry', '다시 도전'], ['title', '처음 화면']];
         var ebw = Math.min(150, Math.floor((W - 36 - 12 * (defs.length - 1)) / defs.length)), ex0 = Math.round(W / 2 - (ebw * defs.length + 12 * (defs.length - 1)) / 2);
         self.endBtns = defs.map(function (d, i) { var b = { act: d[0], x: ex0 + i * (ebw + 12), y: y, w: ebw, h: l[4] };
           self._plate(b.x, b.y, b.w, b.h, 7, i === 0); ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = i === 0 ? '#ffe9b0' : '#dfe6f5'; ctx.fillText(d[1], b.x + b.w / 2, b.y + b.h / 2 + 1); return b; });
         y += l[4]; return; }
       if (l[0] === '@stage') {   // 스테이지 버튼 (시작 화면): 세로로 쌓는다. 적 대표 유닛 그림 + 번호·이름 + 적 종족·난이도, 깬 스테이지는 "클리어"
         var SS = CONFIG.STAGES, sh = Math.floor((l[4] - (SS.length - 1) * 8) / SS.length), sw = Math.min(320, W - 36), sx = Math.round((W - sw) / 2), figs2 = self.assets.get('figs');
-        self.stageBtns = SS.map(function (S, i) { var b = { i: i, x: sx, y: y + i * (sh + 8), w: sw, h: sh }, E = CONFIG.ENEMIES[S.enemy], t = self.types[E.fig];
-          self._plate(b.x, b.y, b.w, b.h, 7, i === self.stageI);
+        self.stageBtns = SS.map(function (S, i) { var b = { i: i, x: sx, y: y + i * (sh + 8), w: sw, h: sh, soon: !!S.soon }, E = CONFIG.ENEMIES[S.enemy] || { name: S.enemyName, fig: S.fig }, t = self.types[E.fig];
+          self._plate(b.x, b.y, b.w, b.h, 7, i === self.stageI && !S.soon); if (S.soon) ctx.globalAlpha = 0.45;
           if (t && figs2) ctx.drawImage(figs2, t.pid * 36, 0, 36, 43, b.x + 10, b.y + Math.round((sh - 34) / 2), 28, 34);
           ctx.textAlign = 'left'; ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText((i + 1) + '. ' + S.name, b.x + 46, b.y + sh / 2 - 7);
           ctx.font = '11px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(E.name + ' · ' + S.note, b.x + 46, b.y + sh / 2 + 10);
-          if (self.cleared[i]) { ctx.textAlign = 'right'; ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#8fe89a'; ctx.fillText('클리어', b.x + b.w - 12, b.y + sh / 2); }
+          ctx.globalAlpha = 1;
+          if (S.soon) { ctx.textAlign = 'right'; ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.fillText('개발 예정', b.x + b.w - 12, b.y + sh / 2); }
+          else if (self.cleared[i]) { ctx.textAlign = 'right'; ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#8fe89a'; ctx.fillText('클리어', b.x + b.w - 12, b.y + sh / 2); }
           ctx.textAlign = 'center'; return b; });
         y += l[4]; return; }
       ctx.font = (l[1] <= 10 ? '' : 'bold ') + l[1] + 'px sans-serif'; ctx.fillStyle = l[2]; ctx.fillText(l[0], W / 2, y + l[4] / 2); y += l[4]; });
@@ -2868,7 +2917,7 @@
       if (CONFIG.PUSH && this.st && !this.titleSeen) { this.titleSeen = true; return; }   // 첫 장(공지): 아무 곳이나 누르면 진영 선택 → 스테이지 고르기로
       if (this._raceShow && this._raceShow()) { this._raceTap(x, y); return; }   // 진영 선택 화면 (defense-race.js)
       if (CONFIG.PUSH && this.st) { if (x < 0) { this.pickStage(this.stageI); return; }
-        for (i = 0; i < (this.stageBtns || []).length; i++) if (inBox(this.stageBtns[i], x, y)) { this.pickStage(this.stageBtns[i].i); break; }
+        for (i = 0; i < (this.stageBtns || []).length; i++) if (inBox(this.stageBtns[i], x, y)) { if (!this.stageBtns[i].soon) this.pickStage(this.stageBtns[i].i, true); break; }
         return; }
       if (x < 0) { this.pickEnemy(this.enemy); return; }
       for (i = 0; i < (this.enemyBtns || []).length; i++) if (inBox(this.enemyBtns[i], x, y)) { this.pickEnemy(this.enemyBtns[i].key); break; }
@@ -2939,12 +2988,21 @@
       open: [0, 1],
       foot: ['상성이 맞으면 피해가 1.25~2배 (마술사 3종은 상성 없음)', '지상 근접 유닛은 공중 유닛(마녀·드래곤)을 공격할 수 없습니다', '흑마술파에는 언데드가 없어 턴 언데드가 통하지 않습니다'] }
   };
+  /* 내 진영이 악령군일 때의 상성 표 (적 = 흑마술파). 원본 상성 칸: 언데드 → 소환·환술류, 흡혈귀·늑대인간·메두사 → 전사·도둑류, 악마류 → 구렁이·벌레류, 짐승류 → 흡혈귀류.
+     흑마술파 쪽: 소환·환술류 → 짐승류, 전사·도둑류 → 악마류, 흡혈귀류와 구렁이·벌레류 → 언데드 (둘째 고리는 닫히지 않는다) */
+  AFF['evil:dark'] = { name: AFF.dark.name, fam: AFF.dark.fam,
+    rings: [
+      [{ n: '언데드', fig: 28, ally: 1, m: '해골전사·해골기사·듀라한·유령·리치' }, { n: '소환·환술류', fig: 59, m: '소환사·환술사·연금술사·인챈터·마녀' }, { n: '짐승류', fig: 43, ally: 1, m: '늑대·켈베로스·펜릴·박쥐·드래곤' }, { n: '흡혈귀류', fig: 63, m: '흡혈귀·늑대인간·가고일' }],
+      [{ n: '흡혈귀류', fig: 35, ally: 1, m: '흡혈귀·늑대인간·메두사' }, { n: '전사·도둑류', fig: 52, m: '전사·흑전사·흑기사·도둑·대도·마기사' }, { n: '악마류', fig: 39, ally: 1, m: '데몬·데빌·사탄·서큐버스' }, { n: '짐승·벌레류', fig: 66, m: '구렁이·드래곤·개미·거미·전갈 (언데드에 강함)' }]],
+    open: [0, 1],
+    foot: ['상성이 맞으면 피해가 1.125~1.5배가 됩니다 (유닛 설명 카드의 "강함")', '지상 근접 유닛은 공중 유닛(마녀·드래곤)을 공격할 수 없습니다', '악령술사·강신술사·사술사는 상성이 없습니다'] };
+  P._aff = function () { return AFF[this.faction + ':' + this.enemy] || AFF[this.enemy] || AFF.evil; };
   Object.keys(AFF).forEach(function (k) { var A = AFF[k]; A.famOf = {}; A.repOf = {}; A.fam.forEach(function (q) { q[1].forEach(function (id) { A.famOf[id] = A.name[q[0]]; A.repOf[id] = q[0]; }); }); });   // 적 유닛 → 묶음 이름·대표 유닛
   P.unitInfo = function (r) {
     var t = r.t, C = CONFIG, basic = basicAct(t), rng = basic ? basic.range * C.RANGE_SCALE : 0, air = t.fly === 2, L = [];
     var kind = !basic ? '지원(공격 없음)' : rng >= 80 ? '원거리' : '근접';
     L.push((air ? '공중 유닛 · ' : '') + kind + (basic ? (rng >= 80 || air ? ' · 공중 공격 가능' : ' · 공중 공격 불가') : ''));
-    var AF = AFF[this.enemy] || AFF.evil, AFF_NAME = AF.name, AFF_FAM = AF.famOf;
+    var AF = this._aff(), AFF_NAME = AF.name, AFF_FAM = AF.famOf;
     var grp = null; for (var k in AFF_NAME) if ((t.aff || []).indexOf(+k) >= 0) grp = AFF_NAME[k];
     if (grp) L.push('강함: ' + grp + ' ×' + (t.affMul / 8).toFixed(2).replace(/0$/, ''));
     // 약함: 이 게임에 나오는 적 중 이 유닛을 상성으로 잡는 적 (원본 aff — 적의 강한 상대 목록에 이 유닛이 있다). 짧게 세 이름까지
@@ -3028,7 +3086,7 @@
     else if (hit === 'title') { this.reset(); this.screen = 'title'; this.titleSeen = true; this.raceOk = false; if (this.raceS) this.raceS = null; }   // 처음으로 = 진영 선택부터 (2026-11-17 사용자 요청 — 설명은 첫 로딩 화면에만 있다)
   };
   P._drawAff = function () {
-    var ctx = this.ctx, W = this.W, H = this.H, figs = this.assets.get('figs'), self = this, x0 = 8, w = W - 16, y0 = 44, foot = 78, h = H - y0 - 12, rh = Math.floor((h - 40 - foot) / 2), nw = Math.floor((w - 24 - 40) / 2), nh = Math.floor((rh - 44) / 2), r, k, AF = AFF[this.enemy] || AFF.evil, AFF_RINGS = AF.rings;
+    var ctx = this.ctx, W = this.W, H = this.H, figs = this.assets.get('figs'), self = this, x0 = 8, w = W - 16, y0 = 44, foot = 78, h = H - y0 - 12, rh = Math.floor((h - 40 - foot) / 2), nw = Math.floor((w - 24 - 40) / 2), nh = Math.floor((rh - 44) / 2), r, k, AF = this._aff(), AFF_RINGS = AF.rings;
     ctx.fillStyle = 'rgba(4,6,10,.72)'; ctx.fillRect(0, 0, W, H);
     this._plate(x0, y0, w, h, 8, false);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('유닛 상성 (적: ' + CONFIG.ENEMIES[this.enemy].name + ') — 화살표 방향으로 강합니다', W / 2, y0 + 20);
@@ -3077,7 +3135,7 @@
   P.start = function () {
     if (this.assets.ready()) { this._pendStart = false; this.reset(); this.screen = 'play'; }
     else { this._pendStart = true; this.screen = 'loading'; }   // 고른 종족의 그림을 받는 중: 다 오면 _frame 이 시작한다
-    if (this.soundOn && !this.bgm.on) { this.bgm.set(0); this.bgm.toggle(); }
+    if (this.soundOn && !this.bgm.on) { this.bgm.set(this.fac.bgm || 0); this.bgm.toggle(); }
     // 휴대폰: 전체 화면을 시도한다 (지원하지 않는 브라우저에서는 조용히 넘어간다). 세로 전용
     try { var el = document.documentElement, p = root.matchMedia && root.matchMedia('(pointer: coarse)').matches && el.requestFullscreen ? el.requestFullscreen() : null;
       var lock = function () { try { var o = root.screen && root.screen.orientation; if (o && o.lock) { var q = o.lock('portrait'); if (q && q.catch) q.catch(function () {}); } } catch (e2) {} };   // 세로 고정 (안드로이드 Chrome 전체 화면에서만 됨, iOS Safari 는 무시)

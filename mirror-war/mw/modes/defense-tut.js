@@ -22,7 +22,7 @@
   function grow(b, p) { return b ? { x: b.x - p, y: b.y - p, w: b.w + p * 2, h: b.h + p * 2 } : null; }
 
   P._tutSeen = function () { try { return root.localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
-  P._tutWanted = function (i) { var q = root.location.search; if (i !== 0 || this._tutDone || /[?&]tut=0/.test(q)) return false; return /[?&]tut=1/.test(q) || !this._tutSeen(); };
+  P._tutWanted = function (i) { var q = root.location.search; if (i !== 0 || this.faction !== 'lib' || this._tutDone || /[?&]tut=0/.test(q)) return false; return /[?&]tut=1/.test(q) || !this._tutSeen(); };
 
   /* ── 찾기 도우미 ── */
   P._tutRos = function (name) { var out = null; this.roster.forEach(function (list, ti) { list.forEach(function (r, i) { if (!out && r.t.name === name) out = { ti: ti, i: i, r: r }; }); }); return out; };
