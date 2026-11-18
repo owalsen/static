@@ -2733,13 +2733,14 @@
 
   /* 상태 이상 표시 (2026-11-12 사용자 요청): 체력 바 바로 위에 원작 상태 아이콘(unitState.spr, 18×18)을 한 줄로. 여러 개가 겹치면 옆으로 나란히, 가운데 정렬.
      STATUS_ICON = 상태 → unitState.spr 프레임. 그림 뜻으로 맞춘 것(원본 코드의 대응표는 아직 해독하지 않음): 12 부러진 칼 = 멜팅 웨폰, 13 깨진 갑옷 = 멜팅 아머, 14 하트 = 매혹, 5 붙잡는 손 = 멈춤(석화) */
-  var STATUS_ICON = { meltw: 12, melta: 13, charm: 14, stun: 5, poison: 6 };   // 6 해골 병 = 중독
+  var STATUS_ICON = { meltw: 12, melta: 13, charm: 14, stun: 5, poison: 6, slow: 8 };   // 6 해골 병 = 중독, 8 줄에 묶인 붉은 덩이 = 감속(마비침·거미줄·눈꽃의 환상·피어섬 테러 — 2026-11-18 사용자 요청: 걸렸는지 안 보였다)
   P._statusOf = function (u) {
     var T = this.time, b = u.buffs, L = [];
     if (u.stunUntil > T) L.push(STATUS_ICON.stun);
     if (b.meltw && b.meltw.until > T) L.push(STATUS_ICON.meltw);
     if (b.melta && b.melta.until > T) L.push(STATUS_ICON.melta);
     if (b.poison && b.poison.until > T) L.push(STATUS_ICON.poison);
+    if (b.slow && b.slow.until > T) L.push(STATUS_ICON.slow);
     if (u.charmed) L.push(STATUS_ICON.charm);
     return L;
   };
