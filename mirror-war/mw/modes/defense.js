@@ -568,7 +568,7 @@
     this.magicUnits = [];        // 전장의 마법 유닛 (패널에 칸이 있는 마법을 가진 아군)
     this.aim = null;             // 지점 지정 대기: { slot } — 적에게 쓰는 마법의 칸을 누른 상태. 전장을 누르면 그 지점에 쓴다
     this.aimPt = null;           // 조준 중 손가락·마우스가 가리키는 화면 좌표 (반경 원을 미리 보여 준다)
-    this.sel = null;             // 전장에서 고른 아군 마법 유닛 (머리 위에 [회수] 버튼이 뜬다). 상태이지 상자가 아니다 — 매 프레임 자리를 다시 계산
+    this.sel = null;             // 전장에서 고른 유닛 (아군·영웅·적 — 정보 띠가 뜬다, 2026-11-18. 전에는 아군 마법 유닛만 골라 [회수] 버튼을 띄웠다). 상태이지 상자가 아니다 — 매 프레임 자리를 다시 계산
     this.btnFirst = 0;           // 소환 캐러셀(세로 모드): 맨 왼쪽에 보이는 칸 번호
     this.recallArm = null;       // (이전 두 번 누르기 회수의 흔적 — 지금은 쓰지 않는다)
     this.selBase = false;        // 성을 골랐는가. 고른 동안에는 소환 버튼이 유닛을 전장 대신 성에 넣고(성 배치), 수비대가 있으면 [퇴각] 팻말이 뜬다.
@@ -1064,22 +1064,21 @@
     var bb = this._baseBox(); this._say(bb.cx + this.cam.x, Math.min(F.y, this.laneY) - 150, F.name + ' 수비대 퇴각 (' + n + '기)', '#ffe9b0'); this._play(CONFIG.RECALL.snd, 0.8);
     return true;
   };
-  /* 전장을 끌지 않고 눌렀다(탭). 우선순위: ① 선택 유닛의 [회수] 버튼 → 회수  ② 아군 마법 유닛 몸통 → 선택  ③ 일반 아군 → 안내만  ④ 빈 곳 → 선택 해제 */
+  /* 전장을 끌지 않고 눌렀다(탭). 우선순위: ① 정보 띠 → 상세 시트  ② 유닛 몸통(아군·영웅·적) → 선택  ③ 성·벙커 → 고르기  ④ 빈 곳 → 선택 해제 */
   P._tapField = function (x, y) {
     if (this.screen !== 'play') return;
     if (this.aim) { this._aimCast(x + this.cam.x, y); return; }   // 조준 중: 누른 지점에 마법
     var rb0 = this.selBase && this.garrison.length ? this._retreatBox() : null;
     if (rb0 && inBox({ x: rb0.x - 8, y: rb0.y - 10, w: rb0.w + 16, h: rb0.h + 20 }, x, y)) { this.retreat(); this.selBase = false; return; }   // 팻말은 작지만 누르는 범위는 손가락에 맞게 넓다   // 성을 고른 뒤 [퇴각] 팻말
-    var sel = this.sel; if (sel && this._recallable(sel) && inBox(this._recallBtnBox(sel), x, y)) { this.recall(sel); this.sel = null; return; }
+    var ub = this._unitStripBox(); if (ub && inBox(ub, x, y)) { this.modal = 'unit'; this.modalT = 0; this.info = null; this.sinfo = null; return; }   // 정보 띠를 누름 → 상세 시트 (게임은 멈춘다)
     var wx = x + this.cam.x, best = null, bd = Infinity, plain = null, L = this.units, i, u, d;
-    for (i = 0; i < L.length; i++) { u = L[i]; if (u.side !== 0 || u.state === 'dead') continue;
-      if (Math.abs(u.x - wx) <= 20 && y >= u.y - u.headY - 6 && y <= u.y + 8) { d = Math.hypot(u.x - wx, (u.y - y) * 1.6);
-        if (this._recallable(u)) { if (d < bd) { bd = d; best = u; } } else if (!plain) plain = u; } }
+    // 2026-11-18 사용자 결정: 아군·영웅·적 모두 누를 수 있다(정보 띠), 회수 기능은 없앤다, 빈 땅을 누르면 닫힌다. 가이드 중에는 유닛을 고르지 않는다
+    if (!this.tut) for (i = 0; i < L.length; i++) { u = L[i]; if (u.state === 'dead' || u.state === 'inside') continue;
+      if (Math.abs(u.x - wx) <= 20 && y >= u.y - u.headY - 6 && y <= u.y + 8) { d = Math.hypot(u.x - wx, (u.y - u.headY * 0.45 - y) * 1.2); if (d < bd) { bd = d; best = u; } } }
     if (best) { this.selBase = false; this._selectUnit(best); return; }
     this.sel = null;
     if (!plain) for (var fi = this.forts.length - 1; fi >= 0; fi--) { var F = this.forts[fi], bb = F.dead ? null : this._baseBox(F); if (bb && inBox(bb, x, y)) { this.selectFort(this.selFort === F ? null : F); return; } }   // 성·벙커를 누름: 고르기/풀기 (벙커 먼저 — 성 그림이 넓다)
     this.selBase = false;
-    if (plain) this._say(wx, y - 12, '마법 유닛만 회수할 수 있습니다', '#c9d1e3');
   };
 
   /* 마법 유닛 칩 i를 누름 = 그 유닛을 선택하고 카메라를 그쪽으로, 스킬 칸도 그 유닛의 마법으로. (회수는 전장의 [회수] 버튼으로) */
@@ -1294,7 +1293,7 @@
     this._updateSlots(dt);
     this.flash = Math.max(0, this.flash - dt); this.baseHit = Math.max(0, this.baseHit - dt); this.lairHit = Math.max(0, (this.lairHit || 0) - dt);
     if (this.aim && this.groups.indexOf(this.aim.group) < 0) this.aim = null;   // 조준하던 마법을 가진 유닛이 모두 사라지면 조준도 풀린다
-    if (this.sel && !this._recallable(this.sel)) this.sel = null;   // 고른 유닛이 쓰러지거나 사라지면 선택도 사라진다
+    if (this.sel && (this.sel.state === 'dead' || this.units.indexOf(this.sel) < 0)) { this.sel = null; if (this.modal === 'unit') this.modal = null; }   // 고른 유닛이 쓰러지거나 사라지면 선택도 사라진다
     this._scrollBtns(0);                                     // 탭·유닛 수가 바뀌어도 소환 캐러셀이 범위 밖에 남지 않게
 
     if (!this.tut) this._updateWave(dt);   // 입문자 가이드 중에는 적이 나오지 않는다 (연출로 세운 적만)
@@ -2333,11 +2332,13 @@
     this._drawBanner();
     if (this.flash > 0) { ctx.fillStyle = 'rgba(255,240,200,' + (this.flash * 0.9) + ')'; ctx.fillRect(0, 0, W, H - this.hudH); }
     this._drawHud();
+    if (this.screen === 'play' && !this.cards && !this.modal && !this.info && !this.sinfo && !this.aim && !this.tut) this._drawUnitStrip();   // 고른 유닛의 정보 띠 (아래 패널 바로 위)
     if (this.screen === 'play' && !this.cards && !this.modal) { this._drawInfo(); this._drawSkillInfo(); }   // 소환 버튼·스킬 칸을 길게 누르는 동안의 설명 카드
     if (this.screen !== 'play') this._drawOverlay();
     else if (this.cards) this._drawCards();
     if (this.screen === 'play' && this.modal === 'menu') this._drawMenu();   // 설정 메뉴 (게임은 멈춰 있다)
     if (this.screen === 'play' && this.modal === 'aff') this._drawAff();   // 유닛 상성 모달 (게임은 멈춰 있다)
+    if (this.screen === 'play' && this.modal === 'unit') this._drawUnitSheet();   // 유닛 상세 시트 (게임은 멈춰 있다)
     if (this.screen === 'play' && this.tut) this._tutDraw();   // 입문자 가이드: 덮개·하이라이트·설명 창 (맨 위)
   };
 
@@ -2691,8 +2692,8 @@
   /* 고른 유닛 머리 위의 [회수 +N] 버튼. 전장 클립 안, 화면 좌표. 유닛이 화면 밖이면 그리지 않는다 */
   P._drawSelectionOverlay = function () {
     if (this.screen !== 'play') return;
-    var u = this.sel, base = !u && this.selBase && this.garrison.length ? this._retreatBox() : null;   // 성을 골랐으면 같은 팻말에 "퇴각"
-    if (!base && (!u || !this._recallable(u))) return;
+    var u = null, base = !this.sel && this.selBase && this.garrison.length ? this._retreatBox() : null;   // 성을 골랐으면 팻말에 "퇴각"
+    if (!base) return;   // 유닛의 [회수] 버튼은 없앴다 (2026-11-18) — 이 팻말은 성·벙커의 [퇴각]만
     var sx = base ? base.tx : u.x - this.cam.x; if (sx < -30 || sx > this.W + 30) return;
     var ctx = this.ctx, b = base || this._recallBtnBox(u), c = 5, tx = Math.max(b.x + 12, Math.min(b.x + b.w - 12, Math.round(sx)));
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, this.W, this.H - this.hudH); ctx.clip();
@@ -3265,6 +3266,96 @@
     ctx.textAlign = 'right'; ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText(I.kind, x + w - 12, y + 17.5); ctx.textAlign = 'left';
     ctx.font = '12px sans-serif'; ctx.fillStyle = '#ffffff'; for (i = 0; i < D.length; i++) ctx.fillText(D[i], x + 12, y + 38 + i * 16);
     ctx.font = '11px sans-serif'; ctx.fillStyle = '#c9d1e3'; for (i = 0; i < I.lines.length; i++) ctx.fillText(this._fit(I.lines[i], w - 24), x + 12, y + 38 + D.length * 16 + 2 + i * lh);
+  };
+  /* ───────── 유닛 정보 UI (2026-11-18 사용자 요청, README 254) ─────────
+     전장에서 아군·영웅·적을 누르면 아래 패널 바로 위에 얇은 정보 띠(46px — 전장을 거의 가리지 않는다)가 뜬다: 초상화 얼굴 · 이름 · 레벨 · 체력 · 상태 아이콘(남은 초) · 스킬 아이콘.
+     띠를 누르면 상세 시트(게임 멈춤): 상태·패시브·액티브를 이름·효과·남은 시간·마나와 함께. 빈 땅을 누르면 띠가 닫힌다. 그림은 원작 초상화(portraits)·상태 아이콘(unitState)·명령 아이콘(acticons)·HUD 돌판 */
+  P._uinfo = function (u) {
+    var C = CONFIG, S = C.SKILL, T = this.time, t = u.t, b = u.buffs || {}, D = this.data, self = this, tp = this.rules.tps, st = [], sk = [], seen = {};
+    var live = function (x) { return x && x.until > T; }, left = function (x) { return Math.max(1, Math.ceil(x - T)); };
+    var actBy = function (pred) { var r = null; D.units.some(function (d) { return d.acts.some(function (a) { if (a && pred(a)) { r = a; return true; } return false; }); }); return r; };
+    if (u.stunUntil > T) st.push({ si: STATUS_ICON.stun, name: u.curseUntil > T ? '묶임' : '멈춤', eff: '움직이지도 공격하지도 못합니다', left: left(u.stunUntil), bad: 1 });
+    if (live(b.meltw)) st.push({ si: STATUS_ICON.meltw, name: '멜팅 웨폰', eff: '공격력을 잃음 (공격값 1)', left: left(b.meltw.until), bad: 1 });
+    if (live(b.melta)) st.push({ si: STATUS_ICON.melta, name: '멜팅 아머', eff: '방어력을 잃음 (방어값 0)', left: left(b.melta.until), bad: 1 });
+    if (live(b.poison)) st.push({ si: STATUS_ICON.poison, name: '중독', eff: '초당 체력 −' + Math.round(tp / 2) + ' (1까지)', left: left(b.poison.until), bad: 1 });
+    if (live(b.slow)) st.push({ si: STATUS_ICON.slow, name: '감속', eff: '걸음 ' + C.TRAPS.slowMul + '배 · 공격 대기 3배', left: left(b.slow.until), bad: 1 });
+    if (u.charmed) st.push({ si: STATUS_ICON.charm, name: '매혹', eff: '편이 바뀌어 싸웁니다', left: 0, bad: 1 });
+    if (live(b.weapon)) { var wa = actBy(function (a) { return a.sup === 'weapon' && a.arm === b.weapon.arm; }), wn = wa ? wa.name : '무기 강화', wm = (C.WEAPON[wn] || {}).mul; st.push({ ai: wa ? wa.icon : -1, si: 1, name: wn, eff: '공격력' + (wm ? ' ' + wm + '배' : ' 강화'), left: left(b.weapon.until) }); }
+    if (live(b.shield)) { var sa = b.shield.block ? actBy(function (a) { return a.name === '방패 막기'; }) : actBy(function (a) { return a.sup === 'shield' && a.arm === b.shield.arm; }); st.push({ ai: sa ? sa.icon : -1, si: 3, name: sa ? sa.name : '방어막', eff: '방어력 ' + (b.shield.block ? 2 : ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[b.shield.arm] || 2) + '배', left: b.shield.block ? 0 : left(b.shield.until) }); }
+    if (live(b.haste)) { var ha = actBy(function (a) { return a.sup === 'masshaste' || a.sup === 'haste'; }); st.push({ ai: ha ? ha.icon : -1, si: 9, name: '가속', eff: '걸음 ' + S.hasteMul + '배 · 공격 대기 없음', left: left(b.haste.until) }); }
+    var foe = u.side === 1 && !u.charmed, addAct = function (a, slot) { if (!a || seen[a.name]) return; seen[a.name] = 1;
+      var q = slot || new SkillSlot(u, a), I = self.skillInfo({ slots: [q], act: a, kind: q.kind, cost: q.cost }), passive = !!(q.auto || a.self || C.TECH[a.name] || foe);
+      sk.push({ ai: a.icon, name: a.name, passive: passive, cost: q.cost, desc: I ? I.desc : '', kind: I ? I.kind : '', cd: slot && slot.cd > 0 ? Math.ceil(slot.cd) : 0 }); };
+    (u.slots || []).forEach(function (q) { addAct(q.act, q); }); skillsOf(t).forEach(function (a) { addAct(a, null); });
+    bodyTechs(t).forEach(function (a) { if (seen[a.name]) return; seen[a.name] = 1; var B = C.BODY_TECH[a.name];
+      sk.push({ ai: a.icon, name: a.name, passive: true, cost: 0, desc: a.name === '방패 막기' ? '체력 ' + Math.round(B.hpBelow * 100) + '% 이하에서 방어 2배, ' + Math.round(B.hpRelease * 100) + '% 이상이면 해제' : a.name === '창 돌리기' ? '적 ' + B.foes + '기 이상에 둘러싸이면 둘레를 공격' : '' }); });
+    if (u.side === 0 && C.REVIVE && C.REVIVE.sides[0] && C.REVIVE.ids.indexOf(t.id) >= 0) sk.push({ si: 2, name: '부활', passive: true, cost: 0, desc: '쓰러질 때 ' + (Math.min(C.REVIVE.cap, (u.level || 1) + C.REVIVE.base) + 1) + '% 확률로 체력을 가득 채워 다시 일어납니다' });
+    var UI = this.unitInfo({ t: t, cost: 0, gar: null }), lines = UI.lines.filter(function (l, i) { return i === 0 || (!foe && /^(강함|약함)/.test(l)) || (/: /.test(l) && !/^(마법|기술|강함|약함)/.test(l)); });
+    return { name: t.name, job: u.hero || u.ehero || u.heroPost ? (t.job || '') : '', hero: !!(u.hero || u.ehero || u.heroPost), lv: u.level || 1, hp: Math.max(0, Math.round(u.hp)), max: u.maxHp, atk: u.atkOv != null ? u.atkOv : t.atk, def: t.def, pid: t.pid, foe: foe, lines: lines, st: st, sk: sk };
+  };
+  P._unitStripBox = function () { if (!this.sel || this.screen !== 'play' || this.cards || this.modal || this.info || this.sinfo || this.aim || this.tut) return null; return { x: 6, y: this.H - this.hudH - 50, w: this.W - 12, h: 46 }; };
+  P._uiPortrait = function (pid, x, y, w, h, face) {
+    var ctx = this.ctx, por = this.assets.get('portraits'), sx = (pid % 12) * 120, sy = Math.floor(pid / 12) * 160;
+    ctx.fillStyle = '#0b0d12'; ctx.fillRect(x, y, w, h);
+    if (por && por.naturalWidth && pid >= 0) { if (face) ctx.drawImage(por, sx + 14, sy + 8, 92, Math.round(92 * h / w), x, y, w, h); else ctx.drawImage(por, sx, sy, 120, 160, x, y, w, h); }
+    ctx.strokeStyle = '#c9a44a'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  };
+  P._uiIcon = function (e, x, y, w) {   // 상태·스킬 아이콘: 행동 아이콘(ai)이 있으면 그것, 없으면 원작 상태 아이콘(si)
+    var ctx = this.ctx, D = this.data.fx.icon, HB = root.MW && root.MW.hpbar;
+    if (e.ai != null && e.ai >= 0) { var fi = e.ai * 2; ctx.drawImage(this.assets.get('acticons'), (fi % D.cols) * D.w, Math.floor(fi / D.cols) * D.h, D.w, D.h, x, y, w, Math.round(w * D.h / D.w)); }
+    else if (HB && HB.states && HB.states[e.si]) { var f = HB.states[e.si], k = Math.round(w * 0.8), o = Math.round((w - k) / 2); ctx.drawImage(this.assets.get('hpbar'), f[0], f[1], f[2], f[3], x + o, y + o, k, k); }
+  };
+  P._uiBar = function (x, y, w, h, r, col) { var ctx = this.ctx; ctx.fillStyle = '#0b0d12'; ctx.fillRect(x, y, w, h); ctx.fillStyle = col; ctx.fillRect(x + 1, y + 1, Math.round((w - 2) * Math.max(0, Math.min(1, r))), h - 2); ctx.strokeStyle = '#3a4152'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); };
+  P._drawUnitStrip = function () {
+    var b = this._unitStripBox(); if (!b) return;
+    var ctx = this.ctx, I = this._uinfo(this.sel), x = b.x, y = b.y, i, col = I.foe ? '#ff9a8a' : '#ffd36e';
+    this._plate(x, y, b.w, b.h, 7, false, 'dark');
+    this._uiPortrait(I.pid, x + 6, y + 5, 30, 36, true);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = col; ctx.fillText(I.name, x + 44, y + 13, 84);
+    var nw = Math.min(84, ctx.measureText(I.name).width); ctx.font = '10px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('Lv ' + I.lv, x + 48 + nw, y + 13);
+    this._uiBar(x + 44, y + 24, 112, 8, I.hp / I.max, I.foe ? '#f74d31' : '#31f352');
+    ctx.font = '9px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(I.hp + ' / ' + I.max, x + 44, y + 39);
+    var sx = x + 164, ns = Math.min(3, I.st.length);
+    for (i = 0; i < ns; i++) { var e = I.st[i]; this._uiIcon(e, sx + i * 19, y + 5, 18); if (e.left) { ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = e.bad ? '#ff9a8a' : '#8fe89a'; ctx.fillText(e.left + '초', sx + i * 19 + 9, y + 33); ctx.textAlign = 'left'; } }
+    if (I.st.length > ns) { ctx.font = '9px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('+' + (I.st.length - ns), sx + ns * 19, y + 14); }
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x + 224, y + 6, 1, b.h - 12);
+    var kx = x + 230, nk = Math.min(3, I.sk.length);
+    for (i = 0; i < nk; i++) { var q = I.sk[i]; this._uiIcon(q, kx + i * 28, y + 4, 26); ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = q.passive ? '#c9b48a' : '#7fd6ff'; ctx.fillText(q.passive ? '자동' : String(q.cost), kx + i * 28 + 13, y + 39); ctx.textAlign = 'left'; }
+    if (I.sk.length > nk) { ctx.font = '9px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('+' + (I.sk.length - nk), kx + nk * 28, y + 14); }
+    ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#ffd36e'; ctx.fillText('자세히 ▸', x + b.w - 8, y + b.h / 2); ctx.textAlign = 'left';
+  };
+  /* 글을 폭 w 안에서 최대 n 줄로 자른다 (마지막 줄이 넘치면 …) */
+  P._uiWrap = function (txt, w, n) { var ctx = this.ctx, out = [], cur = '', i; for (i = 0; i < txt.length; i++) { var c = txt[i]; if (ctx.measureText(cur + c).width > w) { if (out.length === n - 1) { while (cur.length && ctx.measureText(cur + '…').width > w) cur = cur.slice(0, -1); out.push(cur + '…'); return out; } out.push(cur); cur = c === ' ' ? '' : c; } else cur += c; } if (cur) out.push(cur); return out; };
+  P._drawUnitSheet = function () {
+    var u = this.sel; if (!u) { this.modal = null; return; }
+    var ctx = this.ctx, W = this.W, H = this.H, I = this._uinfo(u), self = this, x = 12, w = W - 24, col = I.foe ? '#ff9a8a' : '#ffd36e', WH = '#eef2fb', GR = '#9aa3b8';
+    var pas = I.sk.filter(function (q) { return q.passive; }), act = I.sk.filter(function (q) { return !q.passive; });
+    var rows = I.st.length + pas.length + act.length, secs = (I.st.length ? 1 : 0) + (pas.length ? 1 : 0) + (act.length ? 1 : 0), head = 148, foot = 34, maxH = H - 80;
+    var rh = 50; while (rh > 30 && head + secs * 30 + rows * rh + foot > maxH) rh -= 2;   // 줄이 많으면 줄 높이를 줄인다
+    var two = rh >= 48, h = Math.min(maxH, head + secs * 30 + rows * rh + foot + (rows ? 0 : 20)), y = Math.max(40, Math.round((H - h) / 2));
+    ctx.fillStyle = 'rgba(6,8,12,.62)'; ctx.fillRect(0, 0, W, H);
+    this._plate(x, y, w, h, 8, false);
+    this._uiPortrait(I.pid, x + 14, y + 16, 90, 120, false);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.font = 'bold 19px sans-serif'; ctx.fillStyle = col; ctx.fillText(I.name, x + 116, y + 28, w - 130);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = GR; ctx.fillText((I.foe ? '적 · ' : '') + (I.job ? I.job + ' · ' : '') + (I.hero ? '영웅 · ' : '') + 'Lv ' + I.lv, x + 116, y + 50);
+    this._uiBar(x + 116, y + 62, w - 132, 12, I.hp / I.max, I.foe ? '#f74d31' : '#31f352');
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = WH; ctx.fillText(I.hp + ' / ' + I.max, x + 116, y + 86);
+    ctx.font = '12px sans-serif'; ctx.fillText('공격 ' + I.atk + ' · 방어 ' + I.def, x + 116 + ctx.measureText(I.hp + ' / ' + I.max + '   ').width + 6, y + 86);
+    ctx.font = '11px sans-serif'; ctx.fillStyle = GR; I.lines.slice(0, 3).forEach(function (l, i) { self._uiWrap(l, w - 132, 1).forEach(function (t2) { ctx.fillText(t2, x + 116, y + 105 + i * 15); }); });
+    var yy = y + head + 6;
+    var sec = function (s) { yy += 6; ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.textAlign = 'left'; ctx.fillText(s, x + 16, yy); ctx.fillStyle = 'rgba(255,211,110,.25)'; ctx.fillRect(x + 16, yy + 10, w - 32, 1); yy += 24; };
+    var row = function (e, name, sub, right, c1, c2) { self._uiIcon(e, x + 18, yy - 2, Math.min(30, rh - 8));
+      ctx.textAlign = 'left'; ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = c1 || WH; ctx.fillText(name, x + 56, yy + 6);
+      if (right) { ctx.textAlign = 'right'; ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = c2 || '#7fd6ff'; ctx.fillText(right, x + w - 18, yy + 6); ctx.textAlign = 'left'; }
+      ctx.font = '11px sans-serif'; ctx.fillStyle = GR; self._uiWrap(sub || '', w - 74, two ? 2 : 1).forEach(function (t2, i) { ctx.fillText(t2, x + 56, yy + 22 + i * 13); });
+      yy += rh; };
+    if (I.st.length) { sec('상태'); I.st.forEach(function (e) { row(e, e.name, e.eff, e.left ? e.left + '초 남음' : '', e.bad ? '#ff9a8a' : '#8fe89a', e.bad ? '#ff9a8a' : '#8fe89a'); }); }
+    if (pas.length) { sec(I.foe ? '스킬 (적이 알아서 씀)' : '패시브 (알아서 씀)'); pas.forEach(function (q) { row(q, q.name, q.desc, q.kind || '', WH, '#c9b48a'); }); }
+    if (act.length) { sec('액티브 (스킬 칸을 눌러 씀)'); act.forEach(function (q) { row(q, q.name, q.desc, '마나 ' + q.cost + (q.cd ? ' · 대기 ' + q.cd + '초' : ''), WH, '#7fd6ff'); }); }
+    if (!rows) { ctx.font = '12px sans-serif'; ctx.fillStyle = GR; ctx.textAlign = 'center'; ctx.fillText('걸린 상태도, 가진 스킬도 없습니다', W / 2, yy + 4); }
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.textAlign = 'center'; ctx.fillText('아무 곳이나 누르면 닫힙니다', W / 2, y + h - 16); ctx.textAlign = 'left';
   };
   P._drawInfo = function () {
     var r = this.info; if (!r) return;
