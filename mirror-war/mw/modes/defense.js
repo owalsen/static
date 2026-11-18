@@ -198,7 +198,7 @@
     /* friendlyFire: 범위 안의 아군(시전자 포함)도 같은 피해를 입는 마법 (2026-11-13 사용자 요청 — 가장 센 범위 마법이라 쓸 자리를 가려야 한다) */
     /* 스킬은 전체 마나를 쓴다 (소환과 같은 마나) + 짧은 재사용 대기 cool(초). 값 = 원본 행동 마나 × costMul 을 5 단위로, 종류별 [최소, 최대] 안으로 자른다 (COST)
        — 원본은 유닛마다 마나통이 따로라 값을 그대로 쓸 수 없어 비율만 가져온다. 2026-11-12: 쿨타임만 돌던 방식에서 바꿈 (공짜라 강화를 상시 돌리던 문제) */
-    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyAim: false, buffNeed: 2,   /* 2026-11-15 사용자 요청: 웨폰·파운틴은 다시 누르면 바로 — 시전자 주변(buffRadius)에 다른 공격형 아군이 buffNeed(2)기 이상 있어야 쓸 수 있다(칸 비활성). allyAim: true 면 175번의 아군 찍기로 돌아간다 */ allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, radiusMul: { '12 리플렉터스 소환': 1.3 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
+    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20], meta: [40, 40] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyAim: false, buffNeed: 2,   /* 2026-11-15 사용자 요청: 웨폰·파운틴은 다시 누르면 바로 — 시전자 주변(buffRadius)에 다른 공격형 아군이 buffNeed(2)기 이상 있어야 쓸 수 있다(칸 비활성). allyAim: true 면 175번의 아군 찍기로 돌아간다 */ allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, radiusMul: { '12 리플렉터스 소환': 1.3 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
     /* 소환 패널의 탭: 해방부대 전체(원본 유닛 번호 0~24)를 네 묶음으로 나눈다 */
     TABS: [
       { name: '근접', ids: [0, 1, 2, 3, 6, 7, 8, 10] },      // 전사 기사 창기사 성기사 창검사 격투가 무도가 의적 (의적은 쌍칼 근접 — 2026-11-14 원거리 탭에서 옮김, 사용자 요청)
@@ -386,18 +386,18 @@
        성 사격: 데몬·데빌·사탄(원본 등급 2 = 파이어 볼)을 등급 0(마법사의 파이어 볼)으로 읽는다. 스테이지는 1단계(대 흑마술파)만 열려 있다 — 2~4단계는 soon(개발 예정) */
   var FACTIONS = {
     lib: { name: '해방부대', bgm: 0, base: 'base', baseName: '성', tabs: CONFIG.TABS, heroes: CONFIG.GROW.heroes, stages: CONFIG.STAGES },
-    evil: { name: '악령군', bgm: 1, hud: 'hud1', base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
+    evil: { name: '악령군', bgm: 1, hud: 'hud1', noCover: true, noSummonCd: true,   /* 소환 대기시간 없음 — 마나만 있으면 연달아 뽑는다 (2026-11-18 사용자 요청) */ base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
       tabs: [
         { name: '근접', ids: [28, 31, 43, 29, 35, 36, 30, 44] },    // 해골전사 좀비 늑대 해골기사 흡혈귀 늑대인간 듀라한 켈베로스 (좀비 2026-11-17 추가 — 기본 공격은 핸드 밤, 적 2기가 붙거나 체력 45% 이하면 자폭)
         { name: '원거리', ids: [46, 32, 39, 40, 45, 47] },      // 박쥐 유령 데몬 데빌 펜릴 드래곤
         { name: '마법', ids: [25, 33, 26, 27] },                // 악령술사 리치 강신술사 사술사
-        { name: '암흑', ids: [38, 42, 41] }                     // 메두사 서큐버스 사탄
+        { name: '암흑', ids: [38, 37, 42, 41] }                     // 메두사 도펠갱거 서큐버스 사탄 (도펠갱거 2026-11-18 추가 — 메타몰포시스)
       ],
       aspd: { 36: 2 },                // 2026-11-18 사용자 요청: 늑대인간 공격 속도 2배 (공격 동작과 공격 사이 대기 모두 절반). 아군일 때만 — 적 늑대인간은 그대로
-      atk: { 45: 35, 47: 49 },        // 2026-11-17 사용자 요청: 고급 유닛 펜릴·드래곤의 공격력 +40%를 정수 상수로 (원본 25 → 35, 35 → 49). 아군일 때만 — 적 악령군의 펜릴·드래곤은 그대로. 공격값 식(k2 × 공격력 ÷ 8)에 이 값이 들어간다
+      atk: { 45: 35, 47: 49, 39: 42, 40: 50 },   /* 2026-11-18 사용자 요청: 데몬·데빌 공격력 2배를 정수 상수로 (원본 21 → 42, 25 → 50) */        // 2026-11-17 사용자 요청: 고급 유닛 펜릴·드래곤의 공격력 +40%를 정수 상수로 (원본 25 → 35, 35 → 49). 아군일 때만 — 적 악령군의 펜릴·드래곤은 그대로. 공격값 식(k2 × 공격력 ÷ 8)에 이 값이 들어간다
       splashPx: { 39: 50 },           // 2026-11-17 사용자 요청: 데몬의 파이어 볼을 스플래시로 — 맞은 곳 둘레 50px(원본 거리 약 700). 원본 파이어 볼은 반경 0(단일). 아군일 때만
       speedAs: { 31: 28 },            // 2026-11-17 사용자 요청: 좀비 이동 속도 = 해골전사 (원본 좀비는 더 느리다). 아군일 때만
-      cost: { 28: 7, 31: 12, 43: 20, 29: 20, 35: 50, 36: 55, 30: 37, 44: 90, 46: 20, 32: 15, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 30, 26: 80, 27: 110, 38: 45, 42: 90, 41: 120 },   // 2026-11-18 사용자 요청: 언데드(해골전사·좀비·해골기사·듀라한·유령·리치)는 절반(내림) — 15·25·40·75·30·60 → 7·12·20·37·15·30
+      cost: { 28: 7, 31: 12, 43: 20, 29: 20, 35: 50, 36: 55, 30: 37, 44: 90, 46: 20, 32: 15, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 30, 26: 80, 27: 110, 38: 45, 37: 60, 42: 90, 41: 120 },   // 2026-11-18 사용자 요청: 언데드(해골전사·좀비·해골기사·듀라한·유령·리치)는 절반(내림) — 15·25·40·75·30·60 → 7·12·20·37·15·30
       heroes: ['사울리안', '스컬 크러셔', '노스페라투', '인시너레이터', '킹 오브 그리드', '실버린', '하이네', '그랭키리우스', '코빌리우스', '다크로드', '디아블로'],
       /* 원작 영웅 기록에 없는 영웅 카드 (2026-11-18 사용자 요청: 소환 목록에 없는 다크로드·디아블로를 영웅 카드로, 수치는 다른 영웅과 비슷하게).
          다크로드 = 원본 유닛 그대로(체력 250·공격 30·방어 8 → 영웅 배수로 39·12, 다크 썬더·포이즌 밤을 스스로 쓰고 기본 공격은 이블 스피리츠 커스).
@@ -421,7 +421,7 @@
     var self = this, F = this.fac, data = this.data, parentOf = {}; data.units.forEach(function (d) { (d.up || []).forEach(function (x) { if (parentOf[x] == null) parentOf[x] = d.id; }); });   // 전직 대상 → 원래 유닛
     this.roster = CONFIG.TABS.map(function (tab) { return tab.ids.map(function (id) {
       var t = self.types[id], cost = (F.cost && F.cost[id]) || summonCost(self.types, parentOf, id);
-      return { id: id, t: t, cost: cost, cd: Math.max(1, Math.min(8, cost / 20)), magic: skillsOf(t).some(function (a) { return !CONFIG.TECH[a.name]; }), tech: skillsOf(t).some(function (a) { return !!CONFIG.TECH[a.name]; }) || bodyTechs(t).length > 0, wait: 0, gar: garInfo(id, F.garCls) };
+      return { id: id, t: t, cost: cost, cd: F.noSummonCd ? 0 : Math.max(1, Math.min(8, cost / 20)), magic: skillsOf(t).some(function (a) { return !CONFIG.TECH[a.name]; }), tech: skillsOf(t).some(function (a) { return !!CONFIG.TECH[a.name]; }) || bodyTechs(t).length > 0, wait: 0, gar: garInfo(id, F.garCls) };
     }); });
   };
   /* 원작 영웅: 기본 유닛 종류를 물려받고 이름·초상화·수치만 영웅 기록의 것으로 바꾼 종류를 만든다 (내 진영의 영웅 목록) */
@@ -617,6 +617,8 @@
   /* 한 번에 매혹하는 수: 멀티 챠밍(공주)은 charmMax(3)기, 챠밍(서큐버스)은 1기 (2026-11-17 사용자 요청 — 원본도 챠밍은 한 유닛 대상) */
   /* 조준 없이 누르면 시전 거리 안의 가장 가까운 적 1기에게 바로 쓰는 아군 마법 (2026-11-17 사용자 요청: 메두사의 스톤 게이즈). 적이 쓸 때는 예전처럼 둘레 범위 */
   var SINGLE_NEAR = { '스톤 게이즈': 1, '챠밍': 1 };   // 챠밍(서큐버스)도 조준 없이 가장 가까운 적 1기 (2026-11-18 사용자 요청). 공주의 멀티 챠밍은 그대로 조준
+  /* 메타몰포시스: pow = 변신한 유닛의 위력 배수(공격값·회복량), pick = 찍은 지점에서 대상을 잡는 거리(px) */
+  var META = { pow: 0.7, pick: 70 };
   function charmN(a) { return a && a.name === '챠밍' ? 1 : CONFIG.SKILL.charmMax; }
   function bodyTechs(t) { return t.acts.filter(function (a) { return a && CONFIG.BODY_TECH[a.name] && !CONFIG.SKILL_OFF[a.name]; }); }
   function basicAct(t) { var a = t.ai >= 0 ? t.acts[t.ai] : null; return a && (a.isAtk == 1 || (a.dmg && !a.suicide && !a.mana && !a.aoe)) ? a : null; }   // 좀비의 핸드 밤처럼 '공격' 표시는 없지만 마나 없이 치는 단일 피해 행동도 기본 공격으로 본다
@@ -789,7 +791,7 @@
   }
   SkillSlot.prototype.ready = function () { return this.cd <= 0 && this.unit.state !== 'dead'; };
   /* 적이 있어야 쓰는 마법인가 (범위 공격·약화·멈춤·매혹·암살). 아니면 아군에게 쓰는 마법(회복·강화·가속)이거나 자기에게 쓰는 것(변형) */
-  SkillSlot.prototype.needsFoe = function () { return { blast: 1, weaken: 1, stun: 1, charm: 1, assassin: 1 }[this.kind] === 1; };
+  SkillSlot.prototype.needsFoe = function () { return { blast: 1, weaken: 1, stun: 1, charm: 1, assassin: 1, meta: 1 }[this.kind] === 1; };
   /* 아군 한 기를 찍어 거는 강화 (2026-11-14 사용자 요청): 웨폰류(파이어·매직 — 자기 전용인 아이스 웨폰은 빼고)와 파운틴 베리어.
      찍은 곳에서 가장 가까운 아군 공격 유닛(CONFIG.SKILL.allyPick px 안)이 대상이고, 남는 자리(웨폰 max·buffMax)는 그 대상 둘레(allyNear px)의 공격 유닛이 받는다 */
   SkillSlot.prototype.allyAimed = function () { return !!CONFIG.SKILL.allyAim && this.kind === 'buff' && !this.act.self && /웨폰|파운틴/.test(this.act.name); };
@@ -806,11 +808,12 @@
     if (a.sup === 'charm') return 'charm';                             // 적을 우리 편으로
     if (a.sup === 'assassin') return 'assassin';                       // 적 하나 즉사
     if (a.sup === 'morph') return 'morph';                             // 변형
+    if (a.sup === 'copy') return 'meta';                               // 메타몰포시스: 찍은 적의 모습으로 (도펠갱거)
     if (a.sup === 'massdispel') return 'dispel';                       // 강화 해제: 찍은 곳 둘레의 적 강화를 지우고 아군 약화·멈춤을 푼다 (술 소환)
     if (a.sup === 'recall') return 'recall';                           // 리콜: 찍은 곳 주변의 아군을 시전자 곁으로 (넨 소환)
     return null;
   }
-  var KIND_NAME = { blast: '범위 공격', heal: '회복', buff: '강화', haste: '가속', weaken: '약화', stun: '적 멈춤', charm: '매혹', assassin: '암살', morph: '변형', recall: '리콜', dispel: '강화 해제' };
+  var KIND_NAME = { meta: '변신', blast: '범위 공격', heal: '회복', buff: '강화', haste: '가속', weaken: '약화', stun: '적 멈춤', charm: '매혹', assassin: '암살', morph: '변형', recall: '리콜', dispel: '강화 해제' };
 
   /* 범위 공격 마법의 등급 배수 (2026-11-13): 원본 마나 소모가 큰 상위 마법일수록 세다 — 1 + (원본 마나 − tierBase) × tierPer, 1 밑으로는 안 내려간다.
      라이트닝 썬더(100) ×1.0, 나르 소환(150) ×1.2, 홀리 크로스(180) ×1.32, 12 리플렉터스 소환(250) ×1.6. 전에는 등급과 무관하게 피해가 비슷해 비싼 마법 유닛을 뽑을 이유가 약했다. 아군만 */
@@ -1099,6 +1102,8 @@
     var a = s.act, S = CONFIG.SKILL, self = this, ok = false, tps = this.rules.tps;
     // 시전 조건: 시전자 가까이에 대상이 있어야 한다 — 적에게 쓰는 마법은 시전 거리 안의 적, 아군에게 쓰는 마법은 주변의 다른 아군 (skillTarget)
     var tg = pt ? { foe: pt } : this.skillTarget(u, s), foe = tg ? tg.foe : null;
+    if (pt && s.kind === 'meta') { foe = null; var bdm = META.pick;   // 메타몰포시스: 찍은 지점에서 가장 가까운 적 (영웅 제외)
+      this.units.forEach(function (o) { if (o.side === u.side || o.state === 'dead' || o.hero || o.heroPost || (o.sortie && o.sortie.r.hero)) return; var dm = Math.hypot(o.x - pt.x, o.y - o.headY * 0.5 - pt.y); if (dm < bdm) { bdm = dm; foe = o; } }); }
     if (pt && s.kind === 'assassin') { foe = null; var bd0 = 45;   // 암살은 유닛 하나가 대상: 찍은 지점에서 가장 가까운 적
       this.units.forEach(function (o) { if (o.side === u.side || o.state === 'dead') return; var d0 = Math.hypot(o.x - pt.x, o.y - pt.y); if (d0 < bd0) { bd0 = d0; foe = o; } }); }
     if (!tg) { this._say(u.x, u.y - u.headY - 10, s.needsFoe() ? '가까이에 적이 없음' : '가까이에 아군이 없음', '#c9d1e3'); return false; }
@@ -1127,7 +1132,7 @@
       var mass = a.sup === 'massheal', HL = mass && pt ? this.units.filter(function (o) { return o.side === u.side && o.state !== 'dead' && Math.hypot(o.x - pt.x, o.y - pt.y) <= S.summonRadius; }) : allies(mass ? S.buffRadius * 1.5 : S.buffRadius);   // 말다 소환은 찍은 곳 둘레
       // 힐링(2026-11-13 너프 — 마나 15로 주변 전원을 50%씩 채워 너무 셌다): 주변에서 체력 비율이 가장 낮은 healMax(3)기만, 최대 체력의 healRatio(15%)씩. 말다 소환은 범위 안 전원을 최대 체력의 massHeal(50%)씩 (2026-11-14 전부 절반으로)
       if (!mass) HL = HL.filter(function (o) { return o.hp < o.maxHp; }).sort(function (p, q) { return p.hp / p.maxHp - q.hp / q.maxHp; }).slice(0, S.healMax);
-      HL.forEach(function (o) { var h = Math.round(o.maxHp * (mass ? S.massHeal : S.healRatio)), got = Math.min(o.maxHp - o.hp, h);
+      HL.forEach(function (o) { var h = Math.round(o.maxHp * (mass ? S.massHeal : S.healRatio) * (u.powMul || 1)), got = Math.min(o.maxHp - o.hp, h);
         o.hp += got; if (got > 0) self._say(o.x, o.y - o.t.h - 6, '+' + got, '#8fe89a'); if (mass) { o.stunUntil = 0; delete o.buffs.meltw; delete o.buffs.melta; delete o.buffs.poison; delete o.buffs.slow; }   /* 말다 소환은 상태 이상도 푼다 (원본 case 0x38) */ if (!mass) self._addEffect(o.x, o.y - o.t.h * 0.5, a.arm, 0); });
       if (mass) this._addEffect(pt ? pt.x : u.x, pt ? pt.y : this.laneY, a.arm, 0);
       ok = true;
@@ -1179,6 +1184,13 @@
       this._addEffect(foe.x, foe.y - 20, a.arm, 0); ok = true;
     } else if (s.kind === 'assassin' && foe) {               // 가장 가까운 적 하나를 쓰러뜨린다
       this._damage(foe, foe.hp); ok = true;
+    } else if (s.kind === 'meta') {                          // 메타몰포시스 (도펠갱거, 2026-11-18 사용자 요청): 영웅이 아닌 적 하나의 모습이 된다 — 그 유닛의 기본 공격과 마법을 모두 쓰고, 위력은 META.pow(70%)
+      var mh = foe && foe.t && foe.side !== u.side && foe.state !== 'dead' && !(foe.hero || foe.heroPost || (foe.sortie && foe.sortie.r.hero)) ? foe : null;
+      if (!mh && foe && foe.t) { this._say(foe.x, foe.y - foe.headY - 6, '영웅으로는 변할 수 없습니다', '#c9d1e3'); return false; }
+      if (mh) { var to2 = this.types[mh.t.id] || mh.t, mr = u.hp / u.maxHp; u.metaOf = u.t; u.setType(to2); u.hp = Math.max(1, Math.round(u.maxHp * mr)); u.powMul = META.pow; u.atkOv = null; u.aspd = null; this._applyType(u); u.face(u.dir, -u.dir);
+        this.slots = this.slots.filter(function (q) { return q.unit !== u; }); u.slots = []; skillsOf(to2).forEach(function (a2) { self._addSlot(u, a2); });   // 칸을 그 유닛의 마법으로 갈아 끼운다 (메타몰포시스 칸은 사라진다 — 되돌아가지 않는다)
+        var mk = this.magicUnits.indexOf(u), hasM = u.slots.some(function (q) { return !q.auto; }); if (hasM && mk < 0) this.magicUnits.push(u); else if (!hasM && mk >= 0) this.magicUnits.splice(mk, 1);
+        this._regroup(); this._addEffect(u.x, u.y - u.headY * 0.5, a.arm, 0); this._say(u.x, u.y - u.headY - 30, to2.name + ' (위력 ' + Math.round(META.pow * 100) + '%)', '#d9b8ff'); ok = true; }
     } else if (s.kind === 'morph') {                         // 다른 형태로 (엔트 ↔ 지상 엔트). 체력 비율은 유지
       var to = this.types[CONFIG.MORPH[u.t.id]];
       if (to) { var ratio = u.hp / u.maxHp; u.setType(to); u.hp = Math.max(1, Math.round(u.maxHp * ratio)); this._applyType(u); u.face(u.dir, -u.dir); ok = true; }
@@ -1472,7 +1484,7 @@
       var AI = C.AI, T0 = this.time;
       if (!C.PUSH && !AI.frontMove && u.x > this.frontX + AI.pullOver && this._attackers(u) >= AI.pullMin) u.pullUntil = T0 + AI.pullSec;          // ① 집결선 너머에서 둘 이상에게 맞는다 → 물러선다 (움직이는 집결선을 쓰면 끈다)
       if (u.pullUntil > T0) { if (u.x > this.frontX - 6) { u.aiWhy = 'pull'; u.x -= Math.min(u.x - (this.frontX - 6), this._speed(u) * dt); u.state = 'move'; u.walkT += dt; this._faceVec(u, -1, 0); u.hold = null; u.slotOf = null; u.slotA = null; u.passY = null; return; } u.pullUntil = 0; }
-      if (u.rangePx < 80 && !u.hero) {                                                                                 // ② 다친 근접 유닛 → 멀쩡한 근접 아군 뒤로
+      if (u.rangePx < 80 && !u.hero && !this.fac.noCover) {                                                            // ② 다친 근접 유닛 → 멀쩡한 근접 아군 뒤로 (noCover 진영 = 악령군은 물러나지 않고 끝까지 싸운다 — 2026-11-18 사용자 요청)
         var low = u.hp <= u.maxHp * AI.coverHp;
         // 교대 실패 (2026-11-14 사용자 요청): 숨을 아군이 없거나, 숨을 자리까지 coverTry 초 안에 못 가면(쫓기거나 길이 막혀서) 교대를 그만두고 다시 싸운다. 그 뒤 coverRetry 초 동안은 교대를 다시 시도하지 않는다
         var coverFail = function () { u.coverOn = false; u.coverOf = null; u.coverAt = false; u.coverT = 0; u.coverBan = T0 + AI.coverRetry; u.aiWhy = 'coverfail'; };

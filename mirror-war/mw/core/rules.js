@@ -55,6 +55,7 @@
     if (w && WEAPON[w.arm]) v = (v * WEAPON[w.arm]) >> 3;                              // 무기 강화: 원본 배수 (FUN_004b83d0의 상태 6·9·10·0x22 = 이펙트 번호)
     if (this.buff(a, "meltw")) v = 1;                                                // 멜팅 웨폰: 공격값 1 (FUN_004b83d0 상태 0xD)
     if (this.buff(a, "berserk")) v = (v * 12) >> 3;                                   // 광폭화: 원본 ×12/8 (FUN_004b83d0)
+    if (a.powMul) v = Math.max(1, Math.round(v * a.powMul));                         // 위력 배수 (디펜스: 메타몰포시스로 변신한 도펠갱거 0.7)
     return v;
   };
   O.defenseValue = function (b) {
