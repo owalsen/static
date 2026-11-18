@@ -143,11 +143,9 @@
       { text: '적이 가장 많이 모인 곳을 누르세요. 원 안의 적이 모두 맞습니다.', box: function (g) { return g._tutPtBox(g._tutMid(g._tutFoes()), 46); },
         do: function (g) { var p = g._tutMid(g._tutFoes()); if (p) g._aimCast(p.x, p.y); }, ok: function (g) { return !g.aim; }, run: 3, after: '범위 마법은 적이 뭉쳐 있을 때 쓰면 좋습니다.' } ] },
     { title: '서큐버스 — 챠밍', acts: [
-      { text: '[챠밍]을 누르세요. 적 하나를 우리 편으로 만듭니다.', box: function (g) { return g._tutSlotBox('챠밍'); },
-        pre: function (g) { if (g._tutFoes().length < 2) { var x = g._tutFront() + 120, m = g.rows.length >> 1; g._tutFoe(g.tut.foeId, x, m); g._tutFoe(g.tut.foeId, x + 26, m + 1); } var p = g._tutMid(g._tutFoes()); if (p) g._tutNear(g._tutAlly('서큐버스'), p.x, 150); },
-        ok: function (g) { return !!g.aim; } },
-      { text: '매혹할 적을 누르세요.', box: function (g) { return g._tutUnitBox(g._tutFoes()[0]); },
-        do: function (g) { var e = g._tutFoes()[0]; if (e) g._aimCast(e.x, e.y - e.headY * 0.5); }, ok: function (g) { return !g.aim; }, run: 3, after: '매혹된 적은 우리 편이 되어 싸웁니다. 영웅에게는 통하지 않습니다.' } ] },
+      { text: '[챠밍]을 누르세요. 조준 없이, 가장 가까운 적 하나를 우리 편으로 만듭니다.', box: function (g) { return g._tutSlotBox('챠밍'); },
+        pre: function (g) { if (g._tutFoes().length < 2) { var x = g._tutFront() + 120, m = g.rows.length >> 1; g._tutFoe(g.tut.foeId, x, m); g._tutFoe(g.tut.foeId, x + 26, m + 1); } var p = g._tutMid(g._tutFoes()); if (p) g._tutNear(g._tutAlly('서큐버스'), p.x, 110); g.tut.ch0 = g.units.filter(function (u) { return u.charmed; }).length; },
+        ok: function (g) { return g.units.filter(function (u) { return u.charmed; }).length > g.tut.ch0; }, run: 3, after: '매혹된 적은 우리 편이 되어 싸웁니다. 영웅에게는 통하지 않습니다.' } ] },
     { title: '상성', acts: [
       { text: '새로운 적이 나타났습니다. 적마다 약한 상대가 있습니다. 위쪽의 [상성] 버튼을 누르세요.', box: function (g) { return g.affBtn; },
         pre: function (g) { g._tutClearFoes(); g.units = g.units.filter(function (u) { return !(u.charmed && u.side === 0); }); var x = g._tutFront() + 230, m = g.rows.length >> 1; [[0, m], [26, m - 1], [30, m + 1]].forEach(function (e) { g._tutFoe(g.tut.affId, x + e[0], e[1]); }); },
@@ -157,7 +155,7 @@
       { text: function (g) { return '상성이 유리한 [' + g.tut.counter + '] 버튼을 눌러 소환하세요. 유리한 유닛은 더 큰 피해를 줍니다.'; }, box: function (g) { return g._tutBtnBox(g.tut.counter); }, pre: function (g) { g.tut.n0 = g._tutAllies().length; },
         ok: function (g) { return g._tutAllies().length > g.tut.n0; }, run: 4, hold: 260, after: '소환 버튼을 길게 누르면 유닛 설명과 상성을 볼 수 있습니다.' } ] },
     { title: '가이드 끝', acts: [
-      { text: '여기까지입니다. 유닛을 모아 적 벙커를 부수고, 맨 오른쪽의 적 기지를 무너뜨리면 승리합니다. 이제 마녀의 숲을 시작합니다.', btn: '시작하기' } ] }
+      { text: function (g) { return '여기까지입니다. 유닛을 모아 적 벙커를 부수고, 맨 오른쪽의 적 기지를 무너뜨리면 승리합니다. 이제 ' + g.st.name + ' — 시작합니다.'; }, btn: '시작하기' } ] }
   ];
   var ALL = { lib: LIB_STEPS, evil: EVIL_STEPS }, MELEE = { lib: '전사', evil: '해골기사' }, STEPS = LIB_STEPS;   // STEPS = 지금 도는 가이드 (_tutBegin 이 진영 것으로 바꾼다)
   DG.TUT_STEPS = LIB_STEPS; DG.TUT_ALL = ALL;

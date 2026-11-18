@@ -91,7 +91,7 @@
     var hy = Math.max(30, Math.round(L.y0 - 110 * s - 40));
     var HR = S.hover ? RACES.filter(function (r) { return r.key === S.hover; })[0] : null, ht = HR ? HR.name : '진영을 고르세요';   // 고른 진영의 이름을 위에 크게 (지도의 이름표가 작아 잘 안 보인다 — 2026-11-17 사용자 요청)
     ctx.font = 'bold ' + (HR ? 32 : 26) + 'px sans-serif'; ctx.fillStyle = '#000'; ctx.fillText(ht, W / 2 + 1, hy + 1); ctx.fillStyle = HR ? '#fff1c4' : '#ffd36e'; if (HR) { ctx.shadowColor = '#ffb23a'; ctx.shadowBlur = 14; } ctx.fillText(ht, W / 2, hy); ctx.shadowBlur = 0;
-    ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.fillText('해방부대 · 악령군으로 플레이할 수 있습니다 (악령군은 1단계까지)', W / 2, hy + 26, W - 20);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.fillText('해방부대 · 악령군으로 플레이할 수 있습니다', W / 2, hy + 26, W - 20);
     var by = Math.min(H - 40, L.y0 + L.ih + 34);
     ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(S.go ? ((RACES.filter(function (r) { return r.key === S.pick; })[0] || RACES[0]).name + ' — 출정!') : S.hover && S.hover !== 'cancel' ? '한 번 더 누르면 ' + (RACES.filter(function (r) { return r.key === S.hover; })[0] || RACES[0]).to + ' 출정합니다' : '지도에서 진영을 누르세요', W / 2, by, W - 20);
     ctx.font = '10px sans-serif'; ctx.fillStyle = '#7b8397';

@@ -393,18 +393,19 @@
         { name: '마법', ids: [25, 33, 26, 27] },                // 악령술사 리치 강신술사 사술사
         { name: '암흑', ids: [38, 42, 41] }                     // 메두사 서큐버스 사탄
       ],
+      aspd: { 36: 2 },                // 2026-11-18 사용자 요청: 늑대인간 공격 속도 2배 (공격 동작과 공격 사이 대기 모두 절반). 아군일 때만 — 적 늑대인간은 그대로
       atk: { 45: 35, 47: 49 },        // 2026-11-17 사용자 요청: 고급 유닛 펜릴·드래곤의 공격력 +40%를 정수 상수로 (원본 25 → 35, 35 → 49). 아군일 때만 — 적 악령군의 펜릴·드래곤은 그대로. 공격값 식(k2 × 공격력 ÷ 8)에 이 값이 들어간다
       splashPx: { 39: 50 },           // 2026-11-17 사용자 요청: 데몬의 파이어 볼을 스플래시로 — 맞은 곳 둘레 50px(원본 거리 약 700). 원본 파이어 볼은 반경 0(단일). 아군일 때만
       speedAs: { 31: 28 },            // 2026-11-17 사용자 요청: 좀비 이동 속도 = 해골전사 (원본 좀비는 더 느리다). 아군일 때만
-      cost: { 28: 15, 31: 25, 43: 20, 29: 40, 35: 50, 36: 55, 30: 75, 44: 90, 46: 20, 32: 30, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 60, 26: 80, 27: 110, 38: 45, 42: 90, 41: 120 },
+      cost: { 28: 7, 31: 12, 43: 20, 29: 20, 35: 50, 36: 55, 30: 37, 44: 90, 46: 20, 32: 15, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 30, 26: 80, 27: 110, 38: 45, 42: 90, 41: 120 },   // 2026-11-18 사용자 요청: 언데드(해골전사·좀비·해골기사·듀라한·유령·리치)는 절반(내림) — 15·25·40·75·30·60 → 7·12·20·37·15·30
       heroes: ['사울리안', '스컬 크러셔', '노스페라투', '인시너레이터', '킹 오브 그리드', '실버린', '하이네', '그랭키리우스', '코빌리우스'],
+      /* 악령군 스테이지 (2026-11-18 사용자 확정): 두 개뿐 — 1 해방부대(쉬움) · 2 흑마술파(어려움). 전에는 1 흑마술파(쉬움) · 2 해방부대(보통) · 3·4 개발 예정이었다 */
       stages: [
-        Object.assign({}, CONFIG.STAGES[1], { name: '마녀의 숲', note: '쉬움', cap: 40, ecap: 28, waves: [0, 5], mul: 0.49,   /* 2026-11-17 사용자 요청: 너무 어렵다 — 적 수를 지금의 70%로 (0.7 → 0.49) */ restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
-          lairLv: 1, lairMul: 0.7, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 3, trapEvery: 50, trapLv: 1, guards: [{ at: 'bottom', list: [[53, 2]] }, { at: 'top', list: [[53, 2]] }, { at: 'lair', list: [[54, 1], [53, 2]] }] }),   // 해방부대 2단계(흑마술파)의 틀에 해방부대 1단계의 쉬움 수치
-        { name: '해방부대의 전초', cap: 45, ecap: 32, enemy: 'lib', note: '보통', waves: [0, 6], mul: 0.7, restMul: 1.8, loopRest: 30, loopLv: 0.34, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 4200, efort: { hp: 1000, lv: 2 },
-          lairLv: 2, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 3, traps: 0, guards: [{ at: 'bottom', list: [[1, 2], [4, 1]] }, { at: 'top', list: [[1, 2], [5, 1]] }, { at: 'lair', list: [[3, 1], [1, 2], [12, 1]] }] },   // 해방부대 2단계(흑마술파의 길)와 같은 수치, 적만 해방부대. 덫은 없다(해방부대에 덫 행동이 없음)
-        { name: '흑마술의 탑', note: '어려움', soon: true, enemyName: '흑마술파', fig: 54 },
-        { name: '거울의 끝', note: '매우 어려움', soon: true, enemyName: '흑마술파 + 해방부대', fig: 51 }
+        { name: '해방부대의 전초', note: '쉬움', enemy: 'lib', flank: null,   /* 쉬움 단계는 측면 등장 없음 (2026-11-18 사용자 요청) */ cap: 40, ecap: 28, waves: [0, 5], mul: 0.49, restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
+          lairLv: 1, lairMul: 0.7, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 0, guards: [{ at: 'bottom', list: [[1, 2]] }, { at: 'top', list: [[1, 2]] }, { at: 'lair', list: [[3, 1], [1, 2]] }] },   // 예전 악령군 1단계(마녀의 숲)의 쉬움 수치 그대로, 적만 해방부대. 덫은 없다(해방부대에 덫 행동이 없음)
+        Object.assign({}, CONFIG.STAGES[1], { name: '흑마술의 탑', note: '어려움', cap: 50, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
+          lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 12, trapEvery: 18, trapLv: 3,
+          guards: [{ at: 'bottom', list: [[54, 2], [57, 1]] }, { at: 'top', list: [[54, 2], [56, 1]] }, { at: 'lair', list: [[51, 1], [54, 2], [61, 1], [53, 2]] }] })   // 해방부대 3단계(악령의 성채)의 어려움 수치를 흑마술파 틀에. 기습(ambush)은 없다(해방부대 3단계의 기습 병력이 악령군 유닛이라)
       ] }
   };
   DefenseGame.FACTIONS = FACTIONS;
@@ -609,7 +610,7 @@
   /* 그 종류가 가진 몸동작 기술 (CONFIG.BODY_TECH 에 있고 꺼지지 않은 원본 행동) */
   /* 한 번에 매혹하는 수: 멀티 챠밍(공주)은 charmMax(3)기, 챠밍(서큐버스)은 1기 (2026-11-17 사용자 요청 — 원본도 챠밍은 한 유닛 대상) */
   /* 조준 없이 누르면 시전 거리 안의 가장 가까운 적 1기에게 바로 쓰는 아군 마법 (2026-11-17 사용자 요청: 메두사의 스톤 게이즈). 적이 쓸 때는 예전처럼 둘레 범위 */
-  var SINGLE_NEAR = { '스톤 게이즈': 1 };
+  var SINGLE_NEAR = { '스톤 게이즈': 1, '챠밍': 1 };   // 챠밍(서큐버스)도 조준 없이 가장 가까운 적 1기 (2026-11-18 사용자 요청). 공주의 멀티 챠밍은 그대로 조준
   function charmN(a) { return a && a.name === '챠밍' ? 1 : CONFIG.SKILL.charmMax; }
   function bodyTechs(t) { return t.acts.filter(function (a) { return a && CONFIG.BODY_TECH[a.name] && !CONFIG.SKILL_OFF[a.name]; }); }
   function basicAct(t) { var a = t.ai >= 0 ? t.acts[t.ai] : null; return a && (a.isAtk == 1 || (a.dmg && !a.suicide && !a.mana && !a.aoe)) ? a : null; }   // 좀비의 핸드 밤처럼 '공격' 표시는 없지만 마나 없이 치는 단일 피해 행동도 기본 공격으로 본다
@@ -635,6 +636,7 @@
     u.lookDir = 0; u.slotOf = null; u.slotA = null; u.slotAt = null; u.slotT = 0; u.apT = -9; u.skipUid = null; u.skipUntil = 0; this._setSide(u, side);
     this._applyType(u);
     if (side === 0 && this.allyLv) this._setLevel(u, 1 + this.allyLv);   // "전군 단련"으로 오른 만큼 높은 레벨로 나온다
+    if (side === 0 && this.fac && this.fac.aspd && this.fac.aspd[typeId]) u.aspd = this.fac.aspd[typeId];   // 진영의 유닛별 공격 속도 배수
     if (side === 0 && this.fac && this.fac.atk && this.fac.atk[typeId] != null) u.atkOv = this.fac.atk[typeId];   // 진영의 유닛별 공격력 (악령군 펜릴 35·드래곤 49 — rules.attackValue 가 t.atk 대신 쓴다)
     if (side === 0 && this.fac && this.fac.speedAs && this.types[this.fac.speedAs[typeId]]) u.speedPx = this.types[this.fac.speedAs[typeId]].walkPx * this.rules.tps * C.MOVE_SCALE * C.ALLY_MOVE_MUL;   // 이동 속도를 다른 유닛과 같게 (악령군 좀비 = 해골전사)
     if (side === 0 && this.fac && this.fac.splashPx && this.fac.splashPx[typeId]) u.splashPx = this.fac.splashPx[typeId];   // 원본에 없는 스플래시 (악령군 데몬의 파이어 볼)
@@ -1446,11 +1448,11 @@
     if (u.state === 'attack') {
       // 공격 동작: 원본 애니메이션을 틱 속도(초당 12장)로 넘기다가, 중간 프레임에서 실제 타격
       var A = u.t.anim.atk, n = A ? A.n : 6, hitAt = A && A.hit != null ? A.hit : Math.floor(n * 0.6);   // 원본 이벤트 프레임(data.js anim.atk.hit). 2026-11-13: 없는 필드(ev)를 보고 있어 늘 0.6 지점에서 치던 것을 고침
-      u.at += dt * tps;
+      u.at += dt * tps * (u.aspd || 1);
       if (!u.hitDone && u.at >= hitAt) { u.hitDone = true; this._strike(u); }
       var X = R.extraHits ? R.extraHits(u.act) : null;         // 연속 타격 (분석 8-41): 명궁의 에로우 샤워는 화살 네 발(프레임 5·10·12·14), 무도가의 컴비네이션 어택은 두 번
       if (X) { if (u.at < X[0]) u.xN = 0; while ((u.xN || 0) < X.length && u.at >= X[u.xN]) { u.xN = (u.xN || 0) + 1; this._strike(u); } }
-      if (u.at >= n) { u.state = 'idle'; u.cd = R.cooldown(u, this.rng); }
+      if (u.at >= n) { u.state = 'idle'; u.cd = R.cooldown(u, this.rng) / (u.aspd || 1); }
       return;
     }
 
