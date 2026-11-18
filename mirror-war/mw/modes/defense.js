@@ -168,7 +168,12 @@
     CASTER: { rangeMul: 0.55, supportDist: 110 },
     /* 자폭 (좀비, 원본 행동 39 — 자기 둘레 범위 피해를 주고 자신은 죽는다): 맞은편 유닛이 radius 안에 min 기 이상 붙었거나, 체력이 hp 비율 아래로 떨어졌는데 하나라도 붙어 있으면 터진다.
        멈춤(석화) 중에는 못 터진다 → 턴 언데드로 먼저 잡으면 막을 수 있다. 피해 = 원본 공식(k1 32·k2 26) × dmgMul. 2026-11-13 */
-    BOOM: { radius: 62, min: 2, hp: 0.45, dmgMul: 1 },
+    /* 근접 타격의 부가 효과 (2026-11-18 사용자 요청 "셋 다 넣기", 원본 FUN_004ac6f0 — 분석 8-47). 두 편 모두에게 원본대로 적용한다.
+         vamp   = 행동 종류 4(뱀파이어 터치): 준 피해만큼 공격자 체력 회복(최대 체력까지)
+         slowPct·(지속 = 행동 +0x3E 틱) = 종류 11(마비침): 이 확률로 감속 — 걸음 × TRAPS.slowMul, 공격 대기 × 3(rules.cooldown)
+         splash = 종류 12(할버드 스트라이크)·13(랜스 챠징): 맞은 적 둘레 이 반경(원본 거리, × RANGE_SCALE)의 **지상** 적도 피해(이펙트 66·67 의 armData +0x3C = 900, +0x40 = 1) */
+    MELEE_FX: { vamp: true, slowPct: 34, splash: 900 },
+    BOOM: { radius: 62, touch: 42, dmgMul: 1 },   // 2026-11-18 사용자 요청 "무조건 자폭": 적이 touch px 안에 닿으면 조건 없이 터진다 (전에는 반경 안에 적 2기 이상 또는 체력 45% 이하 — min·hp). 피해는 반경 radius 안의 적 모두. 두 편 모두
     /* 아군 AI (2026-11-13 사용자 요청):
        ① 물러서기: 전장 가운데 집결선(frontX)을 pullOver px 넘게 넘어간 아군이 적 pullMin(2)기 이상에게 맞고 있으면 pullSec 초 동안 집결선 뒤로 돌아온다 — 전선을 뒤로 당긴다.
        ② 교대: 난전 중 체력이 coverHp(50%) 이하로 떨어진 근접 아군은 가까이(coverDist px 안) 있는 멀쩡한 근접 아군의 뒤(coverBack px)로 물러난다. 거기서도 적이 닿으면 싸운다. 회복해서 체력이 coverHp 를 넘으면 다시 앞으로 */
@@ -424,7 +429,7 @@
         { name: '마술', ids: [49, 50, 61, 51] },                  // 흑마술사 요마술사 인챈터 대마술사
         { name: '환술', ids: [62, 60, 58, 59] }                   // 마녀 연금술사 소환사 환술사
       ],
-      extraIds: [79],   /* 가고일 석상 그림 */ cost: { 65: 60, 52: 20, 68: 20, 53: 35, 63: 40, 64: 45, 69: 45, 70: 70, 54: 80, 55: 25, 56: 50, 57: 55, 66: 80, 67: 150, 49: 50, 50: 80, 61: 70, 51: 130, 62: 30, 60: 60, 58: 70, 59: 80 },
+      extraIds: [79],   /* 가고일 석상 그림 */ atk: { 79: 60 },   /* 2026-11-18 사용자 요청: 가고일 석상 공격력 2배를 정수 상수로 (원본 30 → 60). 아군일 때만 — _gargForm 이 형태를 바꿀 때 atkOv 를 다시 맞춘다 */ cost: { 65: 60, 52: 20, 68: 20, 53: 35, 63: 40, 64: 45, 69: 45, 70: 70, 54: 80, 55: 25, 56: 50, 57: 55, 66: 80, 67: 150, 49: 50, 50: 80, 61: 70, 51: 130, 62: 30, 60: 60, 58: 70, 59: 80 },
       heroes: ['쿨구레루 데스모네', '이자비', '카인 제틀링', '라미레스', '네인 피리스', '툴핀 래리', '리루아 힐리', '산적짱', '그린드레곤'],
       stages: [
         Object.assign({}, CONFIG.STAGES[0], { name: '망자의 들판', note: '쉬움' }),   // 해방부대 1단계(해골 들판)의 쉬움 수치 그대로 — 적 악령군
@@ -1708,6 +1713,7 @@
   P._gargForm = function (u, stone) {
     var to = this.types[stone ? GARG.stone : GARG.fly]; if (!to || u.state === 'dead') return;
     var ratio = u.hp / u.maxHp; u.setType(to); u.hp = Math.max(1, Math.round(u.maxHp * ratio)); this._applyType(u); u.face(u.dir, -u.dir);
+    var fa = u.side === 0 && this.fac && this.fac.atk ? this.fac.atk[to.id] : null; if (fa != null) u.atkOv = fa; else delete u.atkOv;   // 진영의 유닛별 공격력 (석상 60)
     u.rooted = stone; u.statue = stone; if (stone) u.speedPx = 0; u.tgt = null; u.slotOf = null; u.slotA = null; u.slotAt = null; u.cd = 0; u.at = 0; u.state = 'idle';
     this._addEffect(u.x, u.y - u.headY * 0.5, 12, 0); this._say(u.x, u.y - u.headY - 10, stone ? '석상' : '가고일', '#c7a0ff');
   };
@@ -1885,7 +1891,12 @@
       sr: Math.max(def.r > 0 ? def.r * CONFIG.RANGE_SCALE : 0, u.splashPx || 0) });   // 스플래시 반경 px: 원본 이펙트 반경(브레스) 또는 진영 설정(데몬)
     else { this._damage(tgt, dmg);
       // 중독 (원본 FUN_004ac6f0: 행동 종류 +0x3C == 1 = 전갈의 포이즌 테일 — 맞은 유닛에 중독, 지속 = 행동 +0x3E 틱. 면역 유닛(종류 +0x54) 제외). 피해는 _updateUnit
-      if (u.act.type === 1 && tgt.state !== 'dead' && !tgt.t.immune) { if (!(tgt.buffs.poison && tgt.buffs.poison.until > this.time)) this._say(tgt.x, tgt.y - tgt.headY - 6, '중독', '#9be36a'); tgt.buffs.poison = { until: this.time + (u.act.dur || 160) / R.tps }; } }
+      if (u.act.type === 1 && tgt.state !== 'dead' && !tgt.t.immune) { if (!(tgt.buffs.poison && tgt.buffs.poison.until > this.time)) this._say(tgt.x, tgt.y - tgt.headY - 6, '중독', '#9be36a'); tgt.buffs.poison = { until: this.time + (u.act.dur || 160) / R.tps }; }
+      var MF = CONFIG.MELEE_FX, ty = u.act.type;
+      if (MF && !tgt.t.immune) {
+        if (ty === 4 && MF.vamp && dmg > 0 && u.state !== 'dead' && u.hp < u.maxHp) { var got = Math.min(u.maxHp - u.hp, Math.round(dmg)); u.hp += got; if (got > 0) this._say(u.x, u.y - u.headY - 6, '+' + got, '#8fe89a'); }   // 흡혈
+        else if (ty === 11 && tgt.state !== 'dead' && this.rng.next() * 100 < MF.slowPct) { if (!(tgt.buffs.slow && tgt.buffs.slow.until > this.time)) this._say(tgt.x, tgt.y - tgt.headY - 6, '감속', '#9fd0ff'); tgt.buffs.slow = { until: this.time + (u.act.dur || 48) / R.tps }; } }   // 마비침
+      if (MF && MF.splash > 0 && (ty === 12 || ty === 13)) this._splash(u, tgt, tgt.x, tgt.y, MF.splash * CONFIG.RANGE_SCALE, true); }   // 할버드 스트라이크·랜스 챠징: 둘레의 지상 적 (면역 여부와 상관없이 — 이펙트는 타격 전에 뜬다)
   };
 
   P._damage = function (u, dmg) { u.hitT = this.time;
@@ -1921,10 +1932,10 @@
   P._hitBase = function (dmg) { var df = this.forts && this.forts[0] ? this.garDef(this.forts[0]) : 0; if (df > 0) dmg = Math.max(Math.ceil(dmg * CONFIG.GAR_DEF_MIN), dmg - df);   // 수비대의 방어 보너스만큼 덜 받는다 (그래도 원래 피해의 GAR_DEF_MIN 은 받는다)
     this.baseHp -= dmg; this.baseHit = 0.25; this.baseHurtT = this.time; this._say(CONFIG.BASE.front - 50, this.laneY - 70, '-' + dmg, '#ff7a6a'); };
 
-  /* 자폭: 조건이 맞으면 터진다 (CONFIG.BOOM). 둘레의 맞은편 유닛 모두에게 원본 공식 피해, 자신은 죽는다. true = 터졌다 */
+  /* 자폭: 적이 닿으면(BOOM.touch) 터진다 (CONFIG.BOOM). 둘레의 맞은편 유닛 모두에게 원본 공식 피해, 자신은 죽는다. true = 터졌다 */
   P._boom = function (u) {
     var B = CONFIG.BOOM, self = this, near = this.units.filter(function (o) { return o.side !== u.side && o.state !== 'dead' && Math.hypot(o.x - u.x, o.y - u.y) <= B.radius; });
-    if (!(near.length >= B.min || (near.length >= 1 && u.hp <= u.maxHp * B.hp))) return false;
+    if (!near.some(function (o) { return Math.hypot(o.x - u.x, o.y - u.y) <= B.touch; })) return false;   // 닿은 적이 있어야 터진다
     var keep = u.act, a = u.boom; u.act = a;
     near.forEach(function (o) { self._damage(o, self.rules.damage(u, o, self.rng) * B.dmgMul); });
     u.act = keep; this._addEffect(u.x, u.y - 10, a.arm, 0); this._say(u.x, u.y - u.t.h - 18, a.name, u.side === 0 ? '#ffd36e' : '#ff8a7a'); this._play(a.snd, 0.9);
@@ -2237,9 +2248,9 @@
   /* 기본 공격의 스플래시 (2026-11-17 사용자 요청: 펜릴·드래곤이 범위 피해를 주는지 검토 → 주지 않고 있었다).
        원본: 발사체 이펙트 칸의 armData +0x3C 가 0 이 아니면 맞은 지점에서 그 반경 안의 적 유닛이 저마다 원본 피해 공식대로 맞는다(FUN_004b9590 의 범위 처리, 아이스 브레스 case 0x25).
        반경 = 원본 거리 × RANGE_SCALE(0.07) — 드래곤 브레스 900 → 63px, 아이스 브레스 800 → 56px. 직접 맞은 대상은 빼고(이미 맞음), 쏜 유닛의 편이 아닌 유닛만 */
-  P._splash = function (u, main, x, y, r) {
+  P._splash = function (u, main, x, y, r, ground) {   // ground = 지상 유닛만 (할버드 스트라이크·랜스 챠징 — 이펙트의 대상 이동 등급 상한 1)
     var self = this, R = this.rules, n = 0;
-    this.units.forEach(function (o) { if (o === main || o.side === u.side || o.state === 'dead' || o.state === 'inside' || Math.hypot(o.x - x, o.y - y) > r) return;
+    this.units.forEach(function (o) { if (o === main || o.side === u.side || o.state === 'dead' || o.state === 'inside' || (ground && o.t.fly === 2) || Math.hypot(o.x - x, o.y - y) > r) return;
       if (u.side === 1) o.__by = u.t.name; self._damage(o, R.damage(u, o, self.rng)); n++; });
     this.splashN = (this.splashN || 0) + n;
   };
@@ -3164,10 +3175,24 @@
     // 약함: 이 게임에 나오는 적 중 이 유닛을 상성으로 잡는 적 (원본 aff — 적의 강한 상대 목록에 이 유닛이 있다). 짧게 세 이름까지
     var weak = [], seen = {}, self = this; C.WAVES.forEach(function (wv) { wv.list.forEach(function (e) { var et = self.types[e[0]]; if (!et || (et.aff || []).indexOf(t.id) < 0 || !basicAct(et)) return; var rep = self.types[AF.repOf[et.id]], fam = rep && (rep.aff || []).indexOf(t.id) >= 0 ? AFF_FAM[et.id] : et.name; if (!seen[fam]) { seen[fam] = 1; weak.push(fam); } }); });   // 강함과 같은 묶음 이름으로
     if (weak.length) L.push('약함: ' + weak.join('·'));
+    // 기본 공격의 부가 효과 (2026-11-18 사용자 요청 — 설명에 빠져 있던 것을 수치로). 판정은 실제 처리와 같은 값을 본다: 스플래시 = _strike 의 sr, 중독 = act.type 1 · 이펙트 칸 17, 묶임 = 칸 18(CURSE), 세 배 = act.type 2, 연속 타격 = EXTRA_HITS
+    if (basic) { var tp = this.rules.tps, bx = [], bd = basic.arm >= 0 ? this.data.fx.arms[basic.arm] : null, F0 = this.fac || {}, sr0 = Math.max(bd && bd.r > 0 ? bd.r * C.RANGE_SCALE : 0, (F0.splashPx && F0.splashPx[t.id]) || 0), xh = this.rules.extraHits(basic);
+      if (sr0 > 0 && !(basic.suicide || t.id === 31)) bx.push('맞은 곳 둘레 ' + Math.round(sr0) + ' 안의 적도 피해');   // 좀비는 닿으면 자폭하므로 따로 적는다
+      if (basic.type === 1 || basic.arm === 17) bx.push('중독 ' + Math.round((basic.type === 1 ? (basic.dur || 160) : 160) / tp) + '초(초당 체력 −' + Math.round(tp / 2) + ', 1까지)');
+      if (basic.arm === 18) bx.push('맞은 적을 ' + CURSE.sec + '초 묶음(같은 적은 ' + CURSE.gap + '초 뒤 다시)');
+      if (basic.type === 2) bx.push('67% 확률로 공격값 3배');
+      var MFi = C.MELEE_FX || {};
+      if (basic.type === 4 && MFi.vamp) bx.push('준 피해만큼 체력 회복');
+      if (basic.type === 11 && MFi.slowPct) bx.push(MFi.slowPct + '% 확률로 ' + Math.round((basic.dur || 48) / tp) + '초 감속(걸음 ×' + C.TRAPS.slowMul + ', 공격 대기 ×3)');
+      if ((basic.type === 12 || basic.type === 13) && MFi.splash) bx.push('맞은 적 둘레 ' + Math.round(MFi.splash * C.RANGE_SCALE) + ' 안의 지상 적도 피해');
+      if (xh) bx.push('한 번에 ' + (xh.length + 1) + '번 타격');
+      if (F0.aspd && F0.aspd[t.id]) bx.push('공격 속도 ×' + F0.aspd[t.id]);
+      if (basic.suicide || t.id === 31) bx.push('적에게 닿으면 바로 자폭 — 둘레 ' + C.BOOM.radius + ' 안의 적 모두 피해, 자신은 죽는다');
+      if (bx.length) L.push(basic.name + ': ' + bx.join(' · ')); }
     var sk = skillsOf(t).map(function (a) { return a.name + (C.TECH[a.name] || a.self ? '(자동)' : ''); });
     if (sk.length) L.push('마법: ' + sk.join(', '));
     // 변형 유닛(엔트): 걷는 형태에는 공격이 없어 설명이 없으면 "공격 없는 유닛"으로만 보인다 → 알아서 뿌리내려 무엇을 하는지 적는다 (CONFIG.ENT)
-    if (t.id === GARG.fly) { var gt = this.types[GARG.stone], gb = gt ? basicAct(gt) : null; L[0] = '공중 · 석상이 되어 공격'; if (gb) L.push('가고일 변형: 찍은 자리로 날아가 석상(타워)이 되어 ' + gb.name + '(사거리 ' + Math.round(gb.range * C.RANGE_SCALE) + ')'); L.push('석상은 움직이지 않습니다 · 다시 쓰면 새 자리로 옮깁니다'); }
+    if (t.id === GARG.fly) { var gt = this.types[GARG.stone], gb = gt ? basicAct(gt) : null; L[0] = '공중 · 석상이 되어 공격'; if (gb) L.push('가고일 변형: 찍은 자리로 날아가 석상(타워)이 되어 ' + gb.name + '(공격 ' + (this.fac && this.fac.atk && this.fac.atk[gt.id] != null ? this.fac.atk[gt.id] : gt.atk) + ' · 사거리 ' + Math.round(gb.range * C.RANGE_SCALE) + ')'); L.push('석상은 움직이지 않습니다 · 다시 쓰면 새 자리로 옮깁니다'); }
     var mt = this.types[C.MORPH[t.id]], mb = mt ? basicAct(mt) : null;
     if (mt && mb) { L[0] = '원거리(뿌리내려 공격) · 공중 공격 가능';
       L.push('적이 다가오면 알아서 뿌리내려 ' + mb.name + '(사거리 ' + Math.round(mb.range * C.RANGE_SCALE) + ')');
@@ -3182,13 +3207,19 @@
   P.skillInfo = function (g) {
     var s = g.slots[0], a = g.act, S = CONFIG.SKILL, tps = this.rules.tps, self = this; if (!s) return null;
     var WKI = CONFIG.WEAPON[a.name] || {}; var V = { wMul: WKI.mul, wMax: WKI.max || S.buffMax, wSec: WKI.sec || S.buffSec, healMax: S.healMax, healPct: Math.round(S.healRatio * 100), buffMax: S.buffMax, buffSec: S.buffSec, stun: stunSecOf(a), charmMax: charmN(a), dur: Math.round(a.sup === 'masshaste' ? S.hasteSec : (a.dur || 600) / tps), undead: S.undeadDmg[a.name] || 0 };
+    // 2026-11-18 사용자 요청(수치 없는 설명 채우기): radius 효과 반경 · dmg 범위 마법의 공격값(지금 그 유닛의 레벨·카드 보정 포함, 적 방어를 빼기 전) · shield 방어막의 방어 배수(rules.js SHIELD) · haste 가속 배수 · cool 자기 강화 재사용 · massPct 말다 회복 % · holyHeal·holyStun 홀리 크로스 · tcool 자동 기술 간격 · pow 메타몰포시스 위력 % · statueAtk 석상 공격력
+    var cu = s.unit, HOi = MWE.OriginalRules.HOLY || {}, gT = this.types[GARG.stone];
+    V.radius = Math.round(this.aimRadius(s)); V.shield = ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[a.arm] || 2; V.haste = S.hasteMul; V.cool = CONFIG.SELF_COOL[a.name] || S.cool; V.massPct = Math.round(S.massHeal * 100);
+    V.tcool = (CONFIG.TECH[a.name] || {}).cool || 0; V.pow = Math.round(META.pow * 100); V.statueAtk = this.fac && this.fac.atk && this.fac.atk[GARG.stone] != null ? this.fac.atk[GARG.stone] : gT ? gT.atk : 0; V.holyStun = +((HOi.stoneTicks || 0) / tps).toFixed(1);
+    if (cu && cu.state !== 'dead') { var kp = cu.act; cu.act = a; var av = this.rules.attackValue(cu); cu.act = kp; V.dmg = Math.round(av * S.dmgMul * (1 + (this.dmgUp || 0)) * blastTier(a)); V.holyHeal = Math.round((av + (HOi.heal || 0)) * S.holyHeal); }   // 홀리 크로스의 회복량도 그 마법의 공격값으로 센다 (castUnitSkill 과 같은 식)
     var desc = ((MWE.DEF_SKILL_DESC && MWE.DEF_SKILL_DESC[a.name]) || '').replace(/\{(\w+)\}/g, function (m, k) { return V[k] != null ? V[k] : m; });
     var L = [], n = g.slots.filter(function (q) { return q.unit && q.unit.state !== 'dead'; }).length;
     if (s.allyAimed()) L.push('칸을 누른 뒤 강화할 아군을 찍습니다 · 닿지 않으면 시전 유닛이 걸어갑니다');
     else if (a.id === GARG.act) L.push('칸을 누른 뒤 전장을 찍으면 그 자리로 날아가 석상이 됩니다 · 아군 진영 안에서만');
     else if (s.aimed) L.push('칸을 누른 뒤 전장을 찍어 씁니다 · 효과 반경 ' + Math.round(this.aimRadius(s)) + ' · 시전 거리 ' + (s.kind === 'recall' ? '제한 없음' : Math.round(this.aimReach(s))));
     else L.push(a.self || CONFIG.TECH[a.name] ? '유닛이 알아서 씁니다' : '칸을 누르면 바로 씁니다' + (s.kind === 'morph' ? '' : ' · 시전 유닛 주변 ' + S.buffRadius));
-    L.push('재사용 ' + S.cool + '초 · 가진 유닛 ' + n + '기' + (s.kind === 'blast' && blastTier(a) > 1 ? ' · 피해 ×' + blastTier(a).toFixed(2).replace(/0$/, '') : ''));
+    L.push('재사용 ' + (a.self ? V.cool : S.cool) + '초 · 가진 유닛 ' + n + '기' + (s.kind === 'blast' && blastTier(a) > 1 ? ' · 피해 ×' + blastTier(a).toFixed(2).replace(/0$/, '') : ''));
+    if (s.kind === 'blast' && V.dmg) L.push('공격값 ' + V.dmg + ' · 피해 = 공격값 − 적 방어 (상성이면 더 큽니다)');
     return { name: a.name, cost: s.cost, kind: KIND_NAME[s.kind] || '', desc: desc, lines: L };
   };
   P._drawSkillInfo = function () {
