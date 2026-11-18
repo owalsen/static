@@ -188,11 +188,9 @@
       { text: '적을 누르세요. 그 둘레의 적이 함께 약해집니다.', box: function (g) { return g._tutPtBox(g._tutMid(g._tutFoes()), 46); },
         do: function (g) { var p = g._tutMid(g._tutFoes()); if (p) g._aimCast(p.x, p.y); }, ok: function (g) { return !g.aim; }, run: 2.6, after: '"방어력 0"이 뜬 적은 한동안 훨씬 큰 피해를 받습니다.' } ] },
     { title: '흑마술사 — 어쓰 퀘이크', acts: [
-      { text: '적이 한데 몰려옵니다. [어쓰 퀘이크]를 누르세요. 찍은 곳 둘레의 적을 한꺼번에 공격합니다.', box: function (g) { return g._tutSlotBox('어쓰 퀘이크'); },
-        pre: function (g) { g._tutClearFoes(); var x = g._tutFront() + 150, id = g.tut.foeId, m = g.rows.length >> 1; [[0, m], [22, m - 1], [18, m + 1], [44, m], [40, m - 1], [-14, m + 1]].forEach(function (e) { g._tutFoe(id, x + e[0], e[1]); }); g._tutNear(g._tutAlly('흑마술사'), x, 120); },
-        ok: function (g) { return !!g.aim; } },
-      { text: '적이 가장 많이 모인 곳을 누르세요. 원 안의 적이 모두 맞습니다.', box: function (g) { return g._tutPtBox(g._tutMid(g._tutFoes()), 46); },
-        do: function (g) { var p = g._tutMid(g._tutFoes()); if (p) g._aimCast(p.x, p.y); }, ok: function (g) { return !g.aim; }, run: 3, after: '범위 마법은 적이 뭉쳐 있을 때 쓰면 좋습니다.' } ] },
+      { text: '적이 흑마술사 곁까지 몰려왔습니다. [어쓰 퀘이크]를 누르세요. 조준 없이, 흑마술사 발밑에서 터져 둘레의 적을 한꺼번에 공격합니다.', box: function (g) { return g._tutSlotBox('어쓰 퀘이크'); },
+        pre: function (g) { g._tutClearFoes(); var c = g._tutAlly('흑마술사'), id = g.tut.foeId, m = g.rows.length >> 1; if (c) { c.castOrder = null; g.tut.q = [[40, m], [58, m - 1], [54, m + 1], [76, m], [70, m - 1], [30, m + 1]].map(function (e) { return g._tutFoe(id, c.x + e[0], e[1]); }); g.tut.qhp = g.tut.q.reduce(function (n, e) { return n + e.hp; }, 0); } },
+        ok: function (g) { return !g.tut.q || g.tut.q.reduce(function (n, e) { return n + (e.state === 'dead' ? 0 : e.hp); }, 0) < g.tut.qhp; }, run: 3, after: '어쓰 퀘이크는 적이 시전자 가까이 있을 때 터집니다. 멀리 있으면 시전자가 다가가서 씁니다.' } ] },
     EVIL_STEPS[EVIL_STEPS.length - 2], EVIL_STEPS[EVIL_STEPS.length - 1]   // 상성 · 가이드 끝 (진영과 상관없는 문구)
   ];
   var ALL = { lib: LIB_STEPS, evil: EVIL_STEPS, dark: DARK_STEPS }, MELEE = { lib: '전사', evil: '해골기사', dark: '전사' }, STEPS = LIB_STEPS;   // STEPS = 지금 도는 가이드 (_tutBegin 이 진영 것으로 바꾼다)

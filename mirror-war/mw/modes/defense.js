@@ -172,6 +172,10 @@
          vamp   = 행동 종류 4(뱀파이어 터치): 준 피해만큼 공격자 체력 회복(최대 체력까지)
          slowPct·(지속 = 행동 +0x3E 틱) = 종류 11(마비침): 이 확률로 감속 — 걸음 × TRAPS.slowMul, 공격 대기 × 3(rules.cooldown)
          splash = 종류 12(할버드 스트라이크)·13(랜스 챠징): 맞은 적 둘레 이 반경(원본 거리, × RANGE_SCALE)의 **지상** 적도 피해(이펙트 66·67 의 armData +0x3C = 900, +0x40 = 1) */
+    /* 감속 마법 (2026-11-18 사용자 요청: "감속 4종 다 넣되 눈꽃의 환상은 적3기 감속. 타게팅으로" + "왕자는 추가하지마" → 멀티 슬로우는 쓸 유닛이 없어 뺐다).
+         칸을 누르고 적을 찍으면 찍은 곳에서 가까운 순서로 max 기까지(반경 = SKILL.radius × 0.7) 감속 — 걸음 × TRAPS.slowMul, 공격 대기 × 3 (마비침·거미줄 덫과 같은 buffs.slow). 면역 유닛 제외.
+         sec = 지속(초). 원본 지속(눈꽃 960틱 = 80초, 피어섬 테러 320틱, 거미줄 400틱)을 그대로 쓰면 케멘 소환처럼 너무 길어 12초로 줄였다(내 판단). 원본은 셋 다 유닛 하나가 대상 */
+    SLOW: { sec: 12, max: { '눈꽃의 환상': 3, '피어섬 테러': 1, '거미줄': 1 } },
     MELEE_FX: { vamp: true, slowPct: 34, splash: 900 },
     BOOM: { radius: 62, touch: 42, dmgMul: 1 },   // 2026-11-18 사용자 요청 "무조건 자폭": 적이 touch px 안에 닿으면 조건 없이 터진다 (전에는 반경 안에 적 2기 이상 또는 체력 45% 이하 — min·hp). 피해는 반경 radius 안의 적 모두. 두 편 모두
     /* 아군 AI (2026-11-13 사용자 요청):
@@ -203,7 +207,7 @@
     /* friendlyFire: 범위 안의 아군(시전자 포함)도 같은 피해를 입는 마법 (2026-11-13 사용자 요청 — 가장 센 범위 마법이라 쓸 자리를 가려야 한다) */
     /* 스킬은 전체 마나를 쓴다 (소환과 같은 마나) + 짧은 재사용 대기 cool(초). 값 = 원본 행동 마나 × costMul 을 5 단위로, 종류별 [최소, 최대] 안으로 자른다 (COST)
        — 원본은 유닛마다 마나통이 따로라 값을 그대로 쓸 수 없어 비율만 가져온다. 2026-11-12: 쿨타임만 돌던 방식에서 바꿈 (공짜라 강화를 상시 돌리던 문제) */
-    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20], meta: [40, 40] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyAim: false, buffNeed: 2,   /* 2026-11-15 사용자 요청: 웨폰·파운틴은 다시 누르면 바로 — 시전자 주변(buffRadius)에 다른 공격형 아군이 buffNeed(2)기 이상 있어야 쓸 수 있다(칸 비활성). allyAim: true 면 175번의 아군 찍기로 돌아간다 */ allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, radiusMul: { '12 리플렉터스 소환': 1.3 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
+    SKILL: { charmMax: 3, cool: 3, costMul: 0.4, COST: { blast: [40, 100], buff: [20, 30], heal: [40, 70], haste: [60, 60], dispel: [30, 40], weaken: [20, 25], stun: [35, 50], slow: [25, 35], recall: [40, 40], charm: [50, 60], assassin: [40, 40], morph: [20, 20], meta: [40, 40] }, radius: 95, buffRadius: 170, dmgMul: 2, healRatio: 0.15, healMax: 3, massHeal: 0.5, holyHeal: 0.5, allyAim: false, buffNeed: 2,   /* 2026-11-15 사용자 요청: 웨폰·파운틴은 다시 누르면 바로 — 시전자 주변(buffRadius)에 다른 공격형 아군이 buffNeed(2)기 이상 있어야 쓸 수 있다(칸 비활성). allyAim: true 면 175번의 아군 찍기로 돌아간다 */ allyPick: 70, allyNear: 70,   /* 대상 지정 강화(allyAimed): 찍은 곳에서 allyPick px 안의 가장 가까운 아군 공격 유닛, 나머지 자리는 그 둘레 allyNear px */   /* 2026-11-14 모든 치유 절반(사용자 요청 — 유닛이 쌓이면 서로 못 잡아 지루했다): 힐링 35% → 17.5% → 15%(같은 날 추가 너프), 말다 소환 완전 회복 → 최대 체력의 50%, 홀리 크로스 아군 회복 × 0.5 */ stunSec: 6, stunBase: 112, firstWait: 2, hasteMul: 1.5, hasteSec: 12,   /* 아군 가속(케멘 소환)의 지속(초). 원본 640틱 = 53초를 그대로 썼더니 너무 길었다 — 가속은 공격 대기가 없어져 매우 세다 (2026-11-13 사용자) */ maxCast: 320, walkSec: 45, buffSec: 7, buffMax: 2, summonRadius: 140, undeadDmg: { '턴 언데드': 80, '디스트로이 언홀리': 140 }, radiusMul: { '12 리플렉터스 소환': 1.3 }, friendlyFire: { '12 리플렉터스 소환': 1 }, tierBase: 100, tierPer: 0.004 },   // maxCast = 시전 거리 한도(px). 원본 사거리가 무제한(65535)인 마법도 이 안에 대상이 있어야 한다   // 스킬 공통 수치 (목업 값)
     /* 소환 패널의 탭: 해방부대 전체(원본 유닛 번호 0~24)를 네 묶음으로 나눈다 */
     TABS: [
       { name: '근접', ids: [0, 1, 2, 3, 6, 7, 8, 10] },      // 전사 기사 창기사 성기사 창검사 격투가 무도가 의적 (의적은 쌍칼 근접 — 2026-11-14 원거리 탭에서 옮김, 사용자 요청)
@@ -643,6 +647,10 @@
   /* 그 종류가 가진 몸동작 기술 (CONFIG.BODY_TECH 에 있고 꺼지지 않은 원본 행동) */
   /* 한 번에 매혹하는 수: 멀티 챠밍(공주)은 charmMax(3)기, 챠밍(서큐버스)은 1기 (2026-11-17 사용자 요청 — 원본도 챠밍은 한 유닛 대상) */
   /* 조준 없이 누르면 시전 거리 안의 가장 가까운 적 1기에게 바로 쓰는 아군 마법 (2026-11-17 사용자 요청: 메두사의 스톤 게이즈). 적이 쓸 때는 예전처럼 둘레 범위 */
+  /* 시전자 발밑에서 터지는 범위 마법 (2026-11-18 사용자 요청: "어쓰퀘이크는 본인 땅밑에서 논타겟으로"). 원본도 대상이 '자기'다(행동 57, 이펙트 칸 33 의 반경 1600).
+     칸을 누르면 조준 없이: 둘레(값 = 반경 px, 1600 × RANGE_SCALE)에 적이 가장 많은 시전자가 바로 쓴다. 둘레에 적이 없으면 적에게 가장 가까운 시전자가 다가가서(castOrder) 쓴다.
+     아군일 때만 — 적이 쓰는 어쓰 퀘이크는 전과 같다(가까운 아군을 중심으로) */
+  var SELF_BLAST = { '어쓰 퀘이크': 112 };
   var SINGLE_NEAR = { '스톤 게이즈': 1, '챠밍': 1 };   // 챠밍(서큐버스)도 조준 없이 가장 가까운 적 1기 (2026-11-18 사용자 요청). 공주의 멀티 챠밍은 그대로 조준
   /* 가고일 변형 (2026-11-18 사용자 요청: "가고일 넣고 타겟으로 타워로 변형되는 스킬도", README 238). 원본: 가고일(65, 공중·공격 없음) ↔ 가고일 석상(79, 파이어 볼) 을 오가는 변형(행동 94).
      디펜스: 칸을 누르고 전장을 찍으면 그 자리로 날아가 석상(움직이지 않는 타워)이 된다. 석상인 가고일에 다시 쓰면 가고일로 돌아가 새 자리로 날아가서 다시 석상이 된다(자리 옮기기).
@@ -815,14 +823,14 @@
     this.readyAt = 0;                                        // 쿨타임이 끝난 시각 (패널에서 앞에 설 순서를 정한다)
     this.vi = null;                                          // 패널에서 지금 그려지는 자리 (순서가 바뀌면 그 자리로 미끄러져 간다)
     this.kind = skillKind(act);
-    this.aimed = (this.needsFoe() && !SINGLE_NEAR[act.name]) || act.id === GARG.act || this.kind === 'recall' || this.kind === 'haste' || this.kind === 'dispel' || act.sup === 'massheal' || this.allyAimed();   // 지점을 찍는 마법: 적에게 쓰는 것, 리콜, 그리고 넓은 범위의 소환 마법(말다 소환 = 범위 회복, 케멘 소환 = 범위 가속 — 2026-11-13 사용자 요청, 원본도 땅을 찍는 마법). 강화·힐링은 누르면 바로   // 리콜도 불러올 곳을 찍는다                            // 적에게 쓰는 마법은 누르면 바로 나가지 않고 전장에서 지점을 찍는다 (아군·자기에게 쓰는 마법은 즉시)
+    this.aimed = (this.needsFoe() && !SINGLE_NEAR[act.name] && !SELF_BLAST[act.name]) || act.id === GARG.act || this.kind === 'recall' || this.kind === 'haste' || this.kind === 'dispel' || act.sup === 'massheal' || this.allyAimed();   // 지점을 찍는 마법: 적에게 쓰는 것, 리콜, 그리고 넓은 범위의 소환 마법(말다 소환 = 범위 회복, 케멘 소환 = 범위 가속 — 2026-11-13 사용자 요청, 원본도 땅을 찍는 마법). 강화·힐링은 누르면 바로   // 리콜도 불러올 곳을 찍는다                            // 적에게 쓰는 마법은 누르면 바로 나가지 않고 전장에서 지점을 찍는다 (아군·자기에게 쓰는 마법은 즉시)
     var lim = CONFIG.SKILL.COST[this.kind] || [20, 60];
     this.cost = Math.max(lim[0], Math.min(lim[1], Math.round(act.mana * CONFIG.SKILL.costMul / 5) * 5));   // 쓸 때 드는 마나
     var wk = CONFIG.WEAPON[act.name]; if (wk && wk.cost) this.cost = wk.cost;   // 웨폰 계열은 종류마다 따로
   }
   SkillSlot.prototype.ready = function () { return this.cd <= 0 && this.unit.state !== 'dead'; };
   /* 적이 있어야 쓰는 마법인가 (범위 공격·약화·멈춤·매혹·암살). 아니면 아군에게 쓰는 마법(회복·강화·가속)이거나 자기에게 쓰는 것(변형) */
-  SkillSlot.prototype.needsFoe = function () { return { blast: 1, weaken: 1, stun: 1, charm: 1, assassin: 1, meta: 1 }[this.kind] === 1; };
+  SkillSlot.prototype.needsFoe = function () { return { blast: 1, weaken: 1, stun: 1, slow: 1, charm: 1, assassin: 1, meta: 1 }[this.kind] === 1; };
   /* 아군 한 기를 찍어 거는 강화 (2026-11-14 사용자 요청): 웨폰류(파이어·매직 — 자기 전용인 아이스 웨폰은 빼고)와 파운틴 베리어.
      찍은 곳에서 가장 가까운 아군 공격 유닛(CONFIG.SKILL.allyPick px 안)이 대상이고, 남는 자리(웨폰 max·buffMax)는 그 대상 둘레(allyNear px)의 공격 유닛이 받는다 */
   SkillSlot.prototype.allyAimed = function () { return !!CONFIG.SKILL.allyAim && this.kind === 'buff' && !this.act.self && /웨폰|파운틴/.test(this.act.name); };
@@ -836,6 +844,7 @@
     if (a.sup === 'haste' || a.sup === 'masshaste') return 'haste';    // 아군 가속
     if (a.sup === 'meltw' || a.sup === 'melta') return 'weaken';       // 적 공격·방어 약화
     if (a.sup === 'stone') return 'stun';                              // 적 멈춤
+    if (a.sup === 'slow' && CONFIG.SLOW.max[a.name]) return 'slow';    // 적 감속 (눈꽃의 환상·피어섬 테러·거미줄)
     if (a.sup === 'charm') return 'charm';                             // 적을 우리 편으로
     if (a.sup === 'assassin') return 'assassin';                       // 적 하나 즉사
     if (a.sup === 'morph') return 'morph';                             // 변형
@@ -844,7 +853,7 @@
     if (a.sup === 'recall') return 'recall';                           // 리콜: 찍은 곳 주변의 아군을 시전자 곁으로 (넨 소환)
     return null;
   }
-  var KIND_NAME = { meta: '변신', blast: '범위 공격', heal: '회복', buff: '강화', haste: '가속', weaken: '약화', stun: '적 멈춤', charm: '매혹', assassin: '암살', morph: '변형', recall: '리콜', dispel: '강화 해제' };
+  var KIND_NAME = { meta: '변신', blast: '범위 공격', heal: '회복', buff: '강화', haste: '가속', weaken: '약화', stun: '적 멈춤', slow: '감속', charm: '매혹', assassin: '암살', morph: '변형', recall: '리콜', dispel: '강화 해제' };
 
   /* 범위 공격 마법의 등급 배수 (2026-11-13): 원본 마나 소모가 큰 상위 마법일수록 세다 — 1 + (원본 마나 − tierBase) × tierPer, 1 밑으로는 안 내려간다.
      라이트닝 썬더(100) ×1.0, 나르 소환(150) ×1.2, 홀리 크로스(180) ×1.32, 12 리플렉터스 소환(250) ×1.6. 전에는 등급과 무관하게 피해가 비슷해 비싼 마법 유닛을 뽑을 이유가 약했다. 아군만 */
@@ -943,6 +952,13 @@
     var why = this._whyNot(g); if (why) { if (why[2]) this._say(why[2].x, why[2].y - why[2].headY - 10, why[0], why[1]); return false; }
     var R = this._readyOf(g);
     if (g.act.races && !this._raceFoes(g.act).length) { var ru = (R[0] || g.slots[0]).unit; this._say(ru.x, ru.y - ru.headY - 10, '대상 없음 — 전장에 ' + raceLabel(g.act) + ' 없음', '#c9d1e3'); return false; }   // 조준에 들어가지 않는다
+    if (!g.aimed && SELF_BLAST[g.act.name]) {                 // 발밑 범위 마법: 둘레에 적이 가장 많은 시전자가 바로, 없으면 적에게 가장 가까운 시전자가 다가가서
+      var F = this.units.filter(function (o) { return o.side === 1 && o.state !== 'dead'; }), sb = null, sn = 0, nb = null, nd = Infinity, nf = null;
+      R.forEach(function (q) { var rr = self.aimRadius(q), c = 0; F.forEach(function (o) { var d = Math.hypot(o.x - q.unit.x, o.y - q.unit.y); if (d <= rr) c++; if (d < nd) { nd = d; nb = q; nf = o; } }); if (c > sn) { sn = c; sb = q; } });
+      if (sb) return this.castUnitSkill(sb.unit, sb.unit.slots.indexOf(sb));
+      if (!nb) return false;
+      nb.unit.castOrder = { slot: nb, x: nf.x, y: nf.y, foe: nf, until: this.time + CONFIG.SKILL.walkSec }; this._say(nb.unit.x, nb.unit.y - nb.unit.headY - 10, g.act.name + ' 쓰러 이동', '#7fd6ff'); return true;
+    }
     if (!g.aimed) {                                          // 즉시 쓰는 마법: 주변에 효과를 받을 아군이 가장 많은 유닛이 쓴다
       var best = null, bn = -1; R.forEach(function (s) { if (!self.skillTarget(s.unit, s)) return; var n = self.units.filter(function (o) { return o.side === 0 && o.state !== 'dead' && Math.abs(o.x - s.unit.x) <= CONFIG.SKILL.buffRadius && (s.kind !== 'heal' || o.hp < o.maxHp) && !(s.kind === 'buff' && o.buffs[s.act.sup] && o.buffs[s.act.sup].until > self.time); }).length; if (n > bn) { bn = n; best = s; } });
       return !!best && this.castUnitSkill(best.unit, best.unit.slots.indexOf(best));
@@ -953,9 +969,9 @@
     return true;
   };
   /* 지점 지정 마법의 시전 거리(px): 시전자에서 이 가로 거리 안의 지점만 찍을 수 있다 */
-  P.aimReach = function (s) { return s.kind === 'recall' || s.act.id === GARG.act ? CONFIG.WORLD_W : Math.min(CONFIG.SKILL.maxCast, s.act.range * CONFIG.RANGE_SCALE); };   // 리콜은 원본처럼 거리 제한 없음
+  P.aimReach = function (s) { return SELF_BLAST[s.act.name] ? SELF_BLAST[s.act.name] * 0.6 /* 다가갈 때는 반경의 0.6 까지 — 0.8 이면 무리의 앞쪽 절반만 맞았다 */ : s.kind === 'recall' || s.act.id === GARG.act ? CONFIG.WORLD_W : Math.min(CONFIG.SKILL.maxCast, s.act.range * CONFIG.RANGE_SCALE); };   // 리콜은 원본처럼 거리 제한 없음
   /* 지점 지정 마법의 효과 반경(px) — 그리기와 판정이 같은 값을 쓴다 */
-  P.aimRadius = function (s) { var S = CONFIG.SKILL, k = 1 + (this.radiusUp || 0); return s.kind === 'haste' || s.kind === 'dispel' || s.act.sup === 'massheal' ? S.summonRadius : s.kind === 'buff' || s.kind === 'morph' ? 22 : s.kind === 'recall' ? 120 : s.kind === 'blast' ? (s.act.aoe ? S.radius * (S.radiusMul && S.radiusMul[s.act.name] || 1) * k : 60) : s.kind === 'charm' ? S.radius * 0.7 : s.kind === 'assassin' ? 45 : S.radius * k; };   // radiusUp = "마법 확산" 카드
+  P.aimRadius = function (s) { var S = CONFIG.SKILL, k = 1 + (this.radiusUp || 0); if (SELF_BLAST[s.act.name]) return SELF_BLAST[s.act.name] * k; return s.kind === 'haste' || s.kind === 'dispel' || s.act.sup === 'massheal' ? S.summonRadius : s.kind === 'buff' || s.kind === 'morph' ? 22 : s.kind === 'recall' ? 120 : s.kind === 'blast' ? (s.act.aoe ? S.radius * (S.radiusMul && S.radiusMul[s.act.name] || 1) * k : 60) : s.kind === 'charm' || s.kind === 'slow' ? S.radius * 0.7 : s.kind === 'assassin' ? 45 : S.radius * k; };   // radiusUp = "마법 확산" 카드
   /* 조준 중 전장을 눌렀다 (2026-11-12 "걸어가서 쓰기"로 바꿈): 찍은 곳에 가장 가까운 준비된 유닛이 쓴다.
      시전 거리 안이면 바로, 밖이면 **닿는 곳까지 걸어가서** 쓴다(u.castOrder → _castWalk). 시전 거리 제한으로 못 찍는 곳은 없다 —
      다만 유닛은 전장 가운데(집결선 frontX)를 넘어 적 진영으로 들어가지 못하므로, 가운데에서도 닿지 않는 곳(frontX + 시전 거리 너머)은 찍을 수 없다 */
@@ -1099,6 +1115,7 @@
     if (s.needsFoe()) {
       var reach = Math.min(S.maxCast, s.act.range * C.RANGE_SCALE), best = null, bd = Infinity;
       for (i = 0; i < L.length; i++) { o = L[i]; if (o.side === u.side || o.state === 'dead') continue; var d = Math.abs(o.x - u.x); if (d < bd) { bd = d; best = o; } }
+      if (u.side === 0 && SELF_BLAST[s.act.name]) return best ? { foe: best } : null;   // 발밑 범위 마법: 거리 제한 없음 — 멀면 pressGroup 이 걸어가게 한다
       return best && bd <= reach ? { foe: best } : null;
     }
     if (s.act.self) return { foe: null };                    // 자기에게만 거는 강화: 대상 조건 없음
@@ -1147,6 +1164,9 @@
         self._addEffect(o.x, o.y, 3, 0); o.x = Math.max(CONFIG.BASE.front - 8, u.x + (o.x - pt.x)); o.y = Math.max(lo0, Math.min(hi0, u.y + (o.y - pt.y)));
         o.tgt = null; o.slotOf = null; o.slotA = null; o.slotAt = null; o.passY = null; o.blockT = 0; if (o.state !== 'attack') o.state = 'move'; self._addEffect(o.x, o.y, 3, 0.25); moved++; });
       if (moved) ok = true; else { this._say(pt.x, pt.y - 12, '불러올 아군이 없음', '#c9d1e3'); return false; }
+    } else if (s.kind === 'blast' && foe && u.side === 0 && SELF_BLAST[a.name]) {   // 발밑 범위 마법 (어쓰 퀘이크): 시전자를 중심으로. 둘레에 적이 없으면 쓰이지 않는다
+      var qc = { x: u.x, y: u.y }, QF = foesAt(qc, SELF_BLAST[a.name] * (1 + this.radiusUp));
+      if (QF.length) { var kq = u.act; u.act = a; QF.forEach(function (o) { self._damage(o, self.rules.damage(u, o, self.rng) * S.dmgMul * (1 + self.dmgUp) * blastTier(a)); }); u.act = kq; this._addEffect(u.x, u.y, a.arm, 0); this.flash = 0.2; foe = qc; ok = true; }
     } else if (s.kind === 'blast' && foe) {                         // 가장 가까운 적을 중심으로 범위 피해 (원본 피해 공식 × dmgMul)
       var keep = u.act; u.act = a;
       foesAt(foe, a.aoe ? S.radius * (S.radiusMul && S.radiusMul[a.name] || 1) * (u.side === 0 ? 1 + this.radiusUp : 1) : 60).forEach(function (o) { self._damage(o, self.rules.damage(u, o, self.rng) * S.dmgMul * (u.side === 0 ? (1 + self.dmgUp) * blastTier(a) : 1) * (u.inLair ? CONFIG.LAIR_HERO.dmgMul * (self.st && self.st.lairCastMul || 1) : 1)); });
@@ -1200,6 +1220,10 @@
     } else if (s.kind === 'weaken' && foe) {                 // 범위 안 적의 공격(멜팅 웨폰)·방어(멜팅 아머)를 무너뜨린다 — 수치는 원본 규칙이 buffs를 보고 적용
       foesAt(foe, S.radius).forEach(function (o) { o.buffs[a.sup] = { arm: a.arm, until: self.time + (a.dur || 600) / tps }; self._say(o.x, o.y - o.headY - 6, a.sup === 'melta' ? '방어력 0' : a.sup === 'meltw' ? '공격력 1' : '약화', '#c7a0ff'); });   // 무엇이 걸렸는지 알려 준다 (2026-11-17 사용자 요청 — 진영 공통. 원본 규칙: 멜팅 아머 = 방어값 0, 멜팅 웨폰 = 공격값 1)
       this._addEffect(foe.x, foe.y, a.arm, 0); ok = true;
+    } else if (s.kind === 'slow' && foe) {                   // 감속 (CONFIG.SLOW): 찍은 곳에서 가까운 순서로 max 기까지
+      var SL = CONFIG.SLOW, sl = foesAt(foe, S.radius * 0.7).filter(function (o) { return !o.t.immune; }).sort(function (p, q) { return Math.hypot(p.x - foe.x, p.y - foe.y) - Math.hypot(q.x - foe.x, q.y - foe.y); }).slice(0, SL.max[a.name] || 1);
+      sl.forEach(function (o) { o.buffs.slow = { until: self.time + SL.sec }; self._say(o.x, o.y - o.headY - 6, '감속', '#9fd0ff'); if (a.arm >= 0) self._addEffect(o.x, o.y - o.headY * 0.5, a.arm, 0); });
+      ok = sl.length > 0;
     } else if (s.kind === 'stun' && foe) {                   // 범위 안의 적을 잠시 멈춘다
       if (u.side === 0 && a.races && !this._raceFoes(a, foe, S.radius * (1 + this.radiusUp)).length) { this._say(foe.x, foe.y - 12, '대상 없음', '#c9d1e3'); return false; }   // 걸어가서 쓰는 사이에 대상이 사라졌을 때도 헛쓰지 않는다
       var ud = u.side === 0 ? S.undeadDmg[a.name] || 0 : 0;   // 디펜스 고유: 턴 언데드·디스트로이 언홀리는 걸리는 종족에게 피해도 준다 (원본 case 0xE·0xF 는 석화만 — 하급 언데드를 쓸어 내는 마법이라는 사용자 요청, 2026-11-13). 방어 무시, 마법 증폭 적용
@@ -1895,7 +1919,7 @@
       var MF = CONFIG.MELEE_FX, ty = u.act.type;
       if (MF && !tgt.t.immune) {
         if (ty === 4 && MF.vamp && dmg > 0 && u.state !== 'dead' && u.hp < u.maxHp) { var got = Math.min(u.maxHp - u.hp, Math.round(dmg)); u.hp += got; if (got > 0) this._say(u.x, u.y - u.headY - 6, '+' + got, '#8fe89a'); }   // 흡혈
-        else if (ty === 11 && tgt.state !== 'dead' && this.rng.next() * 100 < MF.slowPct) { if (!(tgt.buffs.slow && tgt.buffs.slow.until > this.time)) this._say(tgt.x, tgt.y - tgt.headY - 6, '감속', '#9fd0ff'); tgt.buffs.slow = { until: this.time + (u.act.dur || 48) / R.tps }; } }   // 마비침
+        else if (ty === 11 && tgt.state !== 'dead' && this.rng.next() * 100 < MF.slowPct) { if (!(tgt.buffs.slow && tgt.buffs.slow.until > this.time)) this._say(tgt.x, tgt.y - tgt.headY - 6, '감속', '#9fd0ff'); tgt.buffs.slow = { until: Math.max(tgt.buffs.slow ? tgt.buffs.slow.until : 0, this.time + (u.act.dur || 48) / R.tps) }; } }   // 마비침 (더 긴 감속이 걸려 있으면 줄이지 않는다)
       if (MF && MF.splash > 0 && (ty === 12 || ty === 13)) this._splash(u, tgt, tgt.x, tgt.y, MF.splash * CONFIG.RANGE_SCALE, true); }   // 할버드 스트라이크·랜스 챠징: 둘레의 지상 적 (면역 여부와 상관없이 — 이펙트는 타격 전에 뜬다)
   };
 
@@ -2980,7 +3004,7 @@
     var push = CONFIG.PUSH && this.st;
     if (this.reportOpen && push && (sc === 'win' || sc === 'lose')) { this._drawReport(); return; }
     var FAN = [['이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', 10, '#7b8397', 22], ['원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', 10, '#7b8397', 4]];   // 팬 게임 고지 (사용자 2026-11-12 확정 문구)
-    if (sc === 'title' && push && this.titleSeen) items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], [(this.fac.name || '') + ' — 스테이지를 고르세요', 16, '#fff', 18], ['@stage', CONFIG.STAGES.length * 54 - 8, '', 10]].concat(FAN);   // 둘째 장: 스테이지 고르기
+    if (sc === 'title' && push && this.titleSeen) items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], [(this.fac.name || '') + ' — 스테이지를 고르세요', 16, '#fff', 18], ['@stage', CONFIG.STAGES.length * 54 - 8, '', 10], ['@rank', 30, '', 12]].concat(FAN);   // 둘째 장: 스테이지 고르기
     else if (sc === 'title') items = [['거울전쟁 디펜스', 28, '#ffd36e', 0], [push ? '적 기지(마굴)까지 밀고 들어가 무너뜨리세요' : '적군을 막아 성을 지키세요', 14, '#dfe6f5', 14],
       ['탭에서 유닛을 소환하세요 — 길게 누르면 설명, [상성]에서 상성 확인', 12, G, 12],
       ['마법은 칸을 누른 뒤 전장에서 쓸 곳을 누릅니다 (마나는 소환과 공유)', 12, G, 6],
@@ -3013,8 +3037,11 @@
           ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9b0'; ctx.fillText(E.name, cx + 34, b.y + bh / 2 + 1); ctx.textAlign = 'center';
           return b; });
         y += l[4]; return; }
-      if (l[0] === '@repbtn') { var rbw = Math.min(190, W - 60); self.repBtn = { x: Math.round((W - rbw) / 2), y: y, w: rbw, h: l[4] };
-        self._plate(self.repBtn.x, self.repBtn.y, rbw, l[4], 7, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('리포트 보기', W / 2, y + l[4] / 2 + 1); y += l[4]; return; }
+      if (l[0] === '@repbtn') { var hasRk = !!self._rankShow, rbw = hasRk ? Math.min(150, Math.floor((W - 48) / 2)) : Math.min(190, W - 60), rx0 = hasRk ? Math.round(W / 2 - rbw - 6) : Math.round((W - rbw) / 2); self.repBtn = { x: rx0, y: y, w: rbw, h: l[4] };
+        self._plate(self.repBtn.x, self.repBtn.y, rbw, l[4], 7, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('리포트 보기', rx0 + rbw / 2, y + l[4] / 2 + 1);
+        self.rankBtn = null; if (hasRk) { self.rankBtn = { x: rx0 + rbw + 12, y: y, w: rbw, h: l[4] }; self._plate(self.rankBtn.x, y, rbw, l[4], 7, sc === 'win'); ctx.fillStyle = sc === 'win' ? '#ffe9b0' : '#ffd36e'; ctx.fillText(sc === 'win' ? '기록 올리기 · 순위' : '순위 보기', self.rankBtn.x + rbw / 2, y + l[4] / 2 + 1); }   // 순위 (defense-rank.js, 2026-11-18)
+        y += l[4]; return; }
+      if (l[0] === '@rank') { self.rankBtn = null; if (self._rankShow) { var kw = Math.min(150, W - 60); self.rankBtn = { x: Math.round((W - kw) / 2), y: y, w: kw, h: l[4] }; self._plate(self.rankBtn.x, y, kw, l[4], 7, false); ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('순위 보기', W / 2, y + l[4] / 2 + 1); } y += l[4]; return; }
       if (l[0] === '@endbtns') {   // 스테이지가 끝난 화면의 선택지: 이기면 [다음 스테이지] [처음 화면], 지면 [다시 도전] [처음 화면] (마지막 스테이지를 이기면 [처음 화면]만)
         var win = sc === 'win', defs = win ? (self._nextStage() ? [['next', '다음 스테이지 ▶'], ['title', '처음 화면']] : [['title', '처음 화면']]) : [['retry', '다시 도전'], ['title', '처음 화면']];
         var ebw = Math.min(150, Math.floor((W - 36 - 12 * (defs.length - 1)) / defs.length)), ex0 = Math.round(W / 2 - (ebw * defs.length + 12 * (defs.length - 1)) / 2);
@@ -3067,6 +3094,7 @@
       if (CONFIG.PUSH && this.st && !this.titleSeen) { this.titleSeen = true; return; }   // 첫 장(공지): 아무 곳이나 누르면 진영 선택 → 스테이지 고르기로
       if (this._raceShow && this._raceShow()) { this._raceTap(x, y); return; }   // 진영 선택 화면 (defense-race.js)
       if (CONFIG.PUSH && this.st) { if (x < 0) { this.pickStage(this.stageI); return; }
+        if (this.rankBtn && this._rankShow && inBox(this.rankBtn, x, y)) { this._rankShow(false); return; }   // 순위 보기 (defense-rank.js)
         for (i = 0; i < (this.stageBtns || []).length; i++) if (inBox(this.stageBtns[i], x, y)) { if (!this.stageBtns[i].soon) this.pickStage(this.stageBtns[i].i, true); break; }
         return; }
       if (x < 0) { this.pickEnemy(this.enemy); return; }
@@ -3075,6 +3103,7 @@
     if ((this.screen === 'win' || this.screen === 'lose') && CONFIG.PUSH && this.st) {   // 스테이지가 끝난 화면: 버튼만 누를 수 있다 (아무 데나 눌러 넘어가지 않게). 스페이스·엔터 = 첫 버튼
       if (this.reportOpen) { if (x < 0 || inBox(this.repBack || { x: 0, y: 0, w: 0, h: 0 }, x, y)) this.reportOpen = false; return; }   // 리포트 화면: [돌아가기]만
       if (this.repBtn && x >= 0 && inBox(this.repBtn, x, y)) { this.reportOpen = true; return; }
+      if (this.rankBtn && this._rankShow && x >= 0 && inBox(this.rankBtn, x, y)) { this._rankShow(this.screen === 'win'); return; }   // 순위·기록 올리기 (defense-rank.js)
       var eb = (this.endBtns || []).filter(function (b) { return x < 0 || inBox(b, x, y); })[0]; if (!eb) return;
       if (eb.act === 'next') this.pickStage(this.stageI + 1); else if (eb.act === 'retry') this.pickStage(this.stageI); else { this.reset(); this.screen = 'title'; }
       return; }
@@ -3210,16 +3239,18 @@
     // 2026-11-18 사용자 요청(수치 없는 설명 채우기): radius 효과 반경 · dmg 범위 마법의 공격값(지금 그 유닛의 레벨·카드 보정 포함, 적 방어를 빼기 전) · shield 방어막의 방어 배수(rules.js SHIELD) · haste 가속 배수 · cool 자기 강화 재사용 · massPct 말다 회복 % · holyHeal·holyStun 홀리 크로스 · tcool 자동 기술 간격 · pow 메타몰포시스 위력 % · statueAtk 석상 공격력
     var cu = s.unit, HOi = MWE.OriginalRules.HOLY || {}, gT = this.types[GARG.stone];
     V.radius = Math.round(this.aimRadius(s)); V.shield = ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[a.arm] || 2; V.haste = S.hasteMul; V.cool = CONFIG.SELF_COOL[a.name] || S.cool; V.massPct = Math.round(S.massHeal * 100);
-    V.tcool = (CONFIG.TECH[a.name] || {}).cool || 0; V.pow = Math.round(META.pow * 100); V.statueAtk = this.fac && this.fac.atk && this.fac.atk[GARG.stone] != null ? this.fac.atk[GARG.stone] : gT ? gT.atk : 0; V.holyStun = +((HOi.stoneTicks || 0) / tps).toFixed(1);
+    V.slowMax = CONFIG.SLOW.max[a.name] || 1; V.slowSec = CONFIG.SLOW.sec; V.slowMul = CONFIG.TRAPS.slowMul; V.tcool = (CONFIG.TECH[a.name] || {}).cool || 0; V.pow = Math.round(META.pow * 100); V.statueAtk = this.fac && this.fac.atk && this.fac.atk[GARG.stone] != null ? this.fac.atk[GARG.stone] : gT ? gT.atk : 0; V.holyStun = +((HOi.stoneTicks || 0) / tps).toFixed(1);
     if (cu && cu.state !== 'dead') { var kp = cu.act; cu.act = a; var av = this.rules.attackValue(cu); cu.act = kp; V.dmg = Math.round(av * S.dmgMul * (1 + (this.dmgUp || 0)) * blastTier(a)); V.holyHeal = Math.round((av + (HOi.heal || 0)) * S.holyHeal); }   // 홀리 크로스의 회복량도 그 마법의 공격값으로 센다 (castUnitSkill 과 같은 식)
     var desc = ((MWE.DEF_SKILL_DESC && MWE.DEF_SKILL_DESC[a.name]) || '').replace(/\{(\w+)\}/g, function (m, k) { return V[k] != null ? V[k] : m; });
     var L = [], n = g.slots.filter(function (q) { return q.unit && q.unit.state !== 'dead'; }).length;
     if (s.allyAimed()) L.push('칸을 누른 뒤 강화할 아군을 찍습니다 · 닿지 않으면 시전 유닛이 걸어갑니다');
     else if (a.id === GARG.act) L.push('칸을 누른 뒤 전장을 찍으면 그 자리로 날아가 석상이 됩니다 · 아군 진영 안에서만');
+    else if (SELF_BLAST[a.name]) L.push('칸을 누르면 바로 씁니다 · 시전 유닛 둘레 ' + Math.round(this.aimRadius(s)) + ' · 둘레에 적이 없으면 다가가서 씁니다');
     else if (s.aimed) L.push('칸을 누른 뒤 전장을 찍어 씁니다 · 효과 반경 ' + Math.round(this.aimRadius(s)) + ' · 시전 거리 ' + (s.kind === 'recall' ? '제한 없음' : Math.round(this.aimReach(s))));
     else L.push(a.self || CONFIG.TECH[a.name] ? '유닛이 알아서 씁니다' : '칸을 누르면 바로 씁니다' + (s.kind === 'morph' ? '' : ' · 시전 유닛 주변 ' + S.buffRadius));
-    L.push('재사용 ' + (a.self ? V.cool : S.cool) + '초 · 가진 유닛 ' + n + '기' + (s.kind === 'blast' && blastTier(a) > 1 ? ' · 피해 ×' + blastTier(a).toFixed(2).replace(/0$/, '') : ''));
-    if (s.kind === 'blast' && V.dmg) L.push('공격값 ' + V.dmg + ' · 피해 = 공격값 − 적 방어 (상성이면 더 큽니다)');
+    L.push('재사용 ' + (a.self ? V.cool : S.cool) + '초 · 가진 유닛 ' + n + '기' + '');
+    if (s.kind === 'blast' && V.dmg) L.push('공격값 ' + V.dmg + (blastTier(a) > 1 ? '(상위 마법 보정 ×' + blastTier(a).toFixed(2).replace(/0$/, '') + ' 포함)' : '') + ' · 피해 = 공격값 − 적 방어 (상성이면 더 큽니다)');   // 2026-11-18: "피해 ×1.2" 를 따로 적으면 공격값에 한 번 더 곱하는 것처럼 읽혔다(사용자 질문) → 공격값 옆에 "포함"으로
+    else if (s.kind === 'blast' && blastTier(a) > 1) L.push('상위 마법 보정 ×' + blastTier(a).toFixed(2).replace(/0$/, ''));
     return { name: a.name, cost: s.cost, kind: KIND_NAME[s.kind] || '', desc: desc, lines: L };
   };
   P._drawSkillInfo = function () {
@@ -3412,6 +3443,7 @@
     root.addEventListener('beforeunload', function (e) { if (self.screen === 'play' && !root.__noLeaveGuard) { e.preventDefault(); e.returnValue = ''; return ''; } });
     root.addEventListener('resize', function () { self._resize(); });
     root.addEventListener('keydown', function (e) {
+      if (self.rankOpen) return;                               // 순위 창이 떠 있는 동안에는 게임 단축키를 받지 않는다 (닉네임 입력)
       self.bgm.resume();
       if (self.screen === 'play' && self.tut) { if (e.code === 'KeyM' && !e.repeat) { self.sfx.unlock(); self.toggleSound(); } return; }   // 입문자 가이드 중에는 단축키를 막는다 (소리 M 키만 받는다)
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); if (self.screen === 'play') self.panTo(self.cam.x + (e.key === 'ArrowLeft' ? -90 : 90)); return; }
