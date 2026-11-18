@@ -272,20 +272,18 @@
     ECAP_FORT: 0.25, ECAP_MIN: 8,   // 적 벙커가 하나 무너질 때마다 적 웨이브 상한(스테이지 ecap) −25%, 최소 8기 (ecapNow, 2026-11-15 사용자 결정)
     SLOT_ORDER: { band: 60, every: 1 },   // 스킬 칸 순서 = 시전자가 전장에 가까운 순 (_regroup, 2026-11-15 사용자 요청). null 이면 생긴 순서
     ALLY_CAP: 0,   // (적 웨이브 상한은 스테이지 ecap: 28·32·36·40 — 전장에 동시에 있는 웨이브 적 수, waveFoes)
-    // 아군 수 상한 기본값(0 = 없음). 스테이지마다 cap 으로 정한다: 1단계 40, 2단계 45, 3단계 50, 4단계 60 (2026-11-14 사용자 요청)
+    // 아군 수 상한 기본값(0 = 없음). 스테이지마다 cap 으로 정한다: 1단계 40, 2단계 50, 3단계 60 (2026-11-18 전에는 4단계: 40·45·50·60) (2026-11-14 사용자 요청)
     FLANK: { after: 1, ratio: 1.3, from: 12, recheck: 3, first: 6, every: 16, n: 3, out: 50, enter: 45, spots: [[1, 160, 'top'], [6, 0, 'bottom'], [5, 140, 'bottom'], [11, -80, 'top']] },   // 측면 리젠 (_updateFlank, 2026-11-14 사용자 요청)
     WAVE_SCALE: { per: 20, mulMax: 1.6 },   // 비례 증원 (2026-11-14 사용자 요청): 웨이브가 나올 때 살아 있는 아군이 per 기를 넘으면 그 비율만큼 적 수를 늘린다(최대 mulMax 배). 나오는 간격은 그대로라 웨이브가 길어진다
     STAGES: [
       { name: '해골 들판', cap: 40, ecap: 28, enemy: 'evil', note: '쉬움', waves: [0, 5], mul: 0.7, restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 }, lairLv: 1, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 3, trapEvery: 50, trapLv: 1, surge: { from: 14, ratio: 2, fill: 0.6, min: 6, max: 14, gap: 0.25, cool: 70, first: 60, siege: 400, times: 4 }, flank: { after: 1, ratio: 1.3, from: 12, recheck: 3, first: 6, every: 20, n: 2, out: 50, enter: 45, spots: [[1, 160, 'top'], [6, 0, 'bottom'], [5, 140, 'bottom'], [11, -80, 'top']] },
         guards: [{ at: 'bottom', list: [[29, 2]] }, { at: 'top', list: [[29, 2]] }, { at: 'lair', list: [[30, 1], [29, 2]] }] },
-      { name: '흑마술파의 길', cap: 45, ecap: 32, enemy: 'dark', note: '보통', waves: [0, 6], mul: 1, restMul: 1.8, loopRest: 30, loopLv: 0.34, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 4200, efort: { hp: 1000, lv: 2 }, lairLv: 2, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 3, traps: 9, trapEvery: 25, trapLv: 2,
-        guards: [{ at: 'bottom', list: [[53, 2], [55, 1]] }, { at: 'top', list: [[53, 2], [57, 1]] }, { at: 'lair', list: [[54, 1], [53, 2], [61, 1]] }] },
-      { name: '악령의 성채', cap: 50, ecap: 36, enemy: 'evil', note: '어려움', waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 }, lairLv: 4, lairCast: 9, lairCastMul: 0.7, heroPosts: 3,   /* 2026-11-15: 기지 영웅 마법 쿨 6 → 9초, 배수 1 → 0.7 (사용자 요청 — 3단계는 적 기지 앞에서 기지 영웅 마법에 51 → 22기로 무너졌다, README 191. 실효 피해 0.5 → 0.35) */ traps: 12, trapEvery: 18, trapLv: 3,
-        /* 기습 (2026-11-14 사용자 요청): 아군이 둘째 적 벙커(EFORTS[fort])를 지나면, 텔레포테이션 이펙트·소리와 함께 적 병력이 아군의 뒤(rear)와 옆(flank — 맨 윗줄·맨 아랫줄)에 나타난다.
-           처음 지난 순간 한 번, 그 뒤 every 초마다 max 번까지. back = 아군 맨 앞에서 뒤쪽 병력까지의 거리(px). 나타난 적은 hold 초 뒤부터 움직인다 */
-        ambush: { fort: 1, every: 40, max: 3, back: 170, hold: 0.7, per: 30, mulMax: 3, rear: [[29, 3], [30, 1]], flank: [[44, 2], [29, 2]] },
-        guards: [{ at: 'bottom', list: [[30, 2], [44, 1]] }, { at: 'top', list: [[30, 2], [45, 1]] }, { at: 'lair', list: [[34, 1], [44, 2], [41, 1], [30, 2]] }] },
-      /* 4단계 (2026-11-14 사용자 요청): 악령군과 흑마술파가 함께 나온다 (ENEMIES.both — 두 종족의 같은 번호 웨이브를 BOTH_MUL 씩 섞은 표).
+      /* 2026-11-18 사용자 요청: "해방부대 보통난이도 제거" + "대신 어려움난이도에 흑마술파를 두자" → 보통 '흑마술파의 길'(흑마술파)과 어려움 '악령의 성채'(악령군, 기습 있음)를 합쳐 **어려움 = 흑마술파** 하나로 (README 249).
+         수치는 악령군 2단계 '흑마술의 탑'(흑마술파 상대 어려움)과 같고 아군 상한만 50. 기습(ambush)은 병력이 악령군 유닛이라 뺐다. 해방부대 스테이지는 3개: 쉬움 악령군 · 어려움 흑마술파 · 매우 어려움 둘 다.
+         FACTIONS.evil 의 2단계가 이 항목(CONFIG.STAGES[1])을 틀로 쓴다 — 자리를 옮기면 거기도 고칠 것 */
+      { name: '흑마술파의 길', cap: 50, ecap: 36, enemy: 'dark', note: '어려움', waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 }, lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 12, trapEvery: 18, trapLv: 3,
+        guards: [{ at: 'bottom', list: [[54, 2], [57, 1]] }, { at: 'top', list: [[54, 2], [56, 1]] }, { at: 'lair', list: [[51, 1], [54, 2], [61, 1], [53, 2]] }] },
+      /* 마지막 단계 (2026-11-14 사용자 요청, 2026-11-18 부터 3단계): 악령군과 흑마술파가 함께 나온다 (ENEMIES.both — 두 종족의 같은 번호 웨이브를 BOTH_MUL 씩 섞은 표).
          벙커는 아래 = 납골당(악령군), 위 = 흉가(흑마술파). 기지 수비대는 두 종족 영웅 4명씩, 덫은 네 종류 전부 */
       { name: '거울의 끝', amp: { from: 300, perMin: 0.15, max: 1 }, cap: 60, ecap: 40, enemy: 'both', note: '매우 어려움', waves: [0, 10], mul: 1, restMul: 1.3, loopRest: 20, loopLv: 0.5, lv: { start: 2, perWave: 0.5 }, hpMul: 1, lair: 9600, efort: { hp: 1500, lv: 5 }, lairLv: 5, lairCast: 5, heroPosts: 8, traps: 14, trapEvery: 15, trapLv: 4,
         guards: [{ at: 'bottom', list: [[30, 2], [44, 1]] }, { at: 'top', list: [[54, 1], [53, 2]] }, { at: 'lair', list: [[34, 1], [54, 1], [44, 1], [57, 1], [41, 1], [61, 1]] }] }
@@ -436,7 +434,9 @@
       extraIds: [79],   /* 가고일 석상 그림 */ atk: { 79: 60 },   /* 2026-11-18 사용자 요청: 가고일 석상 공격력 2배를 정수 상수로 (원본 30 → 60). 아군일 때만 — _gargForm 이 형태를 바꿀 때 atkOv 를 다시 맞춘다 */ cost: { 65: 60, 52: 20, 68: 20, 53: 35, 63: 40, 64: 45, 69: 45, 70: 70, 54: 80, 55: 25, 56: 50, 57: 55, 66: 80, 67: 150, 49: 50, 50: 80, 61: 70, 51: 130, 62: 30, 60: 60, 58: 70, 59: 80 },
       heroes: ['쿨구레루 데스모네', '이자비', '카인 제틀링', '라미레스', '네인 피리스', '툴핀 래리', '리루아 힐리', '산적짱', '그린드레곤'],
       stages: [
-        Object.assign({}, CONFIG.STAGES[0], { name: '망자의 들판', note: '쉬움' }),   // 해방부대 1단계(해골 들판)의 쉬움 수치 그대로 — 적 악령군
+        /* 해방부대 1단계(해골 들판)의 쉬움 수치가 바탕 — 적 악령군. 2026-11-18 사용자 요청("적숫자가 너무 적다, 특히 언데드가 초반에 많이 나와야"):
+           적 수 0.7 → 1.0, 한 번에 나와 있는 웨이브 적 상한 28 → 36, 앞의 세 웨이브는 언데드(해골전사·해골기사·듀라한·좀비·유령·리치)를 2배 */
+        Object.assign({}, CONFIG.STAGES[0], { name: '망자의 들판', note: '쉬움', mul: 1, ecap: 36, boost: { ids: [28, 29, 30, 31, 32, 33], waves: 3, k: 2 } }),
         { name: '해방부대의 성', note: '어려움', enemy: 'lib', flank: null, cap: 50, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
           lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 0,
           guards: [{ at: 'bottom', list: [[1, 2], [5, 1]] }, { at: 'top', list: [[1, 2], [12, 1]] }, { at: 'lair', list: [[3, 1], [1, 2], [13, 1], [2, 2]] }] }   // 악령군 2단계(흑마술의 탑)의 어려움 수치를 해방부대 틀에. 덫은 없다(해방부대에 덫 행동이 없음)
@@ -3349,7 +3349,9 @@
     var S = CONFIG.STAGES[i], E = S && CONFIG.ENEMIES[S.enemy]; if (!E) return false;
     var a = S.waves || [0, E.waves.length], mul = S.mul || 1;
     this.stageI = i; this.st = S;
-    this._stageWaves = E.waves.slice(a[0], a[1]).map(function (w) { return { list: w.list.map(function (e) { return [e[0], Math.max(1, Math.round(e[1] * mul))]; }), gap: w.gap / mul, rest: w.rest }; });
+    var BO = this.st && this.st.boost;   // boost = { ids, waves, k }: 앞의 waves 개 웨이브에서 ids 유닛 수를 k 배 (흑마술파 1단계 — 초반에 언데드가 많이). 나오는 간격은 늘어난 수만큼 줄여 웨이브 길이는 비슷하게
+    this._stageWaves = E.waves.slice(a[0], a[1]).map(function (w, wi) { var n0 = 0, n1 = 0, list = w.list.map(function (e) { var k = BO && wi < BO.waves && BO.ids.indexOf(e[0]) >= 0 ? BO.k : 1, b = Math.max(1, Math.round(e[1] * mul)), n = Math.max(1, Math.round(e[1] * mul * k)); n0 += b; n1 += n; return [e[0], n]; });
+      return { list: list, gap: w.gap / mul * (n1 > 0 ? n0 / n1 : 1), rest: w.rest }; });
     return this.setEnemy(S.enemy);
   };
   P.pickStage = function (i) { if (!this.setStage(i)) return; this.tut = null; this._tutWant = !!(this._tutWanted && this._tutWanted(i)); this.start(); };   // 1단계를 처음 고르면 입문자 가이드 (defense-tut.js, 2026-11-17)
