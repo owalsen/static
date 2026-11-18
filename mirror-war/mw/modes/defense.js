@@ -398,12 +398,16 @@
       splashPx: { 39: 50 },           // 2026-11-17 사용자 요청: 데몬의 파이어 볼을 스플래시로 — 맞은 곳 둘레 50px(원본 거리 약 700). 원본 파이어 볼은 반경 0(단일). 아군일 때만
       speedAs: { 31: 28 },            // 2026-11-17 사용자 요청: 좀비 이동 속도 = 해골전사 (원본 좀비는 더 느리다). 아군일 때만
       cost: { 28: 7, 31: 12, 43: 20, 29: 20, 35: 50, 36: 55, 30: 37, 44: 90, 46: 20, 32: 15, 39: 55, 40: 70, 45: 85, 47: 160, 25: 55, 33: 30, 26: 80, 27: 110, 38: 45, 42: 90, 41: 120 },   // 2026-11-18 사용자 요청: 언데드(해골전사·좀비·해골기사·듀라한·유령·리치)는 절반(내림) — 15·25·40·75·30·60 → 7·12·20·37·15·30
-      heroes: ['사울리안', '스컬 크러셔', '노스페라투', '인시너레이터', '킹 오브 그리드', '실버린', '하이네', '그랭키리우스', '코빌리우스'],
+      heroes: ['사울리안', '스컬 크러셔', '노스페라투', '인시너레이터', '킹 오브 그리드', '실버린', '하이네', '그랭키리우스', '코빌리우스', '다크로드', '디아블로'],
+      /* 원작 영웅 기록에 없는 영웅 카드 (2026-11-18 사용자 요청: 소환 목록에 없는 다크로드·디아블로를 영웅 카드로, 수치는 다른 영웅과 비슷하게).
+         다크로드 = 원본 유닛 그대로(체력 250·공격 30·방어 8 → 영웅 배수로 39·12, 다크 썬더·포이즌 밤을 스스로 쓰고 기본 공격은 이블 스피리츠 커스).
+         디아블로 = 원본은 체력 50·공격 6·방어 0 의 약한 유닛이라 영웅 수치를 따로 준다: hpBase 250(듀라한급)·공격 36·방어 10 */
+      heroExtra: [{ name: '다크로드', type: 34, pid: 34, atk: 30, def: 8 }, { name: '디아블로', type: 48, pid: 48, atk: 36, def: 10, hpBase: 250 }],
       /* 악령군 스테이지 (2026-11-18 사용자 확정): 두 개뿐 — 1 해방부대(쉬움) · 2 흑마술파(어려움). 전에는 1 흑마술파(쉬움) · 2 해방부대(보통) · 3·4 개발 예정이었다 */
       stages: [
-        { name: '해방부대의 전초', note: '쉬움', enemy: 'lib', flank: null,   /* 쉬움 단계는 측면 등장 없음 (2026-11-18 사용자 요청) */ cap: 40, ecap: 28, waves: [0, 5], mul: 0.49, restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
+        { name: '해방부대의 전초', note: '쉬움', enemy: 'lib', flank: null,   /* 쉬움 단계는 측면 등장 없음 (2026-11-18 사용자 요청) */ cap: 80,   /* 2026-11-18 사용자 요청: 악령군은 아군 상한 2배 (40 → 80, 2단계 50 → 100) */ ecap: 28, waves: [0, 5], mul: 0.49, restMul: 1.7, loopRest: 28, loopLv: 0.25, lv: { start: 1, perWave: 0.3 }, hpMul: 0.9, lair: 3000, efort: { hp: 750, lv: 1 },
           lairLv: 1, lairMul: 0.7, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 0, guards: [{ at: 'bottom', list: [[1, 2]] }, { at: 'top', list: [[1, 2]] }, { at: 'lair', list: [[3, 1], [1, 2]] }] },   // 예전 악령군 1단계(마녀의 숲)의 쉬움 수치 그대로, 적만 해방부대. 덫은 없다(해방부대에 덫 행동이 없음)
-        Object.assign({}, CONFIG.STAGES[1], { name: '흑마술의 탑', note: '어려움', cap: 50, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
+        Object.assign({}, CONFIG.STAGES[1], { name: '흑마술의 탑', note: '어려움', cap: 100, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
           lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 12, trapEvery: 18, trapLv: 3,
           guards: [{ at: 'bottom', list: [[54, 2], [57, 1]] }, { at: 'top', list: [[54, 2], [56, 1]] }, { at: 'lair', list: [[51, 1], [54, 2], [61, 1], [53, 2]] }] })   // 해방부대 3단계(악령의 성채)의 어려움 수치를 흑마술파 틀에. 기습(ambush)은 없다(해방부대 3단계의 기습 병력이 악령군 유닛이라)
       ] }
@@ -423,10 +427,11 @@
   /* 원작 영웅: 기본 유닛 종류를 물려받고 이름·초상화·수치만 영웅 기록의 것으로 바꾼 종류를 만든다 (내 진영의 영웅 목록) */
   P._buildHeroes = function () {
     var self = this, list = this.fac.heroes || [], seen = {}; this.heroDefs = [];
-    (this.data.heroes || []).forEach(function (h) { if (list.indexOf(h.name) < 0 || seen[h.name]) return; var base = self.types[h.type]; if (!base) return; seen[h.name] = 1;
+    (this.data.heroes || []).concat(this.fac.heroExtra || []).forEach(function (h) { if (list.indexOf(h.name) < 0 || seen[h.name]) return; var base = self.types[h.type]; if (!base) return; seen[h.name] = 1;
       var G = CONFIG.GROW, t = Object.create(base); t.name = h.name; t.job = base.name; t.pid = h.pid;
       t.hp = base.hp; t.atk = Math.min(G.heroCap.atk, Math.max(h.atk, Math.round(base.atk * G.heroAtk))); t.def = Math.min(G.heroCap.def, Math.max(h.def, Math.round(base.def * G.heroDef)));
-      t.maxHpAt = function (L) { return base.maxHpAt(Math.max(1, L - G.heroLv)); };   // 체력 = 같은 레벨(추가 heroLv 빼고)의 일반 유닛과 같다. 추가 레벨은 공격·방어 식에만 (2026-11-14 사용자 요청)
+      var hk = h.hpBase ? h.hpBase / base.hp : 1; if (h.hpBase) t.hp = h.hpBase;   // hpBase = 기본 유닛이 너무 약한 영웅(디아블로)의 체력 기준
+      t.maxHpAt = function (L) { return Math.round(base.maxHpAt(Math.max(1, L - G.heroLv)) * hk); };   // 체력 = 같은 레벨(추가 heroLv 빼고)의 일반 유닛과 같다. 추가 레벨은 공격·방어 식에만 (2026-11-14 사용자 요청)
       self.heroDefs.push({ name: h.name, t: t, base: base, rec: h }); });
   };
   /* 내 진영을 바꾼다: 탭·스테이지·기지 그림·영웅·깬 기록·배경음. 그 진영 1단계로 맞추고 필요한 그림을 받기 시작한다 */
@@ -454,6 +459,7 @@
     var ids = {}, C = CONFIG;
     C.TABS.forEach(function (tab) { tab.ids.forEach(function (id) { ids[id] = 1; }); });
     Object.keys(C.MORPH).forEach(function (id) { ids[id] = 1; });
+    ((this.fac && this.fac.heroExtra) || []).forEach(function (h) { ids[h.type] = 1; });   // 소환 목록에 없는 영웅 카드의 유닛 그림
     C.WAVES.forEach(function (w) { w.list.forEach(function (e) { ids[e[0]] = 1; }); });
     var ES = C.EFORT_SET[this.enemy]; if (C.PUSH && ES) (ES.per ? ES.per.map(function (k) { return C.EFORT_SET[k]; }) : [ES]).forEach(function (q) { q.gar.forEach(function (id) { ids[id] = 1; }); });   // 적 벙커 수비대
     if (C.PUSH && this.st && this.st.ambush) this.st.ambush.rear.concat(this.st.ambush.flank).forEach(function (e) { ids[e[0]] = 1; });   // 기습 병력
