@@ -258,7 +258,7 @@
     CARDS: { trigger: 'adverse', first: 60, cool: 60, foeMin: 4, foeRatio: 1.2, pushSec: 20, pushPx: 150, baseHp: 0.7, stallFrom: 300, stallSec: 120, stallCool: 120, progPx: 30, progHp: 60, sec: 45, mana: 2, dmg: 0.5, radius: 0.3,
       wAdverse: { mana: 2, repair: 2, hero: 2, twin: 2, xp: 1, magic: 1, radius: 1 }, wStall: { magic: 3, radius: 3, hero: 2, twin: 1, mana: 1, xp: 1, repair: 1 } },   /* twin = 이중 소환: sec 초 동안 소환 한 번에 2기, 마나는 1기 값 (2026-11-17 사용자 요청, summon) */   // 카드가 나오는 때와 효과 (_cardCheck, 2026-11-15 사용자 요청). trigger 가 'adverse' 가 아니면 예전처럼 레벨업마다
     SIEGE: { dist: 400, capMul: 0.5, gapMul: 2.5 },   // 적 기지 포위: 맨 앞 3기가 기지 400px 안이면 웨이브 상한 ×0.5, 나오는 간격 ×2.5 (_lairSieged, 2026-11-15 사용자 결정)
-    REVIVE: { ids: [28, 29], sides: { 0: true, 1: false }, base: 14, cap: 33 },   // 해골전사·해골기사 부활 (_reviveRoll·_revive, 원본 해독 2026-11-17). 확률 = (min(레벨+14, 33)+1)%. 지금은 아군(악령군)만 — 적 해골에도 켜려면 sides[1] = true
+    REVIVE: { ids: [28, 29], sides: { 0: true, 1: false }, base: 39, cap: 39 },   // 해골전사·해골기사 부활 (_reviveRoll·_revive, 원본 해독 2026-11-17). 확률 = (min(레벨+base, cap)+1)% — 원본은 base 14·cap 33(16~34%), 디펜스는 레벨과 상관없이 40% 고정(2026-11-18 사용자 요청, README 236). 지금은 아군(악령군)만 — 적 해골에도 켜려면 sides[1] = true
     SELF_COOL: { '이블 스피리츠 베리어': 20, '이블 스피리츠 댄싱': 20 },   // 자기 강화의 재사용 대기(초) — 악령술사·강신술사·사술사가 효과(7초)가 끝나자마자 다시 쓰지 않게 (2026-11-17 사용자 요청). 없으면 SKILL.cool(3초)
     ECAP_FORT: 0.25, ECAP_MIN: 8,   // 적 벙커가 하나 무너질 때마다 적 웨이브 상한(스테이지 ecap) −25%, 최소 8기 (ecapNow, 2026-11-15 사용자 결정)
     SLOT_ORDER: { band: 60, every: 1 },   // 스킬 칸 순서 = 시전자가 전장에 가까운 순 (_regroup, 2026-11-15 사용자 요청). null 이면 생긴 순서
