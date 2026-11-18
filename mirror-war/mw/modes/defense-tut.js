@@ -157,7 +157,45 @@
     { title: '가이드 끝', acts: [
       { text: function (g) { return '여기까지입니다. 유닛을 모아 적 벙커를 부수고, 맨 오른쪽의 적 기지를 무너뜨리면 승리합니다. 이제 ' + g.st.name + ' — 시작합니다.'; }, btn: '시작하기' } ] }
   ];
-  var ALL = { lib: LIB_STEPS, evil: EVIL_STEPS }, MELEE = { lib: '전사', evil: '해골기사' }, STEPS = LIB_STEPS;   // STEPS = 지금 도는 가이드 (_tutBegin 이 진영 것으로 바꾼다)
+  /* 흑마술파 가이드 (2026-11-18 사용자 요청 — 진영마다 쉬움 단계에 가이드, README 237). 틀은 악령군 것과 같고 유닛·마법만 흑마술파 것 */
+  var DARK_STEPS = [
+    { title: '흑마술파 가이드', acts: [
+      { text: '흑마술파로 오신 것을 환영합니다. 흑마술파는 전사와 도둑이 앞을 막고, 마술사의 범위 마법과 연금술·환술로 적을 무너뜨립니다. 기본 조작을 차례로 익혀 봅시다.', btn: '시작' } ] },
+    { title: '유닛 생산', acts: [].concat(
+      summonActs('전사', '마나를 쓰고, 전당 앞에서 나와 스스로 싸웁니다.'),
+      summonActs('마기사', '멀리서 불덩이를 던지는 원거리 유닛입니다.'),
+      summonActs('흑마술사', '범위 공격 마법 어쓰 퀘이크를 씁니다.'),
+      summonActs('연금술사', '아군 무기를 강하게 하고, 적의 갑옷을 녹입니다.'),
+      summonActs('마녀', '아군을 치유합니다.')) },
+    { title: '전당에 병력 배치', acts: [
+      { text: '전당을 눌러 고르세요. 전당 안에 넣은 흑마술사·마기사·대마술사는 안에서 적을 쏩니다.', cam: 0, box: function (g) { return g._baseBox(g.forts[0]); }, do: function (g) { g.selectFort(g.forts[0]); g.camGoal = null; }, ok: function (g) { return g.selBase; } },
+      { text: '[원거리] 탭을 누르세요.', cam: 0, box: function (g) { return g._tutTabBox('마기사'); }, skip: function (g) { return g.tab === g._tutRos('마기사').ti; }, ok: function (g) { return g.tab === g._tutRos('마기사').ti; } },
+      { text: '전당을 고른 동안 [마기사]를 누르면 전장이 아니라 전당 안에 배치됩니다.', cam: 0, box: function (g) { return g._tutBtnBox('마기사'); }, pre: function (g) { g.tut.n0 = g.garrison.length; if (!g.selBase) g.selectFort(g.forts[0]); },
+        ok: function (g) { return g.garrison.length > g.tut.n0; }, run: 4, after: '적이 다가오면 전당 안의 마기사가 불덩이를 쏩니다.',
+        post: function (g) { var id = g.tut.foeId, x = CONFIG.BASE.front + 330; g._tutFoe(id, x, 1); g._tutFoe(id, x + 30, 3); } } ] },
+    { title: '마녀 — 파워 힐링', acts: [
+      { text: '전사가 다쳤습니다. 스킬 칸의 [파워 힐링]을 누르세요. 주변의 다친 아군을 치유합니다.', box: function (g) { return g._tutSlotBox('파워 힐링'); },
+        pre: function (g) { g._tutClearFoes(); var w = g._tutMelee(), c = g._tutAlly('마녀'); if (w) { w.hp = Math.max(1, Math.round(w.maxHp * 0.4)); g.tut.hp0 = w.hp; g._tutNear(c, w.x, 70); } },
+        ok: function (g) { var w = g._tutMelee(); return !w || w.hp > g.tut.hp0; }, run: 1.6, after: '체력이 회복됐습니다. 마법은 마나를 쓰고 재사용 대기가 있습니다.' } ] },
+    { title: '연금술사 — 매직 웨폰', acts: [
+      { text: '적이 왔습니다. [매직 웨폰]을 누르세요. 연금술사 둘레의 공격 아군들이 잠시 강해집니다.', box: function (g) { return g._tutSlotBox('매직 웨폰'); },
+        pre: function (g) { var w = g._tutMelee(), id = g.tut.foeId, row = g.rows.length >> 1; if (w) { w.hp = w.maxHp; g._tutHuddle(w); g._tutFoe(id, w.x + 46, row).y = w.y; g._tutFoe(id, w.x + 70, row + 1); } g.tut.b0 = g._tutBuffed('weapon'); },
+        ok: function (g) { return g._tutBuffed('weapon') > g.tut.b0; }, run: 2.6, after: '무기에 마력이 실렸습니다. 둘레에 공격 아군이 2기 이상 있어야 씁니다.' } ] },
+    { title: '연금술사 — 멜팅 아머', acts: [
+      { text: '[멜팅 아머]를 누르세요. 적의 갑옷을 녹여 방어력을 0으로 만듭니다.', box: function (g) { return g._tutSlotBox('멜팅 아머'); },
+        pre: function (g) { if (g._tutFoes().length < 2) { var x = g._tutFront() + 60, m = g.rows.length >> 1; g._tutFoe(g.tut.foeId, x, m); g._tutFoe(g.tut.foeId, x + 22, m + 1); } var p = g._tutMid(g._tutFoes()); if (p) g._tutNear(g._tutAlly('연금술사'), p.x, 110); },
+        ok: function (g) { return !!g.aim; } },
+      { text: '적을 누르세요. 그 둘레의 적이 함께 약해집니다.', box: function (g) { return g._tutPtBox(g._tutMid(g._tutFoes()), 46); },
+        do: function (g) { var p = g._tutMid(g._tutFoes()); if (p) g._aimCast(p.x, p.y); }, ok: function (g) { return !g.aim; }, run: 2.6, after: '"방어력 0"이 뜬 적은 한동안 훨씬 큰 피해를 받습니다.' } ] },
+    { title: '흑마술사 — 어쓰 퀘이크', acts: [
+      { text: '적이 한데 몰려옵니다. [어쓰 퀘이크]를 누르세요. 찍은 곳 둘레의 적을 한꺼번에 공격합니다.', box: function (g) { return g._tutSlotBox('어쓰 퀘이크'); },
+        pre: function (g) { g._tutClearFoes(); var x = g._tutFront() + 150, id = g.tut.foeId, m = g.rows.length >> 1; [[0, m], [22, m - 1], [18, m + 1], [44, m], [40, m - 1], [-14, m + 1]].forEach(function (e) { g._tutFoe(id, x + e[0], e[1]); }); g._tutNear(g._tutAlly('흑마술사'), x, 120); },
+        ok: function (g) { return !!g.aim; } },
+      { text: '적이 가장 많이 모인 곳을 누르세요. 원 안의 적이 모두 맞습니다.', box: function (g) { return g._tutPtBox(g._tutMid(g._tutFoes()), 46); },
+        do: function (g) { var p = g._tutMid(g._tutFoes()); if (p) g._aimCast(p.x, p.y); }, ok: function (g) { return !g.aim; }, run: 3, after: '범위 마법은 적이 뭉쳐 있을 때 쓰면 좋습니다.' } ] },
+    EVIL_STEPS[EVIL_STEPS.length - 2], EVIL_STEPS[EVIL_STEPS.length - 1]   // 상성 · 가이드 끝 (진영과 상관없는 문구)
+  ];
+  var ALL = { lib: LIB_STEPS, evil: EVIL_STEPS, dark: DARK_STEPS }, MELEE = { lib: '전사', evil: '해골기사', dark: '전사' }, STEPS = LIB_STEPS;   // STEPS = 지금 도는 가이드 (_tutBegin 이 진영 것으로 바꾼다)
   DG.TUT_STEPS = LIB_STEPS; DG.TUT_ALL = ALL;
 
   /* ── 진행 ── */

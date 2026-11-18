@@ -2,7 +2,7 @@
    원본판(거울전쟁: 악령군, 2000)의 시나리오 진영 선택 화면을 옮겼다: 탁자 위에 펼친 지도와 원 셋(악령군·흑마술파·해방부대),
    포인터를 원에 대면 칼이 떨어져 동전에 꽂히고 빛이 흐른다. 그림은 tools/racebuild.py 가 원본 title.mwi·knife.mws 에서 굽는다
    (sim/race-bg.jpg = 배경 640×480 의 x 40~600, y 105~440 / sim/race-knife.png = 해방부대 칼 12장·이름표 12장·취소 6장).
-   지금은 해방부대만 고를 수 있다 — 흑마술파·악령군은 어둡게 두고 누르면 "개발 예정"을 띄운다.
+   세 진영 모두 고를 수 있다(해방부대 → 악령군 2026-11-17 → 흑마술파 2026-11-18). on: false 인 진영은 어둡게 두고 누르면 "개발 예정"을 띄운다.
    흐름: 첫 장(공지) → 진영 선택(여기) → 스테이지 고르기. [취소]는 공지로 돌아간다. 스페이스·엔터 = 해방부대.
    defense.js 쪽 연결: _drawOverlay 맨 앞(_raceShow → _drawRace), _tap 의 시작 화면 갈래(_raceTap), pointermove(_raceHover) */
 (function (root) {
@@ -13,7 +13,7 @@
   /* 원본 배경(640×480) 좌표. 이름표·취소는 배경 글자와 픽셀 대조로, 칼은 동전 가운데를 지도 원에 맞춰 구했다 (tools/racebuild.py 머리말) */
   var RACES = [
     { key: 'lib', name: '해방부대', to: '해방부대로', on: true, c: [438, 243], knife: [394, -2], label: [383, 275, 95, 27], ky: 0, ly: 320, nl: 12 },   // ky·ly = 시트에서 칼 줄·이름표 줄의 y, nl = 이름표 장 수
-    { key: 'black', name: '흑마술파', on: false, c: [287, 181], label: [252, 219, 80, 28] },
+    { key: 'dark', name: '흑마술파', to: '흑마술파로', on: true, c: [287, 181], knife: [205, -7], label: [252, 219, 80, 28], ky: 752, ly: 1072, nl: 5 },   // 2026-11-18: 흑마술파 진영을 열었다 (칼 17~28 · 이름표 29~33, 칼 자리는 동전 가운데를 원 가운데에 맞춤)
     { key: 'evil', name: '악령군', to: '악령군으로', on: true, c: [157, 259], knife: [-4, -7], label: [120, 290, 80, 28], ky: 400, ly: 720, nl: 5 }   // 2026-11-17: 1단계(대 흑마술파)부터 열었다
   ];
   var CANCEL = [479, 277, 95, 79], RX = 56, RY = 45, FPS = 12, FALL = 0.16, GO = 0.75;
@@ -91,7 +91,7 @@
     var hy = Math.max(30, Math.round(L.y0 - 110 * s - 40));
     var HR = S.hover ? RACES.filter(function (r) { return r.key === S.hover; })[0] : null, ht = HR ? HR.name : '진영을 고르세요';   // 고른 진영의 이름을 위에 크게 (지도의 이름표가 작아 잘 안 보인다 — 2026-11-17 사용자 요청)
     ctx.font = 'bold ' + (HR ? 32 : 26) + 'px sans-serif'; ctx.fillStyle = '#000'; ctx.fillText(ht, W / 2 + 1, hy + 1); ctx.fillStyle = HR ? '#fff1c4' : '#ffd36e'; if (HR) { ctx.shadowColor = '#ffb23a'; ctx.shadowBlur = 14; } ctx.fillText(ht, W / 2, hy); ctx.shadowBlur = 0;
-    ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.fillText('해방부대 · 악령군으로 플레이할 수 있습니다', W / 2, hy + 26, W - 20);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.fillText(RACES.filter(function (r) { return r.on; }).map(function (r) { return r.name; }).join(' · ') + ' 중에서 고르세요', W / 2, hy + 26, W - 20);
     var by = Math.min(H - 40, L.y0 + L.ih + 34);
     ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(S.go ? ((RACES.filter(function (r) { return r.key === S.pick; })[0] || RACES[0]).name + ' — 출정!') : S.hover && S.hover !== 'cancel' ? '한 번 더 누르면 ' + (RACES.filter(function (r) { return r.key === S.hover; })[0] || RACES[0]).to + ' 출정합니다' : '지도에서 진영을 누르세요', W / 2, by, W - 20);
     ctx.font = '10px sans-serif'; ctx.fillStyle = '#7b8397';

@@ -410,6 +410,27 @@
         Object.assign({}, CONFIG.STAGES[1], { name: '흑마술의 탑', note: '어려움', cap: 100, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
           lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 12, trapEvery: 18, trapLv: 3,
           guards: [{ at: 'bottom', list: [[54, 2], [57, 1]] }, { at: 'top', list: [[54, 2], [56, 1]] }, { at: 'lair', list: [[51, 1], [54, 2], [61, 1], [53, 2]] }] })   // 해방부대 3단계(악령의 성채)의 어려움 수치를 흑마술파 틀에. 기습(ambush)은 없다(해방부대 3단계의 기습 병력이 악령군 유닛이라)
+      ] },
+    /* 흑마술파 (2026-11-18 사용자 요청: "흑마술파 진영도 시작 — 쉬움 악령군, 어려움 해방부대", README 237). 스테이지는 악령군처럼 두 개.
+       원본 생산비가 전부 0금이라(흑마술파는 미션에서 주어지는 병력) 마나 값을 따로 정했다 — 체력·공격을 해방부대·악령군 유닛과 견주어.
+       뺀 유닛: 왕자(멀티 슬로우 미구현). 가고일은 2026-11-18 에 넣었다(GARG). 영웅은 원작 영웅 기록의 흑마술파 이름 붙은 유닛 */
+    dark: { name: '흑마술파', bgm: 2, hud: 'hud2', base: 'lair2', baseName: '전당', fortPic: 'efort2', fortNames: { fort1: '흉가', fort2: '흉가' },
+      /* 건물 사격: 원본에서 흑마술파의 사격 등급은 대마술사(등급 1 = 썬더 스톰)와 흑기사(등급 5 = 둘레 광역)뿐이다. 아군 건물은 활(4)·파이어 볼(0)만 쏘므로 대마술사를 파이어 볼 등급으로 읽고,
+         쏘는 유닛이 대마술사(마나 130) 하나뿐이면 기지 방어가 안 돼서 기본 공격이 파이어 볼인 흑마술사·마기사도 파이어 볼 등급으로 둔다(garUnit — 원본과 다른 점). 요마술사·인챈터·연금술사는 원본대로 사격 피해 보너스 */
+      garCls: { 1: 0 }, garUnit: { 49: 0, 57: 0 },
+      tabs: [
+        { name: '근접', ids: [52, 68, 53, 63, 64, 69, 70, 54] },   // 전사 개미 흑전사 흡혈귀 늑대인간 거미 전갈 흑기사
+        { name: '원거리', ids: [55, 56, 57, 65, 66, 67] },        // 도둑 대도 마기사 가고일 구렁이 드래곤 (가고일 2026-11-18 추가 — 가고일 변형, GARG)
+        { name: '마술', ids: [49, 50, 61, 51] },                  // 흑마술사 요마술사 인챈터 대마술사
+        { name: '환술', ids: [62, 60, 58, 59] }                   // 마녀 연금술사 소환사 환술사
+      ],
+      extraIds: [79],   /* 가고일 석상 그림 */ cost: { 65: 60, 52: 20, 68: 20, 53: 35, 63: 40, 64: 45, 69: 45, 70: 70, 54: 80, 55: 25, 56: 50, 57: 55, 66: 80, 67: 150, 49: 50, 50: 80, 61: 70, 51: 130, 62: 30, 60: 60, 58: 70, 59: 80 },
+      heroes: ['쿨구레루 데스모네', '이자비', '카인 제틀링', '라미레스', '네인 피리스', '툴핀 래리', '리루아 힐리', '산적짱', '그린드레곤'],
+      stages: [
+        Object.assign({}, CONFIG.STAGES[0], { name: '망자의 들판', note: '쉬움' }),   // 해방부대 1단계(해골 들판)의 쉬움 수치 그대로 — 적 악령군
+        { name: '해방부대의 성', note: '어려움', enemy: 'lib', flank: null, cap: 50, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
+          lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 0,
+          guards: [{ at: 'bottom', list: [[1, 2], [5, 1]] }, { at: 'top', list: [[1, 2], [12, 1]] }, { at: 'lair', list: [[3, 1], [1, 2], [13, 1], [2, 2]] }] }   // 악령군 2단계(흑마술의 탑)의 어려움 수치를 해방부대 틀에. 덫은 없다(해방부대에 덫 행동이 없음)
       ] }
   };
   DefenseGame.FACTIONS = FACTIONS;
@@ -421,7 +442,7 @@
     var self = this, F = this.fac, data = this.data, parentOf = {}; data.units.forEach(function (d) { (d.up || []).forEach(function (x) { if (parentOf[x] == null) parentOf[x] = d.id; }); });   // 전직 대상 → 원래 유닛
     this.roster = CONFIG.TABS.map(function (tab) { return tab.ids.map(function (id) {
       var t = self.types[id], cost = (F.cost && F.cost[id]) || summonCost(self.types, parentOf, id);
-      return { id: id, t: t, cost: cost, cd: F.noSummonCd ? 0 : Math.max(1, Math.min(8, cost / 20)), magic: skillsOf(t).some(function (a) { return !CONFIG.TECH[a.name]; }), tech: skillsOf(t).some(function (a) { return !!CONFIG.TECH[a.name]; }) || bodyTechs(t).length > 0, wait: 0, gar: garInfo(id, F.garCls) };
+      return { id: id, t: t, cost: cost, cd: F.noSummonCd ? 0 : Math.max(1, Math.min(8, cost / 20)), magic: skillsOf(t).some(function (a) { return !CONFIG.TECH[a.name]; }), tech: skillsOf(t).some(function (a) { return !!CONFIG.TECH[a.name]; }) || bodyTechs(t).length > 0, wait: 0, gar: garInfo(id, F.garCls, F.garUnit) };
     }); });
   };
   /* 원작 영웅: 기본 유닛 종류를 물려받고 이름·초상화·수치만 영웅 기록의 것으로 바꾼 종류를 만든다 (내 진영의 영웅 목록) */
@@ -460,6 +481,7 @@
     C.TABS.forEach(function (tab) { tab.ids.forEach(function (id) { ids[id] = 1; }); });
     Object.keys(C.MORPH).forEach(function (id) { ids[id] = 1; });
     ((this.fac && this.fac.heroExtra) || []).forEach(function (h) { ids[h.type] = 1; });   // 소환 목록에 없는 영웅 카드의 유닛 그림
+    ((this.fac && this.fac.extraIds) || []).forEach(function (id) { ids[id] = 1; });      // 변형 형태 (흑마술파 가고일 석상)
     C.WAVES.forEach(function (w) { w.list.forEach(function (e) { ids[e[0]] = 1; }); });
     var ES = C.EFORT_SET[this.enemy]; if (C.PUSH && ES) (ES.per ? ES.per.map(function (k) { return C.EFORT_SET[k]; }) : [ES]).forEach(function (q) { q.gar.forEach(function (id) { ids[id] = 1; }); });   // 적 벙커 수비대
     if (C.PUSH && this.st && this.st.ambush) this.st.ambush.rear.concat(this.st.ambush.flank).forEach(function (e) { ids[e[0]] = 1; });   // 기습 병력
@@ -607,9 +629,9 @@
     var t = types[id], top = id, upSum = 0, guard = 0; while (parentOf[top] != null && guard++ < 6) { upSum += types[top].upGold || 0; top = parentOf[top]; }   // 전직 사슬을 거슬러 올라간다 (사제 ← 성령사)
     return Math.max(15, Math.round(t.cost[3] * CONFIG.COST_PER_GOLD / 5) * 5, Math.round((types[top].cost[3] * CONFIG.COST_PER_GOLD + upSum * CONFIG.COST_PER_UP) / 5) * 5);
   }
-  function garInfo(id, map) {   // map = 등급 바꿔 읽기 (악령군: 데몬류의 등급 2 → 0)
+  function garInfo(id, map, umap) {   // map = 등급 바꿔 읽기 (악령군: 데몬류의 등급 2 → 0), umap = 유닛별 등급(흑마술파: 원본에 사격 등급이 없는 흑마술사·마기사를 파이어 볼 등급으로)
     var d = root.MW_DEF && root.MW_DEF.units && root.MW_DEF.units[id]; if (!d) return null;
-    var c0 = map && map[d.cls] != null ? map[d.cls] : d.cls, cls = CONFIG.GARRISON.classes[c0] ? c0 : -1;
+    var c0 = umap && umap[id] != null ? umap[id] : map && map[d.cls] != null ? map[d.cls] : d.cls, cls = CONFIG.GARRISON.classes[c0] ? c0 : -1;
     return cls >= 0 || d.bonus > 0 || d.def > 0 ? { cls: cls, bonus: d.bonus, def: d.def || 0 } : null;   // def = 건물 방어 보너스 (원본 unitdata +0x2B6: 전사·기사 계열)
   }
 
@@ -617,6 +639,10 @@
   /* 한 번에 매혹하는 수: 멀티 챠밍(공주)은 charmMax(3)기, 챠밍(서큐버스)은 1기 (2026-11-17 사용자 요청 — 원본도 챠밍은 한 유닛 대상) */
   /* 조준 없이 누르면 시전 거리 안의 가장 가까운 적 1기에게 바로 쓰는 아군 마법 (2026-11-17 사용자 요청: 메두사의 스톤 게이즈). 적이 쓸 때는 예전처럼 둘레 범위 */
   var SINGLE_NEAR = { '스톤 게이즈': 1, '챠밍': 1 };   // 챠밍(서큐버스)도 조준 없이 가장 가까운 적 1기 (2026-11-18 사용자 요청). 공주의 멀티 챠밍은 그대로 조준
+  /* 가고일 변형 (2026-11-18 사용자 요청: "가고일 넣고 타겟으로 타워로 변형되는 스킬도", README 238). 원본: 가고일(65, 공중·공격 없음) ↔ 가고일 석상(79, 파이어 볼) 을 오가는 변형(행동 94).
+     디펜스: 칸을 누르고 전장을 찍으면 그 자리로 날아가 석상(움직이지 않는 타워)이 된다. 석상인 가고일에 다시 쓰면 가고일로 돌아가 새 자리로 날아가서 다시 석상이 된다(자리 옮기기).
+     fly·stone = 두 형태의 유닛 번호, act = 변형 행동 번호, arrive = 이 거리(px) 안이면 도착 */
+  var GARG = { fly: 65, stone: 79, act: 94, arrive: 4, flyMul: 3 };   // flyMul = 자리로 날아갈 때의 속도 배수 (걷는 속도 그대로면 한 화면에 10초 넘게 걸린다)
   /* 메타몰포시스: pow = 변신한 유닛의 위력 배수(공격값·회복량), pick = 찍은 지점에서 대상을 잡는 거리(px) */
   var META = { pow: 0.7, pick: 70 };
   function charmN(a) { return a && a.name === '챠밍' ? 1 : CONFIG.SKILL.charmMax; }
@@ -784,7 +810,7 @@
     this.readyAt = 0;                                        // 쿨타임이 끝난 시각 (패널에서 앞에 설 순서를 정한다)
     this.vi = null;                                          // 패널에서 지금 그려지는 자리 (순서가 바뀌면 그 자리로 미끄러져 간다)
     this.kind = skillKind(act);
-    this.aimed = (this.needsFoe() && !SINGLE_NEAR[act.name]) || this.kind === 'recall' || this.kind === 'haste' || this.kind === 'dispel' || act.sup === 'massheal' || this.allyAimed();   // 지점을 찍는 마법: 적에게 쓰는 것, 리콜, 그리고 넓은 범위의 소환 마법(말다 소환 = 범위 회복, 케멘 소환 = 범위 가속 — 2026-11-13 사용자 요청, 원본도 땅을 찍는 마법). 강화·힐링은 누르면 바로   // 리콜도 불러올 곳을 찍는다                            // 적에게 쓰는 마법은 누르면 바로 나가지 않고 전장에서 지점을 찍는다 (아군·자기에게 쓰는 마법은 즉시)
+    this.aimed = (this.needsFoe() && !SINGLE_NEAR[act.name]) || act.id === GARG.act || this.kind === 'recall' || this.kind === 'haste' || this.kind === 'dispel' || act.sup === 'massheal' || this.allyAimed();   // 지점을 찍는 마법: 적에게 쓰는 것, 리콜, 그리고 넓은 범위의 소환 마법(말다 소환 = 범위 회복, 케멘 소환 = 범위 가속 — 2026-11-13 사용자 요청, 원본도 땅을 찍는 마법). 강화·힐링은 누르면 바로   // 리콜도 불러올 곳을 찍는다                            // 적에게 쓰는 마법은 누르면 바로 나가지 않고 전장에서 지점을 찍는다 (아군·자기에게 쓰는 마법은 즉시)
     var lim = CONFIG.SKILL.COST[this.kind] || [20, 60];
     this.cost = Math.max(lim[0], Math.min(lim[1], Math.round(act.mana * CONFIG.SKILL.costMul / 5) * 5));   // 쓸 때 드는 마나
     var wk = CONFIG.WEAPON[act.name]; if (wk && wk.cost) this.cost = wk.cost;   // 웨폰 계열은 종류마다 따로
@@ -922,9 +948,9 @@
     return true;
   };
   /* 지점 지정 마법의 시전 거리(px): 시전자에서 이 가로 거리 안의 지점만 찍을 수 있다 */
-  P.aimReach = function (s) { return s.kind === 'recall' ? CONFIG.WORLD_W : Math.min(CONFIG.SKILL.maxCast, s.act.range * CONFIG.RANGE_SCALE); };   // 리콜은 원본처럼 거리 제한 없음
+  P.aimReach = function (s) { return s.kind === 'recall' || s.act.id === GARG.act ? CONFIG.WORLD_W : Math.min(CONFIG.SKILL.maxCast, s.act.range * CONFIG.RANGE_SCALE); };   // 리콜은 원본처럼 거리 제한 없음
   /* 지점 지정 마법의 효과 반경(px) — 그리기와 판정이 같은 값을 쓴다 */
-  P.aimRadius = function (s) { var S = CONFIG.SKILL, k = 1 + (this.radiusUp || 0); return s.kind === 'haste' || s.kind === 'dispel' || s.act.sup === 'massheal' ? S.summonRadius : s.kind === 'buff' ? 22 : s.kind === 'recall' ? 120 : s.kind === 'blast' ? (s.act.aoe ? S.radius * (S.radiusMul && S.radiusMul[s.act.name] || 1) * k : 60) : s.kind === 'charm' ? S.radius * 0.7 : s.kind === 'assassin' ? 45 : S.radius * k; };   // radiusUp = "마법 확산" 카드
+  P.aimRadius = function (s) { var S = CONFIG.SKILL, k = 1 + (this.radiusUp || 0); return s.kind === 'haste' || s.kind === 'dispel' || s.act.sup === 'massheal' ? S.summonRadius : s.kind === 'buff' || s.kind === 'morph' ? 22 : s.kind === 'recall' ? 120 : s.kind === 'blast' ? (s.act.aoe ? S.radius * (S.radiusMul && S.radiusMul[s.act.name] || 1) * k : 60) : s.kind === 'charm' ? S.radius * 0.7 : s.kind === 'assassin' ? 45 : S.radius * k; };   // radiusUp = "마법 확산" 카드
   /* 조준 중 전장을 눌렀다 (2026-11-12 "걸어가서 쓰기"로 바꿈): 찍은 곳에 가장 가까운 준비된 유닛이 쓴다.
      시전 거리 안이면 바로, 밖이면 **닿는 곳까지 걸어가서** 쓴다(u.castOrder → _castWalk). 시전 거리 제한으로 못 찍는 곳은 없다 —
      다만 유닛은 전장 가운데(집결선 frontX)를 넘어 적 진영으로 들어가지 못하므로, 가운데에서도 닿지 않는 곳(frontX + 시전 거리 너머)은 찍을 수 없다 */
@@ -1191,13 +1217,17 @@
         this.slots = this.slots.filter(function (q) { return q.unit !== u; }); u.slots = []; skillsOf(to2).forEach(function (a2) { self._addSlot(u, a2); });   // 칸을 그 유닛의 마법으로 갈아 끼운다 (메타몰포시스 칸은 사라진다 — 되돌아가지 않는다)
         var mk = this.magicUnits.indexOf(u), hasM = u.slots.some(function (q) { return !q.auto; }); if (hasM && mk < 0) this.magicUnits.push(u); else if (!hasM && mk >= 0) this.magicUnits.splice(mk, 1);
         this._regroup(); this._addEffect(u.x, u.y - u.headY * 0.5, a.arm, 0); this._say(u.x, u.y - u.headY - 30, to2.name + ' (위력 ' + Math.round(META.pow * 100) + '%)', '#d9b8ff'); ok = true; }
+    } else if (s.kind === 'morph' && a.id === GARG.act) {     // 가고일 변형: 찍은 자리로 날아가 석상이 된다 (석상이면 먼저 가고일로 돌아간다). 아군 진영(집결선)까지만
+      var gR = this.rows, gx = pt ? Math.max(CONFIG.BASE.front, Math.min(this.frontX, pt.x)) : u.x, gy = pt ? Math.max(this.laneY + gR[0], Math.min(this.laneY + gR[gR.length - 1], pt.y)) : u.y;
+      if (u.t.id === GARG.stone) this._gargForm(u, false);
+      u.gargGo = { x: gx, y: gy }; ok = true;
     } else if (s.kind === 'morph') {                         // 다른 형태로 (엔트 ↔ 지상 엔트). 체력 비율은 유지
       var to = this.types[CONFIG.MORPH[u.t.id]];
       if (to) { var ratio = u.hp / u.maxHp; u.setType(to); u.hp = Math.max(1, Math.round(u.maxHp * ratio)); this._applyType(u); u.face(u.dir, -u.dir); ok = true; }
     }
     if (!ok) { this._say(u.x, u.y - u.headY - 10, '대상 없음', '#c9d1e3'); return false; }
     if (!u.auto && !s.auto) { this.mana -= s.cost;                      // 내가 쓴 마법: 터진 곳(적에게 쓰는 마법은 그 적, 아니면 시전자)이 화면 가운데에 오도록 카메라가 미끄러져 간다
-      this.camGoal = { x: (foe && s.kind !== 'recall' ? foe.x : u.x) - this.W / 2, until: this.time + CONFIG.CAM.skillSec }; this.manualUntil = 0; }
+      this.camGoal = { x: (u.gargGo ? u.gargGo.x : foe && s.kind !== 'recall' ? foe.x : u.x) - this.W / 2, until: this.time + CONFIG.CAM.skillSec }; this.manualUntil = 0; }
     s.cd = s.cdMax; this._sortSlots();                       // 방금 쓴 칸은 바로 뒤로 간다
     this._say(u.x, u.y - u.t.h - 18, a.name, u.side === 0 ? '#ffd36e' : '#ff8a7a');   // 적이 쓴 마법은 붉은 글씨
     this._play(a.snd, 1);
@@ -1457,6 +1487,7 @@
     if (u.side === 0) { this._bodyTech(u); if (C.MORPH[u.t.id] != null) this._entAuto(u, dt); }
     u.cd = Math.max(0, u.cd - dt);
     if (u.boom && this._boom(u)) return;
+    if (u.gargGo) { this._gargFly(u, dt); return; }           // 가고일: 석상이 될 자리로 날아가는 중
     if (u.castOrder && u.state !== 'attack' && this._castWalk(u, dt)) return;
     if (u.fleeUntil > this.time && u.side === 0 && !u.castOrder) {   // 도망: 맞은 지원 유닛이 성 쪽으로 물러난다 (FLEE_SEC 초, 성 앞 선까지만). 끝나면 다시 자리로 돌아온다
       var fx = Math.max(C.BASE.front + 10, u.x - this._speed(u) * C.FLEE_SPEED * dt);
@@ -1543,6 +1574,7 @@
         var fy = Math.max(flo, Math.min(fhi, fortT.y)) + inw * (u.uid % 3) * 10, fx = fortT.x + (u.side === 0 ? -1 : 1) * (44 + (u.uid % 4) * 11), fdx = fx - u.x, fdy = fy - u.y, fd = Math.hypot(fdx, fdy);
         if (Math.abs(fdy) > 18 && fd > 3) { var fs2 = Math.min(fd, this._speed(u) * dt); u.aiWhy = 'tofort'; u.x += fdx / fd * fs2; u.y += fdy / fd * fs2; u.state = 'move'; u.walkT += dt; this._faceVec(u, fdx, fdy); u.slotOf = null; u.slotA = null; u.passY = null; return; }
       }
+      if (u.statue && !(canHitUnit || canHitBase)) { u.state = 'idle'; return; }   // 석상은 걷지 않는다
       if (canHitUnit || canHitBase) {
         if (canHitUnit) this._faceVec(u, tgt.x - u.x, tgt.y - u.y, true);   // 때릴 적을 바라본다 (8방향 — 위아래에 있는 적도 그쪽을 보고 친다)
         if (u.cd <= 0) { u.state = 'attack'; u.at = 0; u.hitDone = false; u.tgt = canHitUnit ? tgt : fortT || (u.side === 0 ? 'lair' : 'base'); this._play(u.act.snd, 0.5); }
@@ -1672,6 +1704,18 @@
   /* 내가 둘러싸이는 쪽인가: 나를 둘러싸려고 자리를 맡은(slotOf = 나) 적이 가까이에 있다.
      두 근접 유닛이 마주치면 먼저 움직인 쪽이 상대 둘레에 자리를 잡고, 상대는 이 판정으로 제자리를 지킨다 */
   /* 엔트의 자동 변형·자동 치료 (CONFIG.ENT). 걷는 형태 = 원본 엔트(공격 없음), 뿌리내린 형태 = 지상 엔트(뿌리 공격). 영웅 폴로운도 같다 — 영웅은 이름·수치를 지킨 채 그림과 행동만 바뀐다 */
+  /* 가고일 ↔ 석상. 석상은 그 자리에서 움직이지 않는다(rooted + 이동 속도 0). 체력 비율 유지, 스킬 칸(가고일 변형)은 그대로 */
+  P._gargForm = function (u, stone) {
+    var to = this.types[stone ? GARG.stone : GARG.fly]; if (!to || u.state === 'dead') return;
+    var ratio = u.hp / u.maxHp; u.setType(to); u.hp = Math.max(1, Math.round(u.maxHp * ratio)); this._applyType(u); u.face(u.dir, -u.dir);
+    u.rooted = stone; u.statue = stone; if (stone) u.speedPx = 0; u.tgt = null; u.slotOf = null; u.slotA = null; u.slotAt = null; u.cd = 0; u.at = 0; u.state = 'idle';
+    this._addEffect(u.x, u.y - u.headY * 0.5, 12, 0); this._say(u.x, u.y - u.headY - 10, stone ? '석상' : '가고일', '#c7a0ff');
+  };
+  P._gargFly = function (u, dt) {
+    var o = u.gargGo, dx = o.x - u.x, dy = o.y - u.y, d = Math.hypot(dx, dy);
+    if (d <= GARG.arrive) { u.x = o.x; u.y = o.y; u.gargGo = null; this._gargForm(u, true); this._play(u.t.snd && u.t.snd.ready, 0.4); return; }
+    var st = Math.min(d, this._speed(u) * GARG.flyMul * dt); u.x += dx / d * st; u.y += dy / d * st; u.state = 'move'; u.walkT += dt; this._faceVec(u, dx, dy); u.slotOf = null; u.slotA = null; u.passY = null;
+  };
   P._entForm = function (u, rooted) {
     var base = this.types[rooted ? 77 : 23], to = base, h = u.hero; if (!base) return;
     if (h) { if (!h.forms) h.forms = {}; to = h.forms[base.id]; if (!to) { to = h.forms[base.id] = Object.create(base); ['name', 'job', 'pid', 'hp', 'atk', 'def', 'lv', 'maxHpAt'].forEach(function (k) { to[k] = h.t[k]; }); } }
@@ -3097,6 +3141,17 @@
       [{ n: '흡혈귀류', fig: 35, ally: 1, m: '흡혈귀·늑대인간·메두사' }, { n: '전사류', fig: 0, m: '전사·기사·창기사·성기사·궁수·명궁·창검사' }, { n: '악마류', fig: 39, ally: 1, m: '데몬·데빌·사탄·서큐버스' }, { n: '격투류', fig: 8, m: '격투가·무도가·도사·의적' }],
       [{ n: '언데드', fig: 28, ally: 1, m: '해골전사·해골기사·듀라한·유령·리치' }, { n: '마법사류', fig: 12, m: '정령사·마법사·장로·연금술사·마법전사·마법기사' }, { n: '짐승류', fig: 43, ally: 1, m: '늑대·켈베로스·펜릴·박쥐·드래곤' }, { n: '성직·소환류', fig: 19, m: '성령사·사제·주교·소환사·엔젤 나이트' }]],
     foot: ['상성이 맞으면 피해가 1.125~1.5배가 됩니다 (유닛 설명 카드의 "강함")', '지상 근접 유닛은 공중 유닛(엔젤 나이트)을 공격할 수 없습니다', '성령사·사제의 마법은 언데드를 멈춥니다'] };
+  /* 내 진영이 흑마술파일 때 (2026-11-18, 원본 상성 칸을 세어 확인): 대 악령군 — 소환·환술류 → 짐승류 → 흡혈귀류(흑) → 언데드 → 소환·환술류 / 전사·도둑류 → 악마류 → 구렁이·벌레류 → 언데드(여기서 끊긴다, 악령군의 흡혈귀류가 전사·도둑류에 강함).
+     대 해방부대 — 해방부대 쪽 표(AFF.dark)를 뒤집은 것 */
+  AFF['dark:evil'] = { name: AFF.evil.name, fam: AFF.evil.fam,
+    rings: [
+      [{ n: '소환·환술류', fig: 59, ally: 1, m: '소환사·환술사·연금술사·인챈터·마녀' }, { n: '짐승류', fig: 43, m: '늑대·켈베로스·펜릴·박쥐·드래곤' }, { n: '흡혈귀류', fig: 63, ally: 1, m: '흡혈귀·늑대인간' }, { n: '언데드', fig: 28, m: '해골전사·해골기사·좀비·듀라한·유령·리치' }],
+      [{ n: '전사·도둑류', fig: 52, ally: 1, m: '전사·흑전사·흑기사·도둑·대도·마기사' }, { n: '악마류', fig: 39, m: '데몬·데빌·사탄·서큐버스' }, { n: '짐승·벌레류', fig: 66, ally: 1, m: '구렁이·드래곤·개미·거미·전갈' }, { n: '언데드', fig: 29, m: '해골전사·해골기사·좀비·듀라한·유령·리치' }]],
+    open: [0, 1],
+    foot: ['상성이 맞으면 피해가 1.125~1.5배가 됩니다 (유닛 설명 카드의 "강함")', '적의 흡혈귀·늑대인간·메두사는 전사·도둑류에 강합니다', '흑마술사·요마술사·대마술사는 상성이 없습니다'] };
+  AFF['dark:lib'] = { name: AFF['evil:lib'].name, fam: AFF['evil:lib'].fam,
+    rings: AFF.dark.rings.map(function (r) { return r.map(function (q) { return { n: q.n, fig: q.fig, m: q.m, ally: q.ally ? 0 : 1 }; }); }), open: AFF.dark.open,
+    foot: ['상성이 맞으면 피해가 1.125~1.5배가 됩니다 (유닛 설명 카드의 "강함")', '지상 근접 유닛은 공중 유닛(엔젤 나이트)을 공격할 수 없습니다', '흑마술사·요마술사·대마술사는 상성이 없습니다'] };
   P._aff = function () { return AFF[this.faction + ':' + this.enemy] || AFF[this.enemy] || AFF.evil; };
   Object.keys(AFF).forEach(function (k) { var A = AFF[k]; A.famOf = {}; A.repOf = {}; A.fam.forEach(function (q) { q[1].forEach(function (id) { A.famOf[id] = A.name[q[0]]; A.repOf[id] = q[0]; }); }); });   // 적 유닛 → 묶음 이름·대표 유닛
   P.unitInfo = function (r) {
@@ -3112,6 +3167,7 @@
     var sk = skillsOf(t).map(function (a) { return a.name + (C.TECH[a.name] || a.self ? '(자동)' : ''); });
     if (sk.length) L.push('마법: ' + sk.join(', '));
     // 변형 유닛(엔트): 걷는 형태에는 공격이 없어 설명이 없으면 "공격 없는 유닛"으로만 보인다 → 알아서 뿌리내려 무엇을 하는지 적는다 (CONFIG.ENT)
+    if (t.id === GARG.fly) { var gt = this.types[GARG.stone], gb = gt ? basicAct(gt) : null; L[0] = '공중 · 석상이 되어 공격'; if (gb) L.push('가고일 변형: 찍은 자리로 날아가 석상(타워)이 되어 ' + gb.name + '(사거리 ' + Math.round(gb.range * C.RANGE_SCALE) + ')'); L.push('석상은 움직이지 않습니다 · 다시 쓰면 새 자리로 옮깁니다'); }
     var mt = this.types[C.MORPH[t.id]], mb = mt ? basicAct(mt) : null;
     if (mt && mb) { L[0] = '원거리(뿌리내려 공격) · 공중 공격 가능';
       L.push('적이 다가오면 알아서 뿌리내려 ' + mb.name + '(사거리 ' + Math.round(mb.range * C.RANGE_SCALE) + ')');
@@ -3129,6 +3185,7 @@
     var desc = ((MWE.DEF_SKILL_DESC && MWE.DEF_SKILL_DESC[a.name]) || '').replace(/\{(\w+)\}/g, function (m, k) { return V[k] != null ? V[k] : m; });
     var L = [], n = g.slots.filter(function (q) { return q.unit && q.unit.state !== 'dead'; }).length;
     if (s.allyAimed()) L.push('칸을 누른 뒤 강화할 아군을 찍습니다 · 닿지 않으면 시전 유닛이 걸어갑니다');
+    else if (a.id === GARG.act) L.push('칸을 누른 뒤 전장을 찍으면 그 자리로 날아가 석상이 됩니다 · 아군 진영 안에서만');
     else if (s.aimed) L.push('칸을 누른 뒤 전장을 찍어 씁니다 · 효과 반경 ' + Math.round(this.aimRadius(s)) + ' · 시전 거리 ' + (s.kind === 'recall' ? '제한 없음' : Math.round(this.aimReach(s))));
     else L.push(a.self || CONFIG.TECH[a.name] ? '유닛이 알아서 씁니다' : '칸을 누르면 바로 씁니다' + (s.kind === 'morph' ? '' : ' · 시전 유닛 주변 ' + S.buffRadius));
     L.push('재사용 ' + S.cool + '초 · 가진 유닛 ' + n + '기' + (s.kind === 'blast' && blastTier(a) > 1 ? ' · 피해 ×' + blastTier(a).toFixed(2).replace(/0$/, '') : ''));
