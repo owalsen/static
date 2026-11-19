@@ -2,7 +2,7 @@
    디펜스(defense.js)와 같은 캔버스·그림·소리·유닛 데이터를 쓴다. 이 파일은 모드 선택 화면(defense-mode.js)에서 [서바이벌]을 고른 뒤에야 받는다 — 디펜스만 하는 사람의 로딩은 늘지 않는다.
    연결: DefenseGame 인스턴스 D 의 D.sub 에 이 게임이 들어가 있는 동안 D._frame 은 sub.frame(dt) 만 부르고, D 의 입력 처리는 쉰다(defense.js 의 `if (self.sub) return`).
          화면 크기(D.W·D.H·D.rs)와 유닛 그리기(D._drawUnit)·체력 바·돌판(_plate)은 D 것을 그대로 빌린다.
-   단계: 1 뼈대(이동·카메라·빈 HUD) / 2 전투(사방 스폰·추적·자동 단도·피격·사망) / 3 성장(경험치·레벨업 카드·붉은보석 도둑 스킬 16개·전직 3갈래) ← 지금 여기 / 3 성장(레벨업 카드·붉은보석 도둑 스킬·전직) / 4 웨이브 10단계·보스·승패 / 5 마무리
+   단계: 1 뼈대(이동·카메라·빈 HUD) / 2 전투(사방 스폰·추적·자동 단도·피격·사망) / 3 성장(경험치·레벨업 카드·붉은보석 도둑 스킬 16개·전직 3갈래) / 4 웨이브 10단계·보스·결과 리포트 ← 지금 여기 / 3 성장(레벨업 카드·붉은보석 도둑 스킬·전직) / 4 웨이브 10단계·보스·승패 / 5 마무리
    좌표: 전장 좌표 = 화면 픽셀과 같은 단위(확대 ZOOM 전). 필드는 끝이 없다 — 바닥 조각(D.ground, 448×192)을 가로세로로 이어 깐다. */
 (function (root) {
   'use strict';
@@ -18,13 +18,27 @@
     SAFE: { top: 20, bottom: 24 },   // 디펜스의 SAFE 와 같다 (상태 표시줄·홈 막대 자리)
     SLOTS: 6,
     /* 전투 (2단계). 수치는 원작에서 출발: 피해 = 원본 피해 공식(rules.damage), 적 걷는 속도 = 디펜스와 같은 식(walkPx × 틱 × 0.45) */
-    ATK: { sec: q('atk', 0.6), range: q('range', 170), shot: 420, dmg: q('dmg', 1.5), life: 0.9, aim: 0.32 },   // 단도 던지기: 간격(초)·사거리(화면 폭 절반 안쪽)·단도 속도·피해 배수(원본 19 → 28: 해골전사 두 방)
+    ATK: { sec: q('atk', 0.5), range: q('range', 170), shot: 420, dmg: q('dmg', 2.8), life: 0.9, anim: 2.4 },   // 단도 던지기: 간격(초)·사거리(화면 폭 절반 안쪽)·단도 속도·피해 배수(원본 19 → 28: 해골전사 두 방)
     FOE: { dmg: q('edmg', 0.6), hp: q('ehp', 1), reach: 24, rs: 0.07, rangeMax: 150, shot: 170, sep: 20, body: 20, far: 1000 },   // 적: 피해·체력 배수, 근접 닿는 거리, 사거리 배율(디펜스 RANGE_SCALE)·원거리 상한, 적 발사체 속도, 서로 밀어내는 거리, 이보다 멀어지면 화면 둘레로 다시 보낸다
     CRIT: { p: q('crit', 0.1), mul: 2, p2: q('crit2', 0.15), mul2: 4 },   // 치명타(붉은보석 도둑에서): 확률·피해 배수. 더블 크리티컬 = 치명타가 났을 때 p2 확률로, 피해 mul2 배. 숫자 색: 보통 흰색 · 치명타 노랑 · 더블 붉은색 (NUM)
     BOOM: { touch: 30, radius: 46 },   // 좀비 자폭: 닿으면 터진다
     HURT: { inv: 0.25, flash: 0.35 },  // 도둑이 맞은 뒤 무적 시간(여럿이 한 틱에 겹쳐 치는 것 방지)·화면 가장자리 붉은 빛
-    /* 스폰 (임시 — 4단계에서 웨이브 10단계 표로 바뀐다): 초당 마릿수 = base + 분 × perMin, 살아 있는 적 상한 cap, 시간대별 유닛 묶음 */
-    SPAWN: { base: 0.7, perMin: 0.55, cap: 260, margin: 50, pool: [[0, [28, 28, 31]], [60, [28, 28, 31, 43]], [150, [28, 31, 43, 68]], [300, [28, 43, 68, 29]], [450, [43, 68, 29, 29]]] }
+    /* 웨이브 10단계 (4단계, 2026-11-19 사용자 안: 처음엔 쉬운 적, 10단계로 갈수록 모든 유닛). 1분에 한 단계.
+       add = 그 단계에 새로 나오는 유닛(세 진영 모두 — 기본 공격이 있는 유닛만). 뽑힐 비중: 새로 나온 단계 3 · 한 단계 전 2 · 두 단계 전 1 · 그보다 옛것 0.4 — 10단계는 전부 같은 비중(모든 유닛이 다 나온다).
+       rate = 초당 마릿수, cap = 살아 있는 적 상한, hp = 체력 배수. boss = 그 단계가 시작될 때 나오는 우두머리 [유닛, 체력 배수] */
+    WAVE: { sec: q('wavesec', 60), margin: 50, list: [
+      { add: [28, 31], rate: 0.9, cap: 60, hp: 1 },                                   // 1 해골전사 좀비
+      { add: [43, 46], rate: 1.2, cap: 80, hp: 1 },                                   // 2 늑대 박쥐
+      { add: [32, 7, 29], rate: 1.5, cap: 100, hp: 1 },                               // 3 유령 격투가 해골기사
+      { add: [68, 0, 52, 4], rate: 1.8, cap: 120, hp: 1.1, boss: [30, 18] },          // 4 개미 전사(해방) 전사(흑) 궁수 · 우두머리 듀라한
+      { add: [36, 35, 11, 6, 33], rate: 2.1, cap: 140, hp: 1.2 },                     // 5 늑대인간 흡혈귀 정령사 창검사 리치
+      { add: [39, 15, 8, 53, 49, 1], rate: 2.4, cap: 160, hp: 1.3 },                  // 6 데몬 마법전사 무도가 흑전사 흑마술사 기사
+      { add: [69, 25, 12, 10, 56, 57, 40], rate: 2.7, cap: 180, hp: 1.4, boss: [47, 28] },   // 7 거미 악령술사 마법사 의적 대도 마기사 데빌 · 우두머리 드래곤
+      { add: [30, 44, 45, 2, 16, 50, 26, 5, 66], rate: 3.0, cap: 210, hp: 1.5 },      // 8 듀라한 켈베로스 펜릴 창기사 마법기사 요마술사 강신술사 명궁 구렁이
+      { add: [70, 54, 3, 22, 9, 13, 41, 27, 51, 19], rate: 3.4, cap: 240, hp: 1.6 },  // 9 전갈 흑기사 성기사 엔젤 나이트 도사 장로 사탄 사술사 대마술사 주교
+      { add: [47, 67, 21, 59, 61, 62, 20, 58, 63, 64], rate: 4.0, cap: 260, hp: 1.8, boss: [34, 90] } ] },   // 10 드래곤 신수사 환술사 인챈터 마녀 소환사 … · 우두머리 다크로드
+    BOSS: { scale: 1.5, dmg: 1.6, speed: 1.15, gem: 30, heal: 30 },   // 우두머리: 그림 배율, 피해·속도 배수, 떨어뜨리는 경험치, 쓰러뜨리면 도둑 체력 회복
+    TS: q('ts', 1)               // 시간 배속 (시험·측정용: ?ts=4)
   };
   var NUM = { n: { size: 12, top: '#ffffff', mid: '#f2f4fa', bot: '#b9c2d6', edge: 'rgba(0,0,0,.55)', life: 0.55, rise: 16 },
     c: { size: 17, top: '#fffbc2', mid: '#ffe23e', bot: '#ff9a12', edge: 'rgba(60,20,0,.7)', life: 0.8, rise: 24 },
@@ -35,10 +49,9 @@
 
   function SurvivalGame(D) {
     this.D = D; this.keys = {}; this.stick = null; this.menu = false; this.menuT = 0; this.done = false;
-    var A = D.assets, seen = {}, ids = [CFG.HERO]; CFG.SPAWN.pool.forEach(function (p) { p[1].forEach(function (id) { if (!seen[id]) { seen[id] = 1; ids.push(id); } }); });
+    var A = D.assets, ids = [CFG.HERO];
     this.fxNeed = {};
-    ids.forEach(function (id) { if (!A.img['u' + id] && D.types[id]) A.load('u' + id, D.types[id].img);   // 디펜스에서 아직 안 받은 유닛 그림만
-      D.types[id].acts.forEach(function (a) { var d = a && a.arm >= 0 && D.data.fx.arms[a.arm]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });   // 그 유닛들의 이펙트 시트
+    this._need(ids); this._need(CFG.WAVE.list[0].add); this._need(CFG.WAVE.list[1].add);   // 도둑과 1·2단계 유닛만 먼저 받는다 — 나머지는 한 단계 앞서 받는다 (_need)
     this._theme = D.theme; D.theme = null;                   // 디펜스의 난이도 테마(색조·바닥)는 끈다 — 나갈 때 돌려준다
     this.reset(); this._bind();
   }
@@ -57,7 +70,7 @@
     this.speed = this.hero.speedPx * CFG.SPEED;              // 초당 px
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
-    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.over = null; this.overT = 0; this.dieSndT = -9;
+    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
     this._growReset();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
@@ -66,12 +79,17 @@
   P.frame = function (dt) {
     var D = this.D;
     if (D.time - (D._groundAt || 0) > 0.5 && D.terrain) D._makeGround();   // 아이폰이 보조 캔버스를 비우는 문제의 복구 (defense.js _frame 과 같은 이유)
-    if (!this.menu && !D.paused && this.ready()) { if (this.cards) this.cardT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else this.update(dt); }
+    for (var k = 0; k < CFG.TS; k++) {
+      if (!this.menu && !D.paused && this.ready()) { if (this.cards) this.cardT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else this.update(dt); }
+      D.time += dt; }                                        // D._faceVec·_drawUnit 이 D.time 을 본다
     if (this.menu) this.menuT += dt;
-    D.time += dt;                                            // D._faceVec·_drawUnit 이 D.time 을 본다
     this.draw();
   };
-  P.ready = function () { return this.D.assets.ready() && !!this.D.ground; };
+  P.ready = function () { return this.started || (this.started = this.D.assets.ready() && !!this.D.ground); };   // 처음 한 번만 기다린다 (뒤 단계 유닛 그림은 하면서 받는다)
+  /* 유닛 그림과 그 유닛의 이펙트 시트를 받는다 (이미 받은 것은 건너뛴다) */
+  P._need = function (ids) { var D = this.D, A = D.assets; ids.forEach(function (id) { var t = D.types[id]; if (!t) return; if (!A.img['u' + id]) A.load('u' + id, t.img);
+    t.acts.forEach(function (a) { var d = a && a.arm >= 0 && D.data.fx.arms[a.arm]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); }); };
+  P._has = function (id) { var im = this.D.assets.img['u' + id]; return !!(im && im.complete && im.naturalWidth); };
 
   P._moveVec = function () {
     var K = this.keys, x = (K.KeyD || K.ArrowRight ? 1 : 0) - (K.KeyA || K.ArrowLeft ? 1 : 0), y = (K.KeyS || K.ArrowDown ? 1 : 0) - (K.KeyW || K.ArrowUp ? 1 : 0);
@@ -82,18 +100,27 @@
   };
   /* 화면 둘레(보이는 곳 바로 밖)의 한 점 — 적이 나오는 자리 */
   P._edgePoint = function () {
-    var D = this.D, rng = D.rng, Z = CFG.ZOOM, M = CFG.SPAWN.margin, h = this.hero, l = D.W / 2 / Z + M, up = D.H * CFG.HERO_Y / Z + M + 40, dn = D.H * (1 - CFG.HERO_Y) / Z + M, k = rng.next() * (4 * l + 2 * (up + dn));
+    var D = this.D, rng = D.rng, Z = CFG.ZOOM, M = CFG.WAVE.margin, h = this.hero, l = D.W / 2 / Z + M, up = D.H * CFG.HERO_Y / Z + M + 40, dn = D.H * (1 - CFG.HERO_Y) / Z + M, k = rng.next() * (4 * l + 2 * (up + dn));
     if (k < 2 * l) return [h.x - l + k, h.y - up]; k -= 2 * l;
     if (k < 2 * l) return [h.x - l + k, h.y + dn]; k -= 2 * l;
     if (k < up + dn) return [h.x - l, h.y - up + k]; return [h.x + l, h.y - up + (k - up - dn)];
   };
-  P._pool = function () { var P0 = CFG.SPAWN.pool, r = P0[0][1]; for (var i = 0; i < P0.length; i++) if (this.t >= P0[i][0]) r = P0[i][1]; return r; };
-  P._spawn = function () {
-    var D = this.D, pool = this._pool(), id = pool[Math.floor(D.rng.next() * pool.length)], p = this._edgePoint(), u = this._unit(id, 1, p[0], p[1]), t = u.t;
-    u.life = Math.round(u.maxHp * CFG.FOE.hp);               // 적의 체력은 life 로 센다 — u.hp 는 가득 둔다(_drawUnit 이 닳은 유닛마다 체력 바를 그려 수백 기면 화면을 덮는다)
+  /* 지금 단계의 스폰 묶음 [[유닛, 비중] …] — 그림이 다 온 유닛만 */
+  P._pool = function () {
+    var self = this, WL = CFG.WAVE.list, w = this.wave, out = [], i;
+    for (i = 0; i <= w; i++) WL[i].add.forEach(function (id) { if (self._has(id)) out.push([id, w === WL.length - 1 ? 1 : Math.max(0.4, 3 - (w - i))]); });
+    return out;
+  };
+  P._spawn = function (bossId, bossHp) {
+    var D = this.D, W = CFG.WAVE.list[this.wave], id = bossId;
+    if (id == null) { var pool = this._pool(), tw = 0, i; if (!pool.length) return null; for (i = 0; i < pool.length; i++) tw += pool[i][1]; var r = D.rng.next() * tw; for (i = 0; i < pool.length - 1 && r >= pool[i][1]; i++) r -= pool[i][1]; id = pool[i][0]; }
+    var p = this._edgePoint(), u = this._unit(id, 1, p[0], p[1]), t = u.t;
+    u.life = Math.round(u.maxHp * CFG.FOE.hp * W.hp * (bossHp || 1)); u.life0 = u.life;   // 적의 체력은 life 로 센다 — u.hp 는 가득 둔다(_drawUnit 이 닳은 유닛마다 체력 바를 그려 수백 기면 화면을 덮는다). 우두머리만 체력 바를 보인다
+    if (bossId != null) { u.boss = true; u.maxHp = u.life; u.hp = u.life; u.speedPx *= CFG.BOSS.speed; }
     u.boom = t.acts.filter(function (a) { return a && a.suicide && a.dmg; })[0] || null;   // 자폭 유닛(좀비)
     if (!u.act && !u.boom) u.act = t.acts.filter(function (a) { return a && a.dmg; })[0] || null;
     var rp = u.act ? u.act.range * CFG.FOE.rs : 0; u.ranged = rp > 80; u.reach = u.ranged ? Math.min(CFG.FOE.rangeMax, rp) : CFG.FOE.reach;
+    if (u.boss) u.boom = null;
     u.state = 'move'; u.cd = 0; this.foes.push(u); return u;
   };
   P._fx = function (x, y, arm) { var d = this.D.data.fx.arms[arm], f = d && (d.hit.length ? d.hit : d.fly.length ? d.fly : d.seq); if (f && f.length) this.effects.push({ x: x, y: y, f: f, t0: this.D.time, add: !d.dir }); };
@@ -103,14 +130,16 @@
     if (this.cls === 'shadow') { var lr = u.life / (u.maxHp * CFG.FOE.hp); if (lr <= 0.2) dmg *= 1.6; else if (lr <= 0.5) dmg *= 1.3; }   // 섀도우 인필트레이터: 마무리 일격
     var kind = 'n'; if (dmg < 1e5 && D.rng.next() < this.crit) { if (D.rng.next() < CFG.CRIT.p2) { kind = 'd'; dmg *= CFG.CRIT.mul2; } else { kind = 'c'; dmg *= CFG.CRIT.mul; } }
     if (dmg < 1e5) { if (this.nums.length > 90) this.nums.shift(); this.nums.push({ x: u.x + (D.rng.next() - 0.5) * 14, y: u.y - u.headY - 2, v: Math.max(1, Math.round(dmg)), k: kind, t0: D.time }); } if (arm >= 0) this._fx(u.x, u.y - u.headY * 0.5, arm);
-    u.life -= Math.max(1, Math.round(dmg)); if (u.life > 0) return;
+    var dd = Math.max(1, Math.round(dmg)), ST = this.stat; if (dd < 1e5) { ST.dealt += Math.min(dd, u.life); if (dd > ST.maxHit) ST.maxHit = dd; if (kind === 'c') ST.crit++; else if (kind === 'd') ST.dbl++; }
+    u.life -= dd; if (u.boss) u.hp = Math.max(0, u.life); if (u.life > 0) return;
+    if (u.boss) { ST.boss++; var hh = this.hero; hh.hp = Math.min(hh.maxHp, hh.hp + CFG.BOSS.heal); this.banner = { s: u.t.name + ' 처치!', t0: D.time, col: '#ffd36e' }; }
     u.state = 'dead'; u.deadT = 0; u.fade = 0; this.kills++; this._drop(u);
     if (D.time - this.dieSndT > 0.12) { this.dieSndT = D.time; D._play(u.t.snd && u.t.snd.die, 0.35); }   // 수십 기가 한꺼번에 쓰러져도 소리는 띄엄띄엄
   };
   P._hitHero = function (dmg) {
     var D = this.D, h = this.hero; if (this.over || D.time < this.invUntil || dmg <= 0) return;
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg)); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; this.invUntil = D.time + CFG.HURT.inv;
+    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg)); this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; this.invUntil = D.time + CFG.HURT.inv;
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
@@ -119,12 +148,18 @@
     // 도둑: 걷기
     var moving = !!(v[0] || v[1]);
     var hs = this.speed * (T < this.stealthUntil && this._evo('shadow') ? 1.24 : 1);
-    if (moving) { this.lastDir = v; h.x += v[0] * hs * dt; h.y += v[1] * hs * dt; h.state = 'move'; h.walkT += dt * Math.max(0.5, Math.hypot(v[0], v[1])) * CFG.SPEED; if (!(T < this.aimUntil)) D._faceVec(h, v[0], v[1]); }   // 단검을 던진 직후에는 던진 쪽을 본 채로 걷는다 (aimUntil)
-    else if (h.state === 'attack') { h.at += dt * R.tps * 1.6; if (h.at >= h.t.anim.atk.n) h.state = 'idle'; }
-    else h.state = 'idle';
+    if (moving) { this.lastDir = v; h.x += v[0] * hs * dt; h.y += v[1] * hs * dt; if (h.state !== 'attack') h.state = 'move'; h.walkT += dt * Math.max(0.5, Math.hypot(v[0], v[1])) * CFG.SPEED; if (!(T < this.aimUntil)) D._faceVec(h, v[0], v[1]); }   // 단검을 던진 직후에는 던진 쪽을 본 채로 걷는다 (aimUntil)
+    else if (h.state !== 'attack') h.state = 'idle';
+    if (h.state === 'attack') { h.at += dt * R.tps * CFG.ATK.anim; if (h.at >= h.t.anim.atk.n) h.state = moving ? 'move' : 'idle'; }   // 던지는 동작: 걷는 중에도 (2026-11-19 사용자 지적) — 그동안 발은 걷지 않고 미끄러진다
     // 스폰
-    this.spawnAcc += dt * (CFG.SPAWN.base + CFG.SPAWN.perMin * this.t / 60);
-    while (this.spawnAcc >= 1) { this.spawnAcc -= 1; if (F.length < CFG.SPAWN.cap) this._spawn(); }
+    // 웨이브: 1분마다 다음 단계. 단계가 바뀌면 알림 한 줄 + 우두머리 + 다음 단계 유닛 그림을 미리 받는다
+    var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec));
+    if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
+      this.banner = { s: '웨이브 ' + (wv + 1) + (WV.boss ? ' — ' + D.types[WV.boss[0]].name + ' 등장' : ''), t0: T, col: WV.boss ? '#ff8a7a' : '#ffe9b0' };
+      if (WV.boss) { this._need([WV.boss[0]]); this.bossWait = WV.boss; } }
+    if (this.bossWait && this._has(this.bossWait[0])) { this._spawn(this.bossWait[0], this.bossWait[1]); this.bossWait = null; }
+    this.spawnAcc += dt * WL[wv].rate;
+    while (this.spawnAcc >= 1) { this.spawnAcc -= 1; if (F.length < WL[wv].cap) this._spawn(); }
     // 적: 도둑에게 다가가 친다. 격자(칸 32px)로 가까운 적끼리만 서로 밀어낸다
     var G = {}, CS = 32, SEP = CFG.FOE.sep, key, near = null, nd = CFG.ATK.range;
     for (i = 0; i < F.length; i++) { u = F[i]; if (u.state === 'dead') continue; key = Math.floor(u.x / CS) + ',' + Math.floor(u.y / CS); (G[key] || (G[key] = [])).push(u); }
@@ -134,6 +169,7 @@
       if (d > CFG.FOE.far) { var p = this._edgePoint(); u.x = p[0]; u.y = p[1]; continue; }   // 너무 멀리 떨어진 적은 화면 둘레로 다시 온다
       if (d < nd) { nd = d; near = u; }
       if (u.bleedUntil > T) { u.dotT = (u.dotT || 0) + dt; if (u.dotT >= 0.5) { u.dotT = 0; this._hitFoe(u, u.bleed * 0.5, -1); if (u.state === 'dead') continue; } }   // 출혈 (베놈 쓰로워)
+      if (u.boss) { u.stunUntil = 0; u.rootUntil = 0; u.slowUntil = 0; }   // 우두머리는 멈춤·묶임·감속이 안 걸린다
       if (u.stunUntil > T || u.rootUntil > T) { u.state = 'idle'; continue; }   // 멈춤(교란)·묶임(발목 함정)
       if (T < this.stealthUntil) { u.state = 'idle'; continue; }                // 그림자 숨기: 도둑을 못 찾는다
       if (u.boom) { if (d <= CFG.BOOM.touch) { this._fx(u.x, u.y - 10, u.boom.arm); D._play(u.boom.snd, 0.5); u.act = u.boom; if (d <= CFG.BOOM.radius) this._hitHero(R.attackValue(u)); u.state = 'dead'; u.deadT = 9; u.fade = 1; this.kills++; this._drop(u); continue; } }
@@ -141,11 +177,11 @@
         var A = u.t.anim.atk, n = A ? A.n : 6, hitAt = A && A.hit != null ? A.hit : Math.floor(n * 0.6); u.at += dt * R.tps;
         if (!u.hitDone && u.at >= hitAt) { u.hitDone = true;
           if (u.ranged) { var def = D.data.fx.arms[u.act.arm]; this.shots.push({ x: u.x, y: u.y - u.headY * 0.6, vx: dx / d * CFG.FOE.shot, vy: (dy + h.headY * 0.5 - u.headY * 0.6) / d * CFG.FOE.shot, dmg: R.damage(u, h, rng), arm: u.act.arm, def: def, foe: true, t0: T, life: (u.reach + 60) / CFG.FOE.shot }); }
-          else if (d <= u.reach * 1.5) this._hitHero(R.damage(u, h, rng)); }   // 휘두르는 사이에 벗어나면 빗나간다
+          else if (d <= u.reach * 1.5) this._hitHero(R.damage(u, h, rng) * (u.boss ? CFG.BOSS.dmg : 1)); }   // 휘두르는 사이에 벗어나면 빗나간다
         if (u.at >= n) { u.state = 'idle'; u.cd = R.cooldown(u, rng); }
         continue; }
       if (u.cd > 0) u.cd -= dt;
-      if (d <= u.reach && u.act) { D._faceVec(u, dx, dy); if (u.cd <= 0) { u.state = 'attack'; u.at = 0; u.hitDone = false; } else u.state = 'idle'; }
+      if (d <= u.reach * (u.boss && !u.ranged ? 1.5 : 1) && u.act) { D._faceVec(u, dx, dy); if (u.cd <= 0) { u.state = 'attack'; u.at = 0; u.hitDone = false; } else u.state = 'idle'; }
       else { var sp = u.speedPx * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.x += dx / d * sp; u.y += dy / d * sp; u.state = 'move'; u.walkT += dt; D._faceVec(u, dx, dy); }
       if (d < CFG.FOE.body) { u.x = h.x - dx / d * CFG.FOE.body; u.y = h.y - dy / d * CFG.FOE.body; }   // 도둑 몸 위로 겹쳐 올라서지 않는다 (밀려 들어온 적은 둘레로)
       // 밀어내기: 둘레 9칸의 적과 SEP 보다 가까우면 반씩 벌린다
@@ -159,8 +195,8 @@
     this.atkCd -= dt;
     if (this.atkCd <= 0 && near) { var dl = this.sk.dagger; this.atkCd = CFG.ATK.sec * SK.dagger.sec(dl);
       var tx = near.x - h.x, ty = near.y - h.y, td = Math.hypot(tx, ty) || 1;
-      D._faceVec(h, tx, ty, true); this.aimUntil = T + CFG.ATK.aim;   // 걷는 중에도 던지는 쪽으로 몸을 돌린다 (2026-11-19 사용자 지적: 등에서 단검이 나가는 것처럼 보였다)
-      if (!moving) { h.state = 'attack'; h.at = 0; }
+      D._faceVec(h, tx, ty, true); this.aimUntil = T + h.t.anim.atk.n / (R.tps * CFG.ATK.anim) + 0.05;   // 걷는 중에도 던지는 쪽으로 몸을 돌린다 (2026-11-19 사용자 지적: 등에서 단검이 나가는 것처럼 보였다)
+      h.state = 'attack'; h.at = 0;
       this._dagger(near, SK.dagger.dmg(dl));
       var xl = this._lvOf('double'); if (xl) { var xn = SK.double.n(xl) + (this._evo('double') ? 2 : 0), px = -ty / td, py = tx / td; for (j = 0; j < xn; j++) { var off = (Math.floor(j / 2) + 1) * 7 * (j % 2 ? -1 : 1); this._dagger(near, SK.double.dmg(xl), px * off, py * off); } }
       D._play(h.act.snd, 0.3); }
@@ -197,7 +233,7 @@
     var L = this.foes.filter(function (u) { return u.x > ox - 80 && u.x < ox + vw + 80 && u.y > oy - 40 && u.y < oy + vh + 120; }).sort(function (a, b) { return a.y - b.y; });
     this._drawGround();
     var h = this.hero, hd = false;
-    for (i = 0; i < L.length; i++) { if (!hd && L[i].y > h.y) { hd = true; this._drawHero(); } D._drawUnit(L[i]); }
+    for (i = 0; i < L.length; i++) { if (!hd && L[i].y > h.y) { hd = true; this._drawHero(); } if (L[i].boss) { var bu = L[i], bs = CFG.BOSS.scale; ctx.save(); ctx.translate(bu.x, bu.y); ctx.scale(bs, bs); ctx.translate(-bu.x, -bu.y); D._drawUnit(bu); ctx.restore(); } else D._drawUnit(L[i]); }
     if (!hd) this._drawHero();
     for (i = 0; i < this.shots.length; i++) { var s = this.shots[i], fl = s.def && !s.def.dir && s.def.fly;
       if (fl && fl.length) D._fxFrame(fl[Math.floor((D.time - s.t0) * 15) % fl.length], s.x, s.y, true);
@@ -219,15 +255,24 @@
     if (this.menu) this._drawMenu();
   };
   P._drawHero = function () { var D = this.D, h = this.hero; D._drawUnit(h); D.ctx.globalAlpha = 1; if (h.state !== 'dead' && h.hp >= h.maxHp) D._drawHpBar(h, Math.round(h.x), Math.round(h.y)); };   // 체력 바는 늘 보인다 (닳으면 _drawUnit 이 그린다)
-  /* 끝난 화면 (임시 — 4단계에서 결과 리포트로): 쓰러짐 / 10분 생존 */
+  /* 끝난 화면 = 결과 리포트: 생존 시간·웨이브·처치·레벨·전직 / 준 피해·최고 한 방·치명타·받은 피해 / 가진 스킬 */
   P._drawOver = function () {
-    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, win = this.over === 'win', al = Math.min(1, this.overT / 0.6), pw = Math.min(280, W - 40), ph = 236, px = Math.round((W - pw) / 2), py = Math.round(H * 0.3), i;
-    ctx.fillStyle = 'rgba(4,6,10,' + (0.7 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, self = this, win = this.over === 'win', al = Math.min(1, this.overT / 0.6), ST = this.stat, pw = Math.min(330, W - 28), px = Math.round((W - pw) / 2), i;
+    var keys = Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; }), all = ['dagger'].concat(keys), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 116, py = Math.max(24, Math.round((H - ph) / 2));
+    ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(win ? '10분을 버텼습니다' : '쓰러졌습니다', W / 2, py + 34);
-    ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText('생존 ' + mmss(Math.floor(this.t)) + '  ·  처치 ' + this.kills + '  ·  Lv ' + this.lv, W / 2, py + 72);
-    var rows = [['retry', '다시 하기'], ['exit', '모드 선택으로']]; this.overBtns = [];
-    for (i = 0; i < rows.length; i++) { var b = { x: px + 14, y: py + 104 + i * 54, w: pw - 28, h: 44, act: rows[i][0] }; this.overBtns.push(b); D._plate(b.x, b.y, b.w, b.h, 5, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(rows[i][1], b.x + b.w / 2, b.y + b.h / 2); }
+    var rows = [['생존 시간', mmss(Math.floor(this.t))], ['웨이브', (this.wave + 1) + ' / ' + CFG.WAVE.list.length], ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
+      ['준 피해', Math.round(ST.dealt).toLocaleString()], ['최고 한 방', ST.maxHit.toLocaleString()], ['치명타 / 더블', ST.crit + ' / ' + ST.dbl], ['받은 피해', Math.round(ST.taken).toLocaleString()]];
+    ctx.font = '13px sans-serif';
+    for (i = 0; i < rows.length; i++) { var ry = py + 68 + i * 24; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(rows[i][0], px + 24, ry); ctx.textAlign = 'right'; ctx.fillStyle = i < 4 ? '#ffe9b0' : '#dfe6f5'; ctx.fillText(rows[i][1], px + pw - 24, ry);
+      if (i === 3) { ctx.fillStyle = 'rgba(168,130,58,.5)'; ctx.fillRect(px + 20, ry + 12, pw - 40, 1); } }
+    var sy = py + 68 + rows.length * 24 + 10, IC = D.data.fx.icon, icons = D.assets.get('acticons');
+    ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('스킬', px + 24, sy);
+    all.forEach(function (k, n) { var bx = px + 16 + (n % per) * 40, by = sy + 14 + Math.floor(n / per) * 46, fi = SK[k].icon * 2; if (icons && IC) ctx.drawImage(icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, bx, by, 34, 37);
+      ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'right'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(self.sk[k], bx + 34, by + 32); ctx.fillStyle = self._evo(k) ? '#ffd36e' : '#fff'; ctx.fillText(self.sk[k], bx + 34, by + 32); });
+    var bts = [['retry', '다시 하기'], ['exit', '모드 선택으로']], by0 = py + ph - 112; this.overBtns = []; ctx.textAlign = 'center';
+    for (i = 0; i < bts.length; i++) { var b = { x: px + 14, y: by0 + i * 50, w: pw - 28, h: 42, act: bts[i][0] }; this.overBtns.push(b); D._plate(b.x, b.y, b.w, b.h, 5, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(bts[i][1], b.x + b.w / 2, b.y + b.h / 2); }
     ctx.textAlign = 'left';
   };
   /* 피해 숫자 (2026-11-19 사용자 요청 — 붉은보석처럼 그림 숫자): 글꼴로 매번 쓰지 않고, 굵은 기울임 숫자 0~9 를 색별로 한 장(시트)에 구워 두고 그림으로 찍는다.
@@ -274,6 +319,15 @@
     ctx.textBaseline = 'middle'; ctx.font = 'bold 15px sans-serif';
     var ty = X.y + 26, txt = function (s, x, al, col) { ctx.textAlign = al; ctx.fillStyle = '#000'; ctx.fillText(s, x + 1, ty + 1); ctx.fillStyle = col; ctx.fillText(s, x, ty); };
     txt(mmss(CFG.TIME - this.t), 10, 'left', '#ffe9b0'); txt('처치 ' + this.kills, W / 2, 'center', '#dfe6f5');
+    ctx.font = 'bold 11px sans-serif'; txt('웨이브 ' + (this.wave + 1) + '/' + CFG.WAVE.list.length, 66, 'left', '#c9b48a');
+    // 알림 한 줄 (웨이브·우두머리): 위쪽 띠 바로 아래에 작고 짧게
+    var BN = this.banner, bt = BN ? D.time - BN.t0 : 9; if (BN && bt < 2.2) { ctx.globalAlpha = Math.min(1, bt / 0.2, (2.2 - bt) / 0.5); ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(BN.s, W / 2, X.y + 54); ctx.fillStyle = BN.col; ctx.fillText(BN.s, W / 2, X.y + 54); ctx.globalAlpha = 1; }
+    // 화면 밖 우두머리: 가장자리에 붉은 화살표
+    var Zm = CFG.ZOOM, hx0 = W / 2, hy0 = D.H * CFG.HERO_Y, F = this.foes;
+    for (i = 0; i < F.length; i++) { var bo = F[i]; if (!bo.boss || bo.state === 'dead') continue; var sx = hx0 + (bo.x - this.cam.x) * Zm, sy = hy0 + (bo.y - this.cam.y) * Zm;
+      if (sx > 16 && sx < W - 16 && sy > 70 && sy < this.hudBot - 10) continue; var ax = Math.max(18, Math.min(W - 18, sx)), ay = Math.max(74, Math.min(this.hudBot - 14, sy)), an = Math.atan2(sy - ay, sx - ax), pu = 0.6 + 0.4 * Math.sin(D.time * 7);
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(an); ctx.globalAlpha = pu; ctx.fillStyle = '#ff5a3a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -8); ctx.lineTo(-2, 0); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    ctx.textBaseline = 'middle'; ctx.font = 'bold 15px sans-serif';
     ctx.font = 'bold 12px sans-serif'; txt('Lv ' + this.lv, this.menuBtn.x - 8, 'right', '#9cc0ff');
     var M = this.menuBtn; D._plate(M.x, M.y, M.w, M.h, 5, false); ctx.fillStyle = '#e6c476'; for (i = 0; i < 3; i++) ctx.fillRect(M.x + 10, M.y + 8 + i * 5, M.w - 20, 2);
     // 스킬 칸: 얻은 순서대로 (아이콘 + 레벨, 주기 스킬은 남은 대기만큼 어둡게 덮인다). 누르는 버튼이 아니라 지금 빌드의 표시
@@ -382,7 +436,7 @@
     trapper: { name: '사일런트 트래퍼', icon: 64, col: '#ffcf7a', lines: ['덫이 더 멀리서 반응하고 일제 폭발이 두 번 터집니다', '발목 함정 → 절단 함정 · 폭발 함정 → 연폭 함정', '유독가스 → 독무'] },
     shadow: { name: '섀도우 인필트레이터', icon: 80, col: '#c9a8ff', lines: ['체력 50% 이하 적에게 피해 +30%, 20% 이하 +60%', '그림자 숨기 → 그림자 동화 · 기습 → 교란', '암살 → 처형'] }
   };
-  var GROW = { classLv: q('classlv', 10), pickup: 46, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, critMax: 0.6, need: function (lv) { return 4 + lv * 3; } };
+  var GROW = { classLv: q('classlv', 7), pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, critMax: 0.6, need: function (lv) { return 3 + lv * 2; } };
   SurvivalGame.SK = SK; SurvivalGame.CLS = CLS; SurvivalGame.GROW = GROW;
 
   P._growReset = function () {
@@ -401,7 +455,7 @@
   P._base = function () { return this.D.rules.attackValue(this.hero); };
   P._text = function (x, y, s, col) { this.texts.push({ x: x, y: y, s: s, t0: this.D.time, col: col }); };
   /* 경험치 */
-  P._drop = function (u) { if (this.gems.length > 400) this.gems.shift(); this.gems.push({ x: u.x, y: u.y, v: Math.max(1, Math.round(u.maxHp / 60)) }); };
+  P._drop = function (u) { if (this.gems.length > 400) this.gems.shift(); this.gems.push({ x: u.x, y: u.y, v: u.boss ? CFG.BOSS.gem : Math.max(1, Math.round(u.t.hp / 60)) }); };
   P._gain = function (v) {
     this.exp += v;
     while (this.exp >= this.expNeed) { this.exp -= this.expNeed; this.lv++; this.expNeed = GROW.need(this.lv); this.pend++; var h = this.hero; h.level = this.lv; h.maxHp += GROW.hpLv; h.hp = Math.min(h.maxHp, h.hp + GROW.hpLv); }
