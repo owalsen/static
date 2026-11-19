@@ -706,7 +706,7 @@
   var SELF_BLAST = { '어쓰 퀘이크': 112 };
   var SINGLE_NEAR = { '스톤 게이즈': 1, '챠밍': 1 };   // 챠밍(서큐버스)도 조준 없이 가장 가까운 적 1기 (2026-11-18 사용자 요청). 공주의 멀티 챠밍은 그대로 조준
   /* 가고일 변형 (2026-11-18 사용자 요청: "가고일 넣고 타겟으로 타워로 변형되는 스킬도", README 238). 원본: 가고일(65, 공중·공격 없음) ↔ 가고일 석상(79, 파이어 볼) 을 오가는 변형(행동 94).
-     디펜스: 칸을 누르고 전장을 찍으면 그 자리로 날아가 석상(움직이지 않는 타워)이 된다. 석상인 가고일에 다시 쓰면 가고일로 돌아가 새 자리로 날아가서 다시 석상이 된다(자리 옮기기).
+     디펜스: 칸을 누르고 전장을 찍으면 그 자리로 날아가 석상(움직이지 않는 타워)이 된다. 한 번만 쓸 수 있다(2026-11-19, README 267 — 전에는 다시 쓰면 자리를 옮겼다).
      fly·stone = 두 형태의 유닛 번호, act = 변형 행동 번호, arrive = 이 거리(px) 안이면 도착 */
   var GARG = { fly: 65, stone: 79, act: 94, arrive: 4, flyMul: 3 };   // flyMul = 자리로 날아갈 때의 속도 배수 (걷는 속도 그대로면 한 화면에 10초 넘게 걸린다)
   /* 메타몰포시스: pow = 변신한 유닛의 위력 배수(공격값·회복량), pick = 찍은 지점에서 대상을 잡는 거리(px) */
@@ -1308,6 +1308,9 @@
       var gR = this.rows, gx = pt ? Math.max(CONFIG.BASE.front, Math.min(this.frontX, pt.x)) : u.x, gy = pt ? Math.max(this.laneY + gR[0], Math.min(this.laneY + gR[gR.length - 1], pt.y)) : u.y;
       if (u.t.id === GARG.stone) this._gargForm(u, false);
       u.gargGo = { x: gx, y: gy }; ok = true;
+      /* 2026-11-19 사용자 요청 "가고일 변형은 한 번 쓰면 스킬을 다시 못 쓰도록"(README 267): 쓰는 순간 그 칸을 유닛과 패널에서 뺀다 — 석상이 되면 그 자리에 계속 선다 */
+      u.slots = u.slots.filter(function (q) { return q !== s; }); this.slots = this.slots.filter(function (q) { return q !== s; });
+      var gk = this.magicUnits.indexOf(u); if (gk >= 0 && !u.slots.some(function (q) { return !q.auto; })) this.magicUnits.splice(gk, 1); this._regroup();
     } else if (s.kind === 'morph') {                         // 다른 형태로 (엔트 ↔ 지상 엔트). 체력 비율은 유지
       var to = this.types[CONFIG.MORPH[u.t.id]];
       if (to) { var ratio = u.hp / u.maxHp; u.setType(to); u.hp = Math.max(1, Math.round(u.maxHp * ratio)); this._applyType(u); u.face(u.dir, -u.dir); ok = true; }
@@ -3384,7 +3387,7 @@
     var sk = skillsOf(t).map(function (a) { return a.name + (C.TECH[a.name] || a.self ? '(자동)' : ''); });
     if (sk.length) L.push('마법: ' + sk.join(', '));
     // 변형 유닛(엔트): 걷는 형태에는 공격이 없어 설명이 없으면 "공격 없는 유닛"으로만 보인다 → 알아서 뿌리내려 무엇을 하는지 적는다 (CONFIG.ENT)
-    if (t.id === GARG.fly) { var gt = this.types[GARG.stone], gb = gt ? basicAct(gt) : null; L[0] = '공중 · 석상이 되어 공격'; if (gb) L.push('가고일 변형: 찍은 자리로 날아가 석상(타워)이 되어 ' + gb.name + '(공격 ' + (this.fac && this.fac.atk && this.fac.atk[gt.id] != null ? this.fac.atk[gt.id] : gt.atk) + ' · 사거리 ' + Math.round(gb.range * C.RANGE_SCALE) + ')'); L.push('석상은 움직이지 않습니다 · 다시 쓰면 새 자리로 옮깁니다'); }
+    if (t.id === GARG.fly) { var gt = this.types[GARG.stone], gb = gt ? basicAct(gt) : null; L[0] = '공중 · 석상이 되어 공격'; if (gb) L.push('가고일 변형: 찍은 자리로 날아가 석상(타워)이 되어 ' + gb.name + '(공격 ' + (this.fac && this.fac.atk && this.fac.atk[gt.id] != null ? this.fac.atk[gt.id] : gt.atk) + ' · 사거리 ' + Math.round(gb.range * C.RANGE_SCALE) + ')'); L.push('석상은 움직이지 않습니다 · 변형은 한 번만 쓸 수 있습니다'); }
     var mt = this.types[C.MORPH[t.id]], mb = mt ? basicAct(mt) : null;
     if (mt && mb) { L[0] = '원거리(뿌리내려 공격) · 공중 공격 가능';
       L.push('적이 다가오면 알아서 뿌리내려 ' + mb.name + '(사거리 ' + Math.round(mb.range * C.RANGE_SCALE) + ')');
