@@ -28,19 +28,21 @@
        rate = 초당 마릿수, cap = 살아 있는 적 상한, hp = 체력 배수. boss = 그 단계가 시작될 때 나오는 우두머리 [유닛, 체력 배수] */
     WAVE: { sec: q('wavesec', 60), margin: 50, list: [
       { add: [28, 31], rate: 1.4, cap: 80, hp: 1 },                                   // 1 해골전사 좀비
-      { add: [43, 46], rate: 1.8, cap: 110, hp: 1 },                                   // 2 늑대 박쥐
-      { add: [32, 7, 29], rate: 2.3, cap: 140, hp: 1 },                               // 3 유령 격투가 해골기사
-      { add: [68, 0, 52, 4], rate: 2.8, cap: 170, hp: 1.1, boss: [30, 18] },          // 4 개미 전사(해방) 전사(흑) 궁수 · 우두머리 듀라한
-      { add: [36, 35, 11, 6, 33], rate: 3.3, cap: 200, hp: 1.2 },                     // 5 늑대인간 흡혈귀 정령사 창검사 리치
-      { add: [39, 15, 8, 53, 49, 1], rate: 3.8, cap: 230, hp: 1.3 },                  // 6 데몬 마법전사 무도가 흑전사 흑마술사 기사
-      { add: [69, 25, 12, 10, 56, 57, 40], rate: 4.3, cap: 260, hp: 1.4, boss: [47, 28] },   // 7 거미 악령술사 마법사 의적 대도 마기사 데빌 · 우두머리 드래곤
-      { add: [30, 44, 45, 2, 16, 50, 26, 5, 66], rate: 4.8, cap: 290, hp: 1.5 },      // 8 듀라한 켈베로스 펜릴 창기사 마법기사 요마술사 강신술사 명궁 구렁이
-      { add: [70, 54, 3, 22, 9, 13, 41, 27, 51, 19], rate: 5.4, cap: 320, hp: 1.6 },  // 9 전갈 흑기사 성기사 엔젤 나이트 도사 장로 사탄 사술사 대마술사 주교
-      { add: [47, 67, 21, 59, 61, 62, 20, 58, 63, 64], rate: 6.2, cap: 340, hp: 1.8, boss: [34, 90] } ] },   // 10 드래곤 신수사 환술사 인챈터 마녀 소환사 … · 우두머리 다크로드
+      { add: [43, 46], rate: 1.8, cap: 110, hp: 1, mini: [43, 25] },                                   // 2 늑대 박쥐
+      { add: [32, 7, 29], rate: 2.5, cap: 150, hp: 1.2, mini: [29, 20] },                             // 3 유령 격투가 해골기사 (2026-11-19 사용자 "3·4단계 넘어갈 때 더 어렵게": rate 2.3·hp 1 → 2.5·1.2. 2.7·1.3 은 봇 셋 다 쓰러짐)
+      { add: [68, 0, 52, 4], rate: 3.0, cap: 180, hp: 1.4, boss: [30, 18], mini: [0, 20] },          // 4 개미 전사(해방) 전사(흑) 궁수 · 우두머리 듀라한 (2.8·1.1 → 3.0·1.4. 3.3·1.6 은 너무 어려움)
+      { add: [36, 35, 11, 6, 33], rate: 3.3, cap: 200, hp: 1.5, mini: [36, 19] },                     // 5 늑대인간 흡혈귀 정령사 창검사 리치
+      { add: [39, 15, 8, 53, 49, 1], rate: 3.8, cap: 230, hp: 2, mini: [39, 20] },                  // 6 데몬 마법전사 무도가 흑전사 흑마술사 기사
+      { add: [69, 25, 12, 10, 56, 57, 40], rate: 4.3, cap: 260, hp: 2.6, boss: [47, 16], mini: [57, 18] },   // 7 거미 악령술사 마법사 의적 대도 마기사 데빌 · 우두머리 드래곤
+      { add: [30, 44, 45, 2, 16, 50, 26, 5, 66], rate: 4.8, cap: 290, hp: 3.2, mini: [44, 16] },      // 8 듀라한 켈베로스 펜릴 창기사 마법기사 요마술사 강신술사 명궁 구렁이
+      { add: [70, 54, 3, 22, 9, 13, 41, 27, 51, 19], rate: 5.4, cap: 320, hp: 4, mini: [54, 14] },  // 9 전갈 흑기사 성기사 엔젤 나이트 도사 장로 사탄 사술사 대마술사 주교
+      { add: [47, 67, 21, 59, 61, 62, 20, 58, 63, 64], rate: 6.2, cap: 340, hp: 5, boss: [34, 32], mini: [47, 10] } ] },   /* 5단계부터 적 체력 (2026-11-19 사용자 "6단계부터 애들이 너무 빠르게 죽음"): 1.2·1.3·1.4·1.5·1.6·1.8 → 1.5·2·2.6·3.2·4·5 (1.8·2.6·3.4·4.4·5.5·7 은 봇 셋 다 6~8단계에서 쓰러짐). 우두머리·중간 우두머리의 배수는 웨이브 배수와 곱해지므로 그만큼 나눠 절대 체력을 거의 그대로(중간 우두머리는 조금 위로) */   // 10 드래곤 신수사 환술사 인챈터 마녀 소환사 … · 우두머리 다크로드
     /* 돌진 (2026-11-19 사용자 지시 — 뱀서류 분석 글의 "무리 돌진"): 3단계부터 한쪽에서 떼가 줄지어 나타나 곧게 달려 지나간다(도둑을 쫓지 않는다).
        먼저 warn 초 동안 지나갈 길(폭 band)을 붉게 보이고 화면 가장자리에 화살표 → 그 길 밖으로 비키면 된다. 닿으면 한 번에 피해 × dmg, 같은 놈은 0.8초 뒤에야 다시 친다.
        every·n = [3단계 값, 10단계 값] (단계에 따라 고르게 바뀐다), unit = [이 단계부터, 유닛] */
     RUSH: { from: 2, every: [36, 22], n: [12, 30], speed: 150, band: 200, warn: 1.7, dist: 580, dmg: 1.3, unit: [[0, 43], [5, 36], [8, 44]] },
+    /* 중간 우두머리 (2026-11-19 사용자 "중간보스 더 자주 등장해서 압박"): 2단계부터 단계마다 at 초에 mini: [유닛, 체력 배수] 하나. 우두머리처럼 멈춤·묶임·감속이 안 걸리고 피해 ×BOSS.dmg, 보상은 작다(경험치 gem, 회복 heal, 회복 아이템 확정 없음) */
+    MINI: { at: q('miniat', 30), scale: 1.25, gem: 4, heal: 0 },   // 처음엔 체력 10~16배·경험치 12·회복 10 → 봇이 쉽게 잡아 경험치 보너스가 됐다(셋 다 생존, 3분에 레벨 17) → 체력 20~28배, 경험치 4, 회복 없음
     BOSS: { scale: 1.5, dmg: 1.6, speed: 1.15, gem: 30, heal: 30 },   // 우두머리: 그림 배율, 피해·속도 배수, 떨어뜨리는 경험치, 쓰러뜨리면 도둑 체력 회복
     TS: q('ts', 1)               // 시간 배속 (시험·측정용: ?ts=4)
   };
@@ -76,7 +78,7 @@
     this.speed = this.hero.speedPx * CFG.SPEED;              // 초당 px
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
-    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.rushIn = null; this.rushWarn = null; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
+    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.rushIn = null; this.rushWarn = null; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
     this._growReset();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
@@ -141,7 +143,7 @@
     if (arm === this.hero.act.arm) this.bursts.push({ x: u.x, y: u.y - u.headY * 0.5, t0: D.time, a: D.rng.next() * 6.28, k: kind, life: (kind === 'n' ? 0.16 : 0.26) * (big ? 1.25 : 1), sc: big || 0 }); else if (arm >= 0) this._fx(u.x, u.y - u.headY * 0.5, arm);   // 단검이 맞으면 흰 별 모양 섬광
     var dd = Math.max(1, Math.round(dmg)), ST = this.stat; if (dd < 1e5) { ST.dealt += Math.min(dd, u.life); if (dd > ST.maxHit) ST.maxHit = dd; if (kind === 'c') ST.crit++; else if (kind === 'd') ST.dbl++; }
     u.life -= dd; if (u.boss) u.hp = Math.max(0, u.life); if (u.life > 0) return;
-    if (u.boss) { ST.boss++; var hh = this.hero; hh.hp = Math.min(hh.maxHp, hh.hp + CFG.BOSS.heal); this.banner = { s: u.t.name + ' 처치!', t0: D.time, col: '#ffd36e' }; }
+    if (u.boss) { if (u.mini) ST.mini = (ST.mini || 0) + 1; else ST.boss++; var hh = this.hero; hh.hp = Math.min(hh.maxHp, hh.hp + (u.mini ? CFG.MINI.heal : CFG.BOSS.heal)); this.banner = { s: u.t.name + ' 처치!', t0: D.time, col: '#ffd36e' }; }
     u.state = 'dead'; u.deadT = 0; u.fade = 0; this.kills++; this._drop(u);
     this.bursts.push({ x: u.x, y: u.y - 6, t0: D.time, a: D.rng.next() * 6.28, k: 'g', life: 0.45 });   // 쓰러진 자리의 노란 반짝임
     if (D.time - this.dieSndT > 0.12) { this.dieSndT = D.time; D._play(u.t.snd && u.t.snd.die, 0.35); }   // 수십 기가 한꺼번에 쓰러져도 소리는 띄엄띄엄
@@ -168,8 +170,9 @@
     var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec));
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
       this.banner = { s: '웨이브 ' + (wv + 1) + (WV.boss ? ' — ' + D.types[WV.boss[0]].name + ' 등장' : ''), t0: T, col: WV.boss ? '#ff8a7a' : '#ffe9b0' };
-      if (WV.boss) { this._need([WV.boss[0]]); this.bossWait = WV.boss; } }
+      if (WV.boss) { this._need([WV.boss[0]]); this.bossWait = WV.boss; } if (WV.mini) this._need([WV.mini[0]]); }
     if (this.bossWait && this._has(this.bossWait[0])) { this._spawn(this.bossWait[0], this.bossWait[1]); this.bossWait = null; }
+    var MW = WL[wv].mini; if (MW && this.miniDone !== wv && this.t - wv * CFG.WAVE.sec >= CFG.MINI.at && this._has(MW[0])) { this.miniDone = wv; var mu = this._spawn(MW[0], MW[1]); if (mu) { mu.mini = true; this.banner = { s: '중간 우두머리 — ' + mu.t.name, t0: T, col: '#ffb27a' }; } }   // 중간 우두머리: 단계마다 at 초에 하나
     this.spawnAcc += dt * WL[wv].rate;
     while (this.spawnAcc >= 1) { this.spawnAcc -= 1; if (F.length < WL[wv].cap) this._spawn(); }
     // 돌진: 예고(길과 화살표) → warn 초 뒤 떼가 나타나 달려 지나간다
@@ -262,7 +265,7 @@
     var L = this.foes.filter(function (u) { return u.x > ox - 80 && u.x < ox + vw + 80 && u.y > oy - 40 && u.y < oy + vh + 120; }).sort(function (a, b) { return a.y - b.y; });
     this._drawGround();
     var h = this.hero, hd = false;
-    for (i = 0; i < L.length; i++) { if (!hd && L[i].y > h.y) { hd = true; this._drawHero(); } if (L[i].boss) { var bu = L[i], bs = CFG.BOSS.scale; ctx.save(); ctx.translate(bu.x, bu.y); ctx.scale(bs, bs); ctx.translate(-bu.x, -bu.y); D._drawUnit(bu); ctx.restore(); } else D._drawUnit(L[i]); }
+    for (i = 0; i < L.length; i++) { if (!hd && L[i].y > h.y) { hd = true; this._drawHero(); } if (L[i].boss) { var bu = L[i], bs = bu.mini ? CFG.MINI.scale : CFG.BOSS.scale; ctx.save(); ctx.translate(bu.x, bu.y); ctx.scale(bs, bs); ctx.translate(-bu.x, -bu.y); D._drawUnit(bu); ctx.restore(); } else D._drawUnit(L[i]); }
     if (!hd) this._drawHero();
     for (i = 0; i < this.shots.length; i++) { var s = this.shots[i], fl = s.def && !s.def.dir && s.def.fly;
       if (fl && fl.length) D._fxFrame(fl[Math.floor((D.time - s.t0) * 15) % fl.length], s.x, s.y, true);
@@ -571,9 +574,9 @@
   P._base = function () { return this.D.rules.attackValue(this.hero) * (1 + this._pv('power')); };
   P._text = function (x, y, s, col) { this.texts.push({ x: x, y: y, s: s, t0: this.D.time, col: col }); };
   /* 경험치 */
-  P._loot = function (u) { var IT = GROW.item, r = this.D.rng.next(), k = u.boss ? 'meat' : r < IT.meat ? 'meat' : r < IT.meat + IT.magnet ? 'magnet' : r < IT.meat + IT.magnet + IT.bomb ? 'bomb' : null; if (!k || (this.items.length >= IT.max && !u.boss)) return; this.items.push({ k: k, x: u.x + 14, y: u.y, t0: this.D.time }); };
+  P._loot = function (u) { var IT = GROW.item, r = this.D.rng.next(), k = u.boss && !u.mini ? 'meat' : r < IT.meat ? 'meat' : r < IT.meat + IT.magnet ? 'magnet' : r < IT.meat + IT.magnet + IT.bomb ? 'bomb' : null; if (!k || (this.items.length >= IT.max && !(u.boss && !u.mini))) return; this.items.push({ k: k, x: u.x + 14, y: u.y, t0: this.D.time }); };
   P._drop = function (u) { if (u.rush) return;   // 돌진하는 떼는 경험치·아이템을 주지 않는다 (줄지어 와서 범위 스킬에 쓸리면 경험치 덩어리가 됐다 — README 282)
-    this._loot(u); if (this.gems.length > 400) this.gems.shift(); this.gems.push({ x: u.x, y: u.y, v: u.boss ? CFG.BOSS.gem : Math.max(1, Math.round(u.t.hp / 60)) }); };
+    this._loot(u); if (this.gems.length > 400) this.gems.shift(); this.gems.push({ x: u.x, y: u.y, v: u.boss ? (u.mini ? CFG.MINI.gem : CFG.BOSS.gem) : Math.max(1, Math.round(u.t.hp / 60)) }); };
   P._gain = function (v) {
     this.exp += v;
     while (this.exp >= this.expNeed) { this.exp -= this.expNeed; this.lv++; this.expNeed = GROW.need(this.lv); this.pend++; var h = this.hero; h.level = this.lv; h.maxHp += GROW.hpLv; h.hp = Math.min(h.maxHp, h.hp + GROW.hpLv); }
