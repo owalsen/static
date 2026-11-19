@@ -2717,12 +2717,12 @@
     if (wr) this._fxFrame(wr[0], x, y, true); else if (wb && wb.until > T) this._loopFx(wb.arm, x, y);
     ctx.save(); ctx.translate(x, y + drop); if (u.mir) ctx.scale(-1, 1);
     if (this.look && u.state !== 'dead') { ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = CONFIG.LOOK.outline * this.rs; }   // 어두운 번짐 테두리
-    if (u.stunUntil > T && !(u.curseUntil > T)) ctx.drawImage(this._stoneSprite(this.assets.get(f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
+    if (u.stunUntil > T && !(u.curseUntil > T)) ctx.drawImage(this._stoneSprite(this.assets.get(u.imgKey || f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
     else { var tc = u.state === 'dead' ? null : u.tint || (this.theme && this.theme.tint ? this.theme.tint[u.side] : null);   // 유닛 자신의 색조(서바이벌 트래퍼의 녹색) 또는 난이도 테마의 유닛 색조
-      if (tc) ctx.drawImage(this._tintSprite(this.assets.get(f[6] || ('u' + u.t.id)), f, tc), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);
-      else ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
+      if (tc) ctx.drawImage(this._tintSprite(this.assets.get(u.imgKey || f[6] || ('u' + u.t.id)), f, tc), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);
+      else ctx.drawImage(this.assets.get(u.imgKey || f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
     if (this.look && u.hitT != null && T - u.hitT < CONFIG.LOOK.flash && u.state !== 'dead') { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = CONFIG.LOOK.flashAlpha * (1 - (T - u.hitT) / CONFIG.LOOK.flash);   // 맞으면 번쩍
-      ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
+      ctx.drawImage(this.assets.get(u.imgKey || f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
     ctx.restore();
     if (wr) this._fxFrame(wr[1], x, y, true);
     if (u.state !== 'dead') { if (u === this.sel) { ctx.globalAlpha = 0.775 + 0.225 * Math.sin(T * 7.54); this._ring(u, x, y + 2, 28, 1, 1); ctx.globalAlpha = 1; } }   // 원의 앞쪽 반 (발을 덮는다) ctx.globalAlpha = 1;

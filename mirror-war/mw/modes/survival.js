@@ -58,6 +58,16 @@
     d: { size: 21, top: '#ff5a48', mid: '#ff2616', bot: '#d00000', life: 1.15, rise: 14, label: 'Double Critical!!' } };
   var GW = 448, GH = 192;        // 바닥 조각 크기 (defense.js 의 GW·GH)
   function inBox(b, x, y) { return b && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h; }
+  /* 그림의 한 색 범위만 다른 색으로: 색상(hue)이 h0~h1 도이고 채도가 있는 픽셀만 shift 도 돌린다 (밝기·채도는 그대로). 결과는 캔버스 — drawImage 에 그대로 쓴다 */
+  function recolor(img, h0, h1, shift) {
+    var c = document.createElement('canvas'); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height; var x = c.getContext('2d'); x.drawImage(img, 0, 0);
+    var id = x.getImageData(0, 0, c.width, c.height), d = id.data, i;
+    for (i = 0; i < d.length; i += 4) { if (d[i + 3] < 8) continue; var r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), dl = mx - mn; if (!dl || dl / mx < 0.2) continue;
+      var hh = mx === r ? ((g - b) / dl + 6) % 6 : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4; hh *= 60; if (hh < h0 || hh > h1) continue;
+      hh = ((hh + shift) % 360 + 360) % 360 / 60; var k = function (n) { var t = (n + hh) % 6; return mx - dl * Math.max(0, Math.min(1, Math.min(t, 4 - t))); };   // HSV → RGB (같은 명도·채도)
+      d[i] = Math.round(k(5) * 255); d[i + 1] = Math.round(k(3) * 255); d[i + 2] = Math.round(k(1) * 255); }
+    x.putImageData(id, 0, 0); return c;
+  }
   function mmss(t) { t = Math.max(0, Math.ceil(t)); return (t < 600 ? '0' : '') + Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60); }
 
   function SurvivalGame(D) {
@@ -602,7 +612,7 @@
     if (cls === 'shadow') this._toBlade(); if (cls === 'trapper') { if (!this.sk.toxdag) this.sk.toxdag = 1; if (!this.sk.bombdag) this.sk.bombdag = 1; } if (!T2 || h.t === T2) return;
     if (this.tm.ult == null) this.tm.ult = 4;
     var sp0 = this.speed, mh = h.maxHp + GROW.clsHp, hp = h.hp + GROW.clsHp; h.setType(T2); D._applyType(h); h.maxHp = mh; h.hp = Math.min(mh, hp); this.speed = h.speedPx * CFG.SPEED;
-    if (cls === 'trapper') h.tint = 'rgba(60,210,70,.32)';   // 트래퍼: 대도 그림에 녹색을 덮는다 (2026-11-19 사용자 "2를 선택했을 때 색깔을 녹색으로")
+    if (cls === 'trapper') { var gk = 'u' + T2.id + 'g'; if (!D.assets.img[gk]) D.assets.img[gk] = recolor(D.assets.get('u' + T2.id), 240, 330, -165); h.imgKey = gk; }   // 트래퍼: 대도의 포인트색(보라)만 녹색으로 (2026-11-19 사용자 "전체가 녹색이 아니라 포인트색만 녹색으로" — 전에는 그림 전체에 녹색을 덮었다)
     if (cls === 'shadow') { this.speed = Math.max(this.speed, sp0); h.act = Object.assign({}, h.act, { k1: 8, arm: -5 }); }   // 마법전사: 걸음은 느리므로 전직 전 속도를 지키고, 공격값의 레벨 계수(원작 16)는 다른 갈래와 같은 8 로(아니면 후반에 두 배로 세진다). arm −5 = 베기 타격 표시용 (−1 은 폭발·출혈과 겹친다)
     this._fx(h.x, h.y - 8, 3); this.ringT = D.time; this.ringN = 12; this.ringA = 0;
     this.tm.ult = 4; this.banner = { s: '궁극기 「' + ULT[cls].name + '」 — 오른쪽 아래 칸', t0: D.time + 0.8, col: CLS[cls].col };
