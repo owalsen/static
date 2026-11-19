@@ -102,6 +102,9 @@
     /* 주둔 적군 (2026-11-14 사용자 요청): 진군하는 적과 따로, 적 진영의 자리(post)를 지키는 부대. 자리에서 leash px 안에 들어온 아군만 상대하고 그 밖으로는 쫓지 않으며, 싸울 상대가 없으면 자리로 돌아가 선다.
        스테이지 guards = [{ at: 'bottom'(아래 적 벙커 앞) | 'top'(위 적 벙커 앞) | 'lair'(마굴 앞), list: [[유닛 번호, 수], …] }] — 난이도 조절용. 다시 채워지지 않는다 */
     GUARD: { leash: 220, ahead: 70 },
+    /* 아군 주둔 영웅(원본판, README 256·260) 강화 (2026-11-19 사용자 요청 "어느 정도 강력해야 — 근접은 공속 2배, 마법은 더 자주, 체력 1.5배", README 264):
+       hp = 체력 배수, meleeAspd = 근접 기본 공격이면 공격 속도 배수, cool = 마법 하나의 재사용 대기(초 — 적 마법 유닛·주둔 아군은 ENEMY_SKILL.cool 30), first = 처음 마법까지 최대 초 */
+    GUARD_HERO: { hp: 1.5, meleeAspd: 2, cool: 10, first: 4 },
     /* 기지 안 영웅의 마법 (2026-11-14 사용자 요청 — 쉬움에서도 적극적으로. 적 기지가 너무 빨리 무너졌다): 기지 수비대의 영웅(LAIR_GAR 첫 칸)은 건물 안에서 자기 마법을 쓴다.
        쓰는 마법 = 그 유닛의 범위 공격(플레임 헬·어쓰 퀘이크 …)과 회복(파워 힐링 — 기지 앞의 적군을 채운다). 매혹·순간이동·방어막·합체는 쓰지 않는다.
        시전 거리 안에 아군이 들어오면 first 초 뒤부터, 마법 하나마다 cool 초(스테이지 lairCast 로 바꿈)마다. 피해 = 원작 공식 × SKILL.dmgMul × dmgMul. 마나는 쓰지 않는다. 기지가 무너지면 멈춘다 */
@@ -356,6 +359,15 @@
      상성: 원본판 유닛의 aff 에는 이미 어드밴스드 번호가 같이 들어 있다(origpack.js). 반대로 어드밴스드 유닛의 aff 에 그 상대의 원본판 번호를 더하고, 상성표 묶음(AFF.fam)에도 넣는다.
      체력 바 폭·선택 원 크기(hpbar.units)는 같은 이름의 어드밴스드 유닛 것을 빌린다. 초상화는 원본판 초상화(orig/portraits.png, 126×126) */
   var ORIG_SFX = 10000;
+  /* ───────── 난이도 테마 (2026-11-19 사용자 요청 "난이도에 따라 맵과 아군/적군 건물을 차별화 — 어려워질수록 무거워지고 웅장한 느낌, 아군·적군 색조 변형도", README 263) ─────────
+     스테이지 note(쉬움/어려움/매우 어려움)로 고른다(스테이지 theme 으로 덮어쓸 수 있다). 쉬움 = 지금 그대로.
+       ground·mid = 바닥 조각 두 장(tools/themebuild.js — 원작 지도에서 떠 온 448×192), bld = 건물 시트(tools/defbuild.js — 같은 건물의 지형별 바닥 변형, 배치는 같다)
+       grade = 전장 전체에 곱하는 색(multiply, 알파), edge = 전투 줄 밖(위·아래)과 좌우 끝을 어둡게(0~1), ash = 떠다니는 재·불티 수
+       tint = 유닛 색조 [아군, 적군] — 그 색을 그림 위에 알파만큼 덮는다(source-atop, 아이폰은 ctx.filter 를 못 써서 석화와 같은 방식). 아군·적군이 서로 구분되게 다른 색 */
+  var THEMES = {
+    '어려움': { key: 'hard', ground: 'theme/hard-ground.png', mid: 'theme/hard-mid.png', bld: 'defense-v.png', grade: 'rgba(150,110,70,.16)', edge: 0.38, ash: 0, tint: [null, 'rgba(110,30,10,.16)'] },
+    '매우 어려움': { key: 'vhard', ground: 'theme/vhard-ground.png', mid: 'theme/vhard-mid.png', bld: 'defense-l.png', grade: 'rgba(170,70,50,.22)', edge: 0.6, ash: 46, tint: ['rgba(70,120,210,.12)', 'rgba(150,10,0,.2)'] }
+  };
   function mergeOrig(data) {
     var pk = root.MW_ORIGPACK; if (!pk || data._orig) return {}; data._orig = true;
     var off = data.fx.frames.length, R = function (L) { return L.map(function (i) { return i + off; }); }, origOf = {};
@@ -1407,7 +1419,7 @@
   /* 유닛 레벨을 바꾼다: 최대 체력이 원작 식(종류 체력 + 레벨당 성장 × 레벨, 영웅은 추가 레벨을 뺀 일반 유닛과 같다)으로 오르고 오른 만큼 지금 체력도 는다.
      공격·방어는 원작 피해 식이 레벨을 본다 (공격 = k1 × 레벨 ÷ 8 + …, 방어 = 방어력 + 성장 × 레벨 ÷ 4) */
   P._setLevel = function (u, L) {
-    var mh = Math.round(u.t.maxHpAt(L) * (u.hero && u.side === 0 ? CONFIG.GROW.heroHp || 1 : 1));   // 아군 영웅은 체력 ×heroHp (2026-11-17 사용자 요청 — 레벨이 오를 때마다 이 식으로 다시 구한다). 적 영웅은 그대로
+    var mh = Math.round(u.t.maxHpAt(L) * (u.hero && u.side === 0 ? CONFIG.GROW.heroHp || 1 : 1) * (u.hpMul || 1));   // hpMul = 유닛별 체력 배수 (아군 주둔 영웅 1.5 — GUARD_HERO)   // 아군 영웅은 체력 ×heroHp (2026-11-17 사용자 요청 — 레벨이 오를 때마다 이 식으로 다시 구한다). 적 영웅은 그대로
     u.level = L; u.hp += Math.max(0, mh - u.maxHp); u.maxHp = mh;
   };
   /* 영웅 한 명을 전장에 올린다: 기본 유닛으로 나온 뒤 종류를 영웅 종류로 바꾸고(이름·초상화·수치), 레벨을 올리고, 마법은 스스로 쓰게 한다 */
@@ -2297,8 +2309,10 @@
     /* 2026-11-19 사용자 요청 "아군 주둔 원본판 유닛은 영웅 1기로만 — 너무 복잡함"(README 260): 기본은 영웅만. ally.units = true 면 예전처럼 원본판 유닛 전부 */
     if (S.orig.ally.units) [[near, false], [far, true]].forEach(function (g) { var n = { top: 0, bottom: 0 }; g[0].forEach(function (id, i) { var at = i % 2 ? 'bottom' : 'top', u = self.spawn(id, 0); self._setLevel(u, lv); u.hp = u.maxHp; put(u, at, n[at]++, g[1]); }); });
     var rec = (pk.heroes || []).filter(function (h) { return h.name === S.orig.ally.hero; })[0], base = rec && this.types[rec.type];
-    if (base) { var u = this.spawn(rec.type, 0), ht = this._heroType(rec, base); ht.pid = base.pid; ht.opid = rec.pid; u.t = ht; this._applyType(u); this._setLevel(u, Math.max(lv, rec.lv || 1)); u.hp = u.maxHp;
-      auto(u); u.x = ((F.top ? F.top.x : 470) + (F.bottom ? F.bottom.x : 730)) / 2 + G.ahead; u.y = this.laneY + R[half]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.ehero = true; }
+    if (base) { var u = this.spawn(rec.type, 0), ht = this._heroType(rec, base), GH = CONFIG.GUARD_HERO; ht.pid = base.pid; ht.opid = rec.pid; u.t = ht; this._applyType(u); u.hpMul = GH.hp; u.maxHp = 0; this._setLevel(u, Math.max(lv, rec.lv || 1)); u.hp = u.maxHp;
+      auto(u); var hb = basicAct(ht); if (hb && hb.range * CONFIG.RANGE_SCALE < 80) u.aspd = GH.meleeAspd;   // 근접 기본 공격이면 공격 속도 ×2
+      u.slots.forEach(function (q) { q.cdMax = GH.cool; q.cd = Math.min(q.cd, GH.first); });   /* 마법은 더 자주 */
+      u.x = ((F.top ? F.top.x : 470) + (F.bottom ? F.bottom.x : 730)) / 2 + G.ahead; u.y = this.laneY + R[half]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.ehero = true; }
   };
   /* 흩어 놓는 주둔 적군 (at: 'spread', README 260): 적 진영 x from ~ (적 기지 − back) 사이에 격자로 — 칸 간격을 넓게 잡고 홀수 줄은 반 칸 밀어 엇갈리게.
      한 칸에 한 기, 줄은 전투 줄 전부를 쓴다. 규칙은 다른 주둔 적군과 같다(u.post) */
@@ -2407,6 +2421,7 @@
     for (i = 0; i < this.effects.length; i++) if (!this.effects[i].ground) this._drawEffect(this.effects[i]);
     this._drawTexts();
     ctx.restore();
+    this._drawAtmos();                                       // 난이도 테마의 분위기(색조·가장자리 어둠·재) — 전투 줄은 가리지 않는다
     this._drawAim();                                         // 조준 중: 시전 거리 띠 + 반경 원
     this._drawBaseSel();
     this._drawSelectionOverlay();                            // 선택 링 위의 [회수] 버튼 — 유닛 정렬 루프 밖(위에 그려지는 유닛에 가리지 않게), 화면 좌표
@@ -2431,12 +2446,13 @@
     // 이미 있으면 같은 캔버스에 다시 그린다 (새로 만들지 않는다) — 아이폰 WebKit 은 메모리가 모자라면 다시 그리지 않는 캔버스의 내용을 비우므로, 주기적으로 다시 그려 복구한다 (_frame)
     var map = this.map, c = map.t2w(map.arena[0], map.arena[1]), cv = this.ground || document.createElement('canvas'); if (cv.width !== GW) cv.width = GW; if (cv.height !== GH) cv.height = GH;
     var g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, GW, GH);
-    this.terrain.draw(g, { x: Math.round(c[0] / 64) * 64 - GW / 2, y: Math.round(c[1] / 32) * 32 - GH / 2 }, GW, GH);
+    var TH = this.theme, tg = TH && this.assets.get('th:' + TH.ground), tm = TH && this.assets.get('th:' + TH.mid);   // 난이도 테마의 바닥 조각 (받기 전에는 기본 지도)
+    if (tg && tg.naturalWidth) g.drawImage(tg, 0, 0); else this.terrain.draw(g, { x: Math.round(c[0] / 64) * 64 - GW / 2, y: Math.round(c[1] / 32) * 32 - GH / 2 }, GW, GH);
     this.ground = cv; this._groundAt = this.time;
     // 가운데 띠의 바닥 (CONFIG.MID): 같은 원본 지도의 다른 곳(돌이 깔린 풀밭)을 한 조각 떠 온다
     var MD = CONFIG.MID, c2 = map.t2w(MD.tile[0], MD.tile[1]), cv2 = this.ground2 || document.createElement('canvas'); if (cv2.width !== GW) cv2.width = GW; if (cv2.height !== GH) cv2.height = GH;
     var g2 = cv2.getContext('2d'); g2.imageSmoothingEnabled = false; g2.clearRect(0, 0, GW, GH);
-    this.terrain.draw(g2, { x: Math.round(c2[0] / 64) * 64 - GW / 2, y: Math.round(c2[1] / 32) * 32 - GH / 2 }, GW, GH);
+    if (tm && tm.naturalWidth) g2.drawImage(tm, 0, 0); else this.terrain.draw(g2, { x: Math.round(c2[0] / 64) * 64 - GW / 2, y: Math.round(c2[1] / 32) * 32 - GH / 2 }, GW, GH);
     this.ground2 = cv2; this.midStrip = null;                // 띠는 다음에 그릴 때 다시 만든다
   };
   /* 가운데 띠 한 장(폭 MID.w × 전장 높이): 가운데 지형을 세로로 이어 깔고 조금 어둡게 덮은 뒤, 좌우 가장자리를 투명하게 풀어 둘레 바닥과 자연스럽게 이어지게 한다 */
@@ -2528,7 +2544,7 @@
   P._drawOutline = function (b, x, y) {
     var p = this.bld.pics[b.pic], o = this._bldOrigin(b, x, y), ctx = this.ctx, k, r = 1;   // 원작 화면(사용자 캡쳐 2026-11-13)처럼 가는 1px 선, 깜박이지 않는다
     if (!this._sil || this._sil.pic !== b.pic) { var cv = document.createElement('canvas'); cv.width = p[2]; cv.height = p[3]; var c2 = cv.getContext('2d');
-      c2.drawImage(this.assets.get('defense'), p[0], p[1], p[2], p[3], 0, 0, p[2], p[3]); c2.globalCompositeOperation = 'source-in'; c2.fillStyle = '#58e86a'; c2.fillRect(0, 0, p[2], p[3]); this._sil = { pic: b.pic, cv: cv }; }
+      c2.drawImage(this._bldSheet(), p[0], p[1], p[2], p[3], 0, 0, p[2], p[3]); c2.globalCompositeOperation = 'source-in'; c2.fillStyle = '#58e86a'; c2.fillRect(0, 0, p[2], p[3]); this._sil = { pic: b.pic, cv: cv }; }
     var x0 = Math.round(o[0] - p[4]), y0 = Math.round(o[1] - p[5]), D = [[-r, 0], [r, 0], [0, -r], [0, r], [-r, -r], [r, -r], [-r, r], [r, r]];
     for (k = 0; k < D.length; k++) ctx.drawImage(this._sil.cv, x0 + D[k][0], y0 + D[k][1]);
   };
@@ -2583,12 +2599,13 @@
      처음에는 두 깃발 사이에 금빛 점선을 그었으나, 양 진영을 가르는 선처럼 보여 뺐다(사용자) — 가운데는 바닥 지형을 달리해서 알린다(_drawGround 의 가운데 띠) */
   P._drawRally = function () {
     var B = this.bld.base, ctx = this.ctx, R = this.rows, x = this.frontX, y0 = this.laneY + R[0] - 34, y1 = this.laneY + R[R.length - 1] + 22; if (!B) return;
-    var k = Math.floor(this.time * 8) % B.flagFrames.length, self = this, im = this.assets.get('defense');
+    var k = Math.floor(this.time * 8) % B.flagFrames.length, self = this, im = this._bldSheet();
     [[y0 - 2, 0], [y1 + 26, 3]].forEach(function (q) { var p = self.bld.pics[B.flagFrames[(k + q[1]) % B.flagFrames.length]], sc = 2;   // 깃발: 그림의 원점(깃대 발치)을 선 끝에 맞춘다
       ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, q[0], 9, 3.5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.drawImage(im, p[0], p[1], p[2], p[3], Math.round(x - p[4] * sc), Math.round(q[0] - p[5] * sc), p[2] * sc, p[3] * sc); });
   };
-  P._pic = function (i, x, y) { var p = this.bld.pics[i]; this.ctx.drawImage(this.assets.get('defense'), p[0], p[1], p[2], p[3], Math.round(x - p[4]), Math.round(y - p[5]), p[2], p[3]); };
+  P._bldSheet = function () { var TH = this.screen === 'play' || this.screen === 'win' || this.screen === 'lose' ? this.theme : null, im = TH && TH.bld && this.assets.get('th:' + TH.bld); return im && im.naturalWidth ? im : this.assets.get('defense'); };   // 난이도 테마의 건물 시트(지형별 바닥, 배치는 같다)
+  P._pic = function (i, x, y) { var p = this.bld.pics[i]; this.ctx.drawImage(this._bldSheet(), p[0], p[1], p[2], p[3], Math.round(x - p[4]), Math.round(y - p[5]), p[2], p[3]); };
 
   /* 원작 선택 원 한 쪽(choice.spr): color = 0 초록 / 14 빨강 / 28 노랑 / 42 흰색, half = 0 뒤쪽 반 / 1 앞쪽 반, up = 크기를 몇 단계 키울지.
      크기 번호는 체력 바 틀과 같은 값(unitData +0xFE)을 쓴다 — 원본 FUN_004f7a80 / FUN_004f7bc0 */
@@ -2612,6 +2629,35 @@
     return cv;
   };
 
+  /* 색조를 입힌 유닛 그림 (난이도 테마, README 263): 보조 캔버스에 그 프레임을 그리고 색을 덮은(source-atop) 뒤 그 캔버스를 그린다 — _stoneSprite 와 같은 방식(아이폰은 ctx.filter 없음) */
+  P._tintSprite = function (img, f, col) {
+    var cv = this._tintCv || (this._tintCv = document.createElement('canvas')), w = f[2], h = f[3];
+    if (cv.width < w) cv.width = w; if (cv.height < h) cv.height = h;
+    var c = cv.getContext('2d'); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, w, h); c.drawImage(img, f[0], f[1], w, h, 0, 0, w, h);
+    c.globalCompositeOperation = 'source-atop'; c.fillStyle = col; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'source-over';
+    return cv;
+  };
+  /* 난이도 테마의 분위기 (README 263): ① 전장 전체에 색을 곱한다(grade) ② 전투 줄 밖(위·아래)과 좌우 끝을 어둡게(edge — 미리 그려 둔 한 장) ③ 재·불티(ash)가 천천히 떠오른다.
+     전투 줄(첫 줄 −40 ~ 끝 줄 +30)에는 어둠을 거의 두지 않는다 (사용자 원칙: 전장을 가리지 않게). 아래 패널은 덮지 않는다 */
+  P._drawAtmos = function () {
+    var TH = this.theme; if (!TH || this.screen === 'title' || this.screen === 'loading') return;
+    var ctx = this.ctx, W = this.W, gh = this.H - this.hudH, key = W + 'x' + gh + ':' + TH.key + ':' + this.laneY;
+    if (!this.atmos || this.atmos.key !== key) {
+      var cv = document.createElement('canvas'); cv.width = W; cv.height = gh; var g = cv.getContext('2d'), R = this.rows, top = Math.max(0, this.laneY + R[0] - 40), bot = Math.min(gh, this.laneY + R[R.length - 1] + 30), e = TH.edge || 0;
+      var v = g.createLinearGradient(0, 0, 0, gh); v.addColorStop(0, 'rgba(0,0,0,' + e + ')'); v.addColorStop(top / gh, 'rgba(0,0,0,' + (e * 0.12) + ')'); v.addColorStop(bot / gh, 'rgba(0,0,0,' + (e * 0.12) + ')'); v.addColorStop(1, 'rgba(0,0,0,' + e + ')');
+      g.fillStyle = v; g.fillRect(0, 0, W, gh);
+      var hz = g.createLinearGradient(0, 0, W, 0); hz.addColorStop(0, 'rgba(0,0,0,' + (e * 0.55) + ')'); hz.addColorStop(0.16, 'rgba(0,0,0,0)'); hz.addColorStop(0.84, 'rgba(0,0,0,0)'); hz.addColorStop(1, 'rgba(0,0,0,' + (e * 0.55) + ')');
+      g.fillStyle = hz; g.fillRect(0, 0, W, gh);
+      this.atmos = { key: key, cv: cv, ash: [] }; for (var i = 0; i < (TH.ash || 0); i++) this.atmos.ash.push({ x: Math.random() * W, y: Math.random() * gh, s: 0.6 + Math.random() * 1.6, v: 6 + Math.random() * 16, w: Math.random() * 6.28, hot: Math.random() < 0.35 });
+    }
+    var A = this.atmos;
+    if (TH.grade) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = TH.grade; ctx.fillRect(0, 0, W, gh); ctx.restore(); }
+    ctx.drawImage(A.cv, 0, 0);
+    if (A.ash.length) { var dt = Math.min(0.05, Math.max(0, this.time - (A.t || this.time))); A.t = this.time; ctx.save();
+      for (var j = 0; j < A.ash.length; j++) { var p = A.ash[j]; p.y -= p.v * dt; p.x += Math.sin(this.time * 0.7 + p.w) * 8 * dt - 3 * dt; if (p.y < -4) { p.y = gh + 4; p.x = Math.random() * W; } if (p.x < -4) p.x = W + 4;
+        ctx.globalAlpha = p.hot ? 0.35 + 0.3 * Math.sin(this.time * 3 + p.w) * 0.5 + 0.15 : 0.35; ctx.fillStyle = p.hot ? '#ff8a3c' : '#9a8f86'; ctx.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s); }
+      ctx.restore(); }
+  };
   /* 유닛 한 기: 그림자 → 강화 이펙트 → 원본 스프라이트(Unit.frameIndex가 고른 프레임) → 체력 바 → 스킬 칸 번호 */
   P._drawUnit = function (u) {
     var ctx = this.ctx, fi = u.frameIndex(this.rules.tps), f = fi >= 0 ? u.t.frames[fi] : null, x = Math.round(u.x), y = Math.round(u.y), drop = u.drop || 0, T = this.time;
@@ -2630,7 +2676,9 @@
     ctx.save(); ctx.translate(x, y + drop); if (u.mir) ctx.scale(-1, 1);
     if (this.look && u.state !== 'dead') { ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = CONFIG.LOOK.outline * this.rs; }   // 어두운 번짐 테두리
     if (u.stunUntil > T && !(u.curseUntil > T)) ctx.drawImage(this._stoneSprite(this.assets.get(f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
-    else ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]);
+    else { var tc = this.theme && this.theme.tint && u.state !== 'dead' ? this.theme.tint[u.side] : null;   // 난이도 테마의 유닛 색조
+      if (tc) ctx.drawImage(this._tintSprite(this.assets.get(f[6] || ('u' + u.t.id)), f, tc), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);
+      else ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
     if (this.look && u.hitT != null && T - u.hitT < CONFIG.LOOK.flash && u.state !== 'dead') { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = CONFIG.LOOK.flashAlpha * (1 - (T - u.hitT) / CONFIG.LOOK.flash);   // 맞으면 번쩍
       ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
     ctx.restore();
@@ -3530,6 +3578,8 @@
     var S = CONFIG.STAGES[i], E = S && CONFIG.ENEMIES[S.enemy]; if (!E) return false;
     var a = S.waves || [0, E.waves.length], mul = S.mul || 1;
     this.stageI = i; this.st = S;
+    var TH = S.theme !== undefined ? S.theme : THEMES[S.note] || null; this.theme = TH; this.atmos = null; this._groundAt = -9;   // 난이도 테마: 바닥·건물 그림을 그때 받는다 (첫 로딩에는 안 들어감)
+    if (TH && this.assets) ['ground', 'mid', 'bld'].forEach(function (k) { var key = 'th:' + TH[k]; if (TH[k] && !this.assets.img[key]) this.assets.load(key, TH[k]); }, this);
     var BO = this.st && this.st.boost;   // boost = { ids, waves, k }: 앞의 waves 개 웨이브에서 ids 유닛 수를 k 배 (흑마술파 1단계 — 초반에 언데드가 많이). 나오는 간격은 늘어난 수만큼 줄여 웨이브 길이는 비슷하게
     this._stageWaves = E.waves.slice(a[0], a[1]).map(function (w, wi) { var n0 = 0, n1 = 0, list = w.list.map(function (e) { var k = BO && wi < BO.waves && BO.ids.indexOf(e[0]) >= 0 ? BO.k : 1, b = Math.max(1, Math.round(e[1] * mul)), n = Math.max(1, Math.round(e[1] * mul * k)); n0 += b; n1 += n; return [e[0], n]; });
       return { list: list, gap: w.gap / mul * (n1 > 0 ? n0 / n1 : 1), rest: w.rest }; });
