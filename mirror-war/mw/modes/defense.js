@@ -1986,7 +1986,7 @@
     dmg = dmg > 0 ? Math.max(1, Math.round(dmg)) : 0; if (this.tut && u.side === 0) dmg = Math.min(dmg, Math.max(0, u.hp - 1));   // 입문자 가이드: 아군은 죽지 않는다   // 정수로: "마법 증폭"(×1.3) 뒤 124.80000000000001 같은 긴 소수가 그대로 뜨던 버그 (2026-11-12)
     this._say(u.x, u.y - u.headY - 6, dmg > 0 ? String(dmg) : 'miss', u.side === 1 ? '#ffe9a8' : '#ff9a8a');
     if (dmg <= 0) return;
-    u.hp -= dmg;
+    u.hp -= dmg; if (u.side === 0 && (u.hero || (u.guard && u.ehero))) this._alert(u.x);   // 아군 영웅·주둔 영웅이 맞으면 공격 알림
     if (u.side === 0 && !u.act && !u.hero) u.fleeUntil = this.time + CONFIG.FLEE_SEC;   // 기본 공격이 없는 아군(성령사·사제·연금술사·소환사·공주 …)은 맞으면 아군 쪽으로 물러난다
     if (u.hp <= 0) {
       u.hp = 0; u.state = 'dead'; u.deadT = 0; u.fade = 0; u.buffs = {};
@@ -2012,7 +2012,7 @@
   };
 
   P._hitBase = function (dmg) { var df = this.forts && this.forts[0] ? this.garDef(this.forts[0]) : 0; if (df > 0) dmg = Math.max(Math.ceil(dmg * CONFIG.GAR_DEF_MIN), dmg - df);   // 수비대의 방어 보너스만큼 덜 받는다 (그래도 원래 피해의 GAR_DEF_MIN 은 받는다)
-    this.baseHp -= dmg; this.baseHit = 0.25; this.baseHurtT = this.time; this._say(CONFIG.BASE.front - 50, this.laneY - 70, '-' + dmg, '#ff7a6a'); };
+    this.baseHp -= dmg; this.baseHit = 0.25; this.baseHurtT = this.time; this._alert(CONFIG.BASE.front - 40); this._say(CONFIG.BASE.front - 50, this.laneY - 70, '-' + dmg, '#ff7a6a'); };
 
   /* 자폭: 적이 닿으면(BOOM.touch) 터진다 (CONFIG.BOOM). 둘레의 맞은편 유닛 모두에게 원본 공식 피해, 자신은 죽는다. true = 터졌다 */
   P._boom = function (u) {
@@ -2087,7 +2087,7 @@
   /* 벙커가 맞았다: 수비대의 방어 보너스만큼 덜 받는다. 체력이 0이면 부서지고 안의 유닛이 밖으로 나온다 */
   P._hitFort = function (F, dmg) {
     var df = this.garDef(F), self = this; if (df > 0) dmg = Math.max(Math.ceil(dmg * CONFIG.GAR_DEF_MIN), dmg - df);
-    F.hp -= dmg; F.hit = 0.25; this._say(F.x + 20, F.y - 60, '-' + dmg, '#ff7a6a');
+    F.hp -= dmg; F.hit = 0.25; this._say(F.x + 20, F.y - 60, '-' + dmg, '#ff7a6a'); this._alert(F.x);
     if (F.hp > 0) return;
     F.hp = 0; F.dead = true;
     F.garrison.forEach(function (m) { var o = self.spawn(m.r.id, 0); o.x = F.x + 20; });
@@ -2428,7 +2428,8 @@
     this._drawBanner();
     if (this.flash > 0) { ctx.fillStyle = 'rgba(255,240,200,' + (this.flash * 0.9) + ')'; ctx.fillRect(0, 0, W, H - this.hudH); }
     this._drawHud();
-    if (this.screen === 'play' && !this.cards && !this.modal && !this.info && !this.sinfo && !this.aim && !this.tut) this._drawUnitStrip();   // 고른 유닛의 정보 띠 (아래 패널 바로 위)
+    if (this.screen === 'play' && !this.cards && !this.modal && !this.info && !this.sinfo && !this.aim && !this.tut) this._drawUnitStrip();
+    if (this.screen === 'play' && !this.cards && !this.modal && !this.tut) this._drawCamBtns();   // 카메라 버튼: 기지로 · 공격받는 곳으로   // 고른 유닛의 정보 띠 (아래 패널 바로 위)
     if (this.screen === 'play' && !this.cards && !this.modal) { this._drawInfo(); this._drawSkillInfo(); }   // 소환 버튼·스킬 칸을 길게 누르는 동안의 설명 카드
     if (this.screen !== 'play') this._drawOverlay();
     else if (this.cards) this._drawCards();
@@ -2629,6 +2630,30 @@
     return cv;
   };
 
+  /* 카메라 버튼 (2026-11-19 사용자 요청 "HUD 에 카메라가 기지로 가는 버튼과 공격당한 곳으로 이동하는 버튼", README 265)
+     자리: 전장 오른쪽 아래, 아래 패널 바로 위(휴대폰에서 엄지가 닿는 곳). 유닛 정보 띠가 떠 있으면 그 위로 비킨다.
+     [기지] = 늘 보인다(카메라가 이미 기지에 있으면 흐리게) — 누르면 내 기지로. 그림 = 내 진영의 기지 건물(성·마굴·전당)을 줄인 것.
+     [공격] = 내 기지·벙커·아군 영웅(주둔 영웅 포함)이 맞은 지 ALERT.sec 초 안이고 그 자리가 화면 밖일 때만 나타나 붉게 맥박친다 — 누르면 가장 최근에 맞은 곳으로.
+       그림 = 원작 명령 아이콘의 칼(acticons 0번)에 붉은 색을 입힌 것. 진행 막대에도 맞은 자리에 붉은 점. 판 = 원작 HUD 돌판(_plate) */
+  var ALERT = { sec: 5, size: 40, gap: 6 };
+  P._alert = function (x) { var A = this.alertAt; if (A && this.time - A.t < 0.5 && Math.abs(A.x - x) < 80) { A.t = this.time; return; } this.alertAt = { x: x, t: this.time }; };
+  P._alertOn = function () { var A = this.alertAt; if (!A || this.time - A.t > ALERT.sec) return false; return A.x < this.cam.x + 20 || A.x > this.cam.x + this.W - 20; };
+  P._camBtnBoxes = function () {
+    var S = ALERT.size, x = this.W - S - 8, y = this.H - this.hudH - S - 8 - (this._unitStripBox() ? 50 : 0);
+    return { home: { x: x, y: y, w: S, h: S }, alert: this._alertOn() ? { x: x, y: y - S - ALERT.gap, w: S, h: S } : null };
+  };
+  P._camBtnAt = function (x, y) { if (this.screen !== 'play') return null; var B = this._camBtnBoxes(); if (inBox(B.home, x, y)) return 'home'; if (B.alert && inBox(B.alert, x, y)) return 'alert'; return null; };
+  P._drawCamBtns = function () {
+    var ctx = this.ctx, B = this._camBtnBoxes(), T = this.time, h = B.home, atHome = this.cam.x < 40;
+    ctx.save(); ctx.globalAlpha = atHome ? 0.45 : 0.9; this._plate(h.x, h.y, h.w, h.h, 6, false);
+    var bp = this.bld && this.bld.base && this.bld.pics ? this.bld.pics[this.bld.base.pic] : null, sh = this._bldSheet();
+    if (bp && sh && sh.naturalWidth) { var k = Math.min((h.w - 8) / bp[2], (h.h - 8) / bp[3]), dw = Math.round(bp[2] * k), dh = Math.round(bp[3] * k); ctx.drawImage(sh, bp[0], bp[1], bp[2], bp[3], Math.round(h.x + (h.w - dw) / 2), Math.round(h.y + (h.h - dh) / 2), dw, dh); }
+    ctx.restore();
+    var a = B.alert; if (!a) return;
+    var pulse = 0.5 + 0.5 * Math.sin(T * 9), D = this.data.fx.icon, icons = this.assets.get('acticons');
+    ctx.save(); ctx.shadowColor = 'rgba(255,40,20,' + (0.5 + 0.5 * pulse) + ')'; ctx.shadowBlur = 8 + 8 * pulse; this._plate(a.x, a.y, a.w, a.h, 6, true); ctx.restore();
+    if (icons && icons.naturalWidth && D) { var f = [0, 0, D.w, D.h], s2 = Math.min((a.w - 8) / D.w, (a.h - 8) / D.h); ctx.drawImage(this._tintSprite(icons, f, 'rgba(255,40,20,' + (0.55 + 0.25 * pulse) + ')'), 0, 0, D.w, D.h, Math.round(a.x + (a.w - D.w * s2) / 2), Math.round(a.y + (a.h - D.h * s2) / 2), Math.round(D.w * s2), Math.round(D.h * s2)); }
+  };
   /* 색조를 입힌 유닛 그림 (난이도 테마, README 263): 보조 캔버스에 그 프레임을 그리고 색을 덮은(source-atop) 뒤 그 캔버스를 그린다 — _stoneSprite 와 같은 방식(아이폰은 ctx.filter 없음) */
   P._tintSprite = function (img, f, col) {
     var cv = this._tintCv || (this._tintCv = document.createElement('canvas')), w = f[2], h = f[3];
@@ -2994,6 +3019,7 @@
     for (var i = 0; i < L.length; i++) { var u = L[i]; if (u.state === 'dead') continue;
       ctx.fillStyle = u.side === 0 ? '#5aaaff' : '#ff5a46'; ctx.fillRect(Math.round(m.x + u.x * k) - 1, cy + (u.side === 0 ? -4 : 1), 3, 3); }
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(m.x + this.cam.x * k) + 0.5, m.y + 0.5, Math.round(this.W * k), m.h - 1);
+    var AL = this.alertAt; if (AL && this.time - AL.t < ALERT.sec) { var ap = 0.5 + 0.5 * Math.sin(this.time * 9); ctx.fillStyle = 'rgba(255,50,30,' + (0.55 + 0.45 * ap) + ')'; ctx.beginPath(); ctx.arc(Math.round(m.x + AL.x * k), cy, 3 + 2 * ap, 0, 6.283); ctx.fill(); }   // 공격받은 곳 (카메라 버튼, README 265)
   };
 
   /* 원작 HUD 스킨 (2026-11-13, 1단계: 아래 패널): 해방부대 HUD 그림(hud0.png = liber.img, 800×152)에서 부품을 잘라 지금 배치에 입힌다.
@@ -3216,6 +3242,9 @@
   P._tap = function (x, y) {
     var i;
     this.sfx.unlock();                                       // 브라우저는 첫 터치 뒤에만 소리를 허락한다
+    if (this.screen === 'play' && !this.cards && !this.modal && !this.tut) { var cb = this._camBtnAt(x, y);
+      if (cb === 'home') { this.camGoal = { x: 0, until: this.time + 1.5 }; this.manualUntil = 0; return; }
+      if (cb === 'alert' && this.alertAt) { this.camGoal = { x: this.alertAt.x - this.W / 2, until: this.time + 1.5 }; this.manualUntil = 0; this.alertAt.seen = this.time; return; } }
     if (this.screen === 'loading') { if (!this._pendStart) this._loadGo(); return; }   // 첫 로딩 70%: 누르면 음악과 함께 100% 로 → 진영 선택
     if (this.screen === 'play' && this.modal === 'menu') { this._menuTap(x, y); return; }   // 설정 메뉴
     if (this.screen === 'play' && !this.cards && this.menuBtn && inBox(this.menuBtn, x, y)) { this.modal = 'menu'; this.modalT = 0; this.aim = null; this.info = null; this.sinfo = null; this.sel = null; return; }
@@ -3665,7 +3694,7 @@
       e.preventDefault(); var p = self._pos(e), x = p[0], y = p[1], m = self.miniBox; if (self.aim) self.aimPt = { x: x, y: y };
       self.bgm.resume();   // 멈춰 있는 배경음(자동 재생이 막혔거나 다른 소리에 끊김)은 아무 누르기에서나 다시 튼다 (2026-11-17)
       if (self.screen === 'play' && self.tut) { self.sfx.unlock(); self._tutPointer(x, y); return; }   // 입문자 가이드: 하이라이트된 곳과 [건너뛰기]만 받는다
-      if (self.screen === 'play' && (self.cards || self.modal || inBox(self.affBtn, x, y) || inBox(self.menuBtn, x, y))) { self.sfx.unlock(); self._tap(x, y); return; }   // 카드를 고르는 중, 상성 모달, [상성] 버튼
+      if (self.screen === 'play' && (self.cards || self.modal || inBox(self.affBtn, x, y) || inBox(self.menuBtn, x, y) || self._camBtnAt(x, y))) { self.sfx.unlock(); self._tap(x, y); return; }   // 카드를 고르는 중, 상성 모달, [상성] 버튼
       if (self.screen === 'play' && x >= m.x - 6 && x <= m.x + m.w + 6 && y >= m.y - 6 && y <= m.y + m.h + 6) { self.drag = { mini: true, id: e.pointerId }; self._miniPan(x); return; }
       // 전장: 손을 뗄 때까지 지켜본다 — 6px 넘게 끌면 카메라 이동(그때부터 따라온다), 끌지 않고 떼면 탭(유닛 선택·회수 버튼)
       if (self.screen === 'play' && y < self.H - self.hudH && !inBox(self.menuBtn, x, y) && !inBox(self.lookBtn, x, y)) { self.sfx.unlock(); self.drag = { field: true, x: x, y: y, cam: self.cam.x, moved: false, id: e.pointerId }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} return; }
