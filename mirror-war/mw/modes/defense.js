@@ -1260,7 +1260,7 @@
         BT = [c].concat(this.units.filter(function (o) { return o !== c && o.side === u.side && o.state !== 'dead' && o.act && Math.hypot(o.x - c.x, o.y - c.y) <= S.allyNear; }).filter(weaker)
           .sort(function (p, q) { return (hasB(p) - hasB(q)) || (Math.hypot(p.x - c.x, p.y - c.y) - Math.hypot(q.x - c.x, q.y - c.y)); }).slice(0, wMax - 1));
       } else { BT = allies(S.buffRadius).filter(function (o) { return o !== u && o.act; }).filter(weaker).sort(function (p, q) { return (hasB(p) - hasB(q)) || (mine && WK.pick === 'strong' ? q.t.atk - p.t.atk : 0) || (u.side === 0 ? q.x - p.x : p.x - q.x); }).slice(0, wMax); if ((!BT.length || (a.self && BT.length < wMax)) && weaker(u)) BT.push(u); }
-      BT.forEach(function (o) { o.buffs[a.sup] = { k1: a.k1, k2: a.k2, arm: a.arm, mul: wMul, until: self.time + wSec }; });
+      BT.forEach(function (o) { o.buffs[a.sup] = { k1: a.k1, k2: a.k2, arm: a.arm, mul: wMul, until: self.time + wSec, act: a }; });   // act = 건 마법 (토네이도 실드의 회오리 피해가 그 행동의 공격값을 쓴다 — TORNADO)
       ok = true;
     } else if (s.kind === 'haste') {                         // 주변 아군이 빨리 걷는다 (케멘 소환). 걸린 유닛 머리 위에 원본 가속 이펙트(칸 44)
       (pt ? this.units.filter(function (o) { return o.side === u.side && o.state !== 'dead' && Math.hypot(o.x - pt.x, o.y - pt.y) <= S.summonRadius; }) : allies(S.buffRadius * 1.3)).forEach(function (o) { o.buffs.haste = { arm: a.arm, until: self.time + (u.side === 0 ? S.hasteSec : (a.dur || 600) / tps) }; });   // 찍었으면 찍은 곳 둘레
@@ -1573,6 +1573,7 @@
       if (u.deadT > 1.2) u.fade = Math.min(1, u.fade + dt * 1.5); return; }
     var ps = u.buffs.poison;                                 // 중독 (원본 FUN_00454580, 분석 8-26): 2틱마다 체력 −1, 1 밑으로는 안 내려간다 (12틱/초 → 초당 6)
     if (ps) { if (ps.until <= this.time) delete u.buffs.poison; else { u.poisonAcc = (u.poisonAcc || 0) + dt * tps / 2; while (u.poisonAcc >= 1) { u.poisonAcc -= 1; if (u.hp > 1) u.hp--; } } }
+    var tsb = u.buffs.shield; if (tsb && tsb.act && tsb.arm % 100 === TORNADO.arm && tsb.until > this.time) this._tornado(u, tsb, dt);   // 토네이도 실드: 걸려 있는 동안 둘레의 적을 친다
     if (u.stunUntil > this.time || u.holdUntil > this.time) { u.state = 'idle'; return; }   // 멈춤 스킬에 걸림
     if (u.side === 0) { this._bodyTech(u); if (C.MORPH[u.t.id] != null) this._entAuto(u, dt); }
     u.cd = Math.max(0, u.cd - dt);
@@ -2633,6 +2634,18 @@
     return cv;
   };
 
+  /* 토네이도 실드의 회오리 피해 (2026-11-19 사용자 요청 "토네이도 실드에 공격 기능이 원래 없었나" → 원본 확인 → "공격 기능 넣어 줘", README 268 · 분석 8-48)
+     원본 FUN_00453ec0(방어 이펙트의 틱): 이펙트 0x23(토네이도 실드)이 걸린 유닛은 틱(초당 12)마다 카운터를 올리고 24에서 0으로 — 카운터가 2·5·9·14 일 때
+     FUN_004ad230(시전자, 반경 = 행동 +0x2A(1000), 이동 등급 상한 = +0x2C(2 — 공중까지), 공격값 = FUN_004b83d0(시전자, 행동 0x3B))로 반경 안의 적 모두에게 피해.
+     표(24 · {4: 2,5,9,14})는 arm35.mww 메타에서 읽은 값(DAT_005ab6f6·DAT_005ab6fa 자리). → 2초에 네 번(초당 2번), 피해 = 원본 피해 공식(그 행동의 k1·k2, 상대 방어·상성). 건물은 맞지 않는다 */
+  var TORNADO = { arm: 35, loop: 24, hits: [2, 5, 9, 14] };
+  P._tornado = function (u, b, dt) {
+    var tps = this.rules.tps; b.tk = (b.tk || 0) + dt * tps;
+    while (b.tk >= 1) { b.tk -= 1; b.f = ((b.f == null ? -1 : b.f) + 1) % TORNADO.loop; if (TORNADO.hits.indexOf(b.f) < 0) continue;
+      var a = b.act, R = (a.range || 1000) * CONFIG.RANGE_SCALE, keep = u.act, self = this; u.act = a;
+      this.units.forEach(function (o) { if (o.side === u.side || o.state === 'dead' || o.isFort || Math.hypot(o.x - u.x, o.y - u.y) > R) return; self._damage(o, self.rules.damage(u, o, self.rng)); });
+      u.act = keep; }
+  };
   /* 카메라 버튼 (2026-11-19 사용자 요청 "HUD 에 카메라가 기지로 가는 버튼과 공격당한 곳으로 이동하는 버튼", README 265)
      자리: 전장 오른쪽 아래, 아래 패널 바로 위(휴대폰에서 엄지가 닿는 곳). 유닛 정보 띠가 떠 있으면 그 위로 비킨다.
      [기지] = 늘 보인다(카메라가 이미 기지에 있으면 흐리게) — 누르면 내 기지로. 그림 = 내 진영의 기지 건물(성·마굴·전당)을 줄인 것.
@@ -3404,6 +3417,7 @@
     var WKI = CONFIG.WEAPON[a.name] || {}; var V = { wMul: WKI.mul, wMax: WKI.max || S.buffMax, wSec: WKI.sec || S.buffSec, healMax: S.healMax, healPct: Math.round(S.healRatio * 100), buffMax: S.buffMax, buffSec: S.buffSec, stun: stunSecOf(a), charmMax: charmN(a), dur: Math.round(a.sup === 'masshaste' ? S.hasteSec : (a.dur || 600) / tps), undead: S.undeadDmg[a.name] || 0 };
     // 2026-11-18 사용자 요청(수치 없는 설명 채우기): radius 효과 반경 · dmg 범위 마법의 공격값(지금 그 유닛의 레벨·카드 보정 포함, 적 방어를 빼기 전) · shield 방어막의 방어 배수(rules.js SHIELD) · haste 가속 배수 · cool 자기 강화 재사용 · massPct 말다 회복 % · holyHeal·holyStun 홀리 크로스 · tcool 자동 기술 간격 · pow 메타몰포시스 위력 % · statueAtk 석상 공격력
     var cu = s.unit, HOi = MWE.OriginalRules.HOLY || {}, gT = this.types[GARG.stone];
+    V.tornR = Math.round((a.range || 1000) * CONFIG.RANGE_SCALE);   // 토네이도 실드의 회오리 반경 (TORNADO)
     V.radius = Math.round(this.aimRadius(s)); V.shield = ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[a.arm % 100] || 2; V.haste = S.hasteMul; V.cool = CONFIG.SELF_COOL[a.name] || S.cool; V.massPct = Math.round(S.massHeal * 100);
     V.slowMax = CONFIG.SLOW.max[a.name] || 1; V.slowSec = CONFIG.SLOW.sec; V.slowMul = CONFIG.TRAPS.slowMul; V.tcool = (CONFIG.TECH[a.name] || {}).cool || 0; V.pow = Math.round(META.pow * 100); V.statueAtk = this.fac && this.fac.atk && this.fac.atk[GARG.stone] != null ? this.fac.atk[GARG.stone] : gT ? gT.atk : 0; V.holyStun = +((HOi.stoneTicks || 0) / tps).toFixed(1);
     if (cu && cu.state !== 'dead') { var kp = cu.act; cu.act = a; var av = this.rules.attackValue(cu); cu.act = kp; V.dmg = Math.round(av * S.dmgMul * (1 + (this.dmgUp || 0)) * blastTier(a)); V.holyHeal = Math.round((av + (HOi.heal || 0)) * S.holyHeal); }   // 홀리 크로스의 회복량도 그 마법의 공격값으로 센다 (castUnitSkill 과 같은 식)
