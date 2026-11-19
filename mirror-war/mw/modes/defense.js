@@ -2407,7 +2407,7 @@
     var ctx = this.ctx, W = this.W, H = this.H;
     ctx.setTransform(this.rs, 0, 0, this.rs, 0, 0); ctx.imageSmoothingEnabled = !!this.look; if (this.look) ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H);
-    if (this.screen === 'loading') { MWE.drawLoadingOrig(ctx, W, H, this.assets, this.sfx, { title: '거울전쟁', sub: 'Mirror War Defense', p: this._pendStart ? null : this._loadShowP(), noTitle: !this._pendStart && this._loadHeld() }); if (!this._pendStart && this._loadHeld()) this._drawLoadIntro(); return; }   // 원본판 로딩 화면 느낌 (render/assets.js)   // 진행률 바 (render/assets.js)
+    if (this.screen === 'loading') { MWE.drawLoadingOrig(ctx, W, H, this.assets, this.sfx, { title: '거울전쟁', sub: 'Mirror War', p: this._pendStart ? null : this._loadShowP() }); if (!this._pendStart && this._loadHeld()) this._drawLoadIntro(); return; }   // 원본판 로딩 화면 느낌 (render/assets.js)   // 진행률 바 (render/assets.js)
 
     this._drawGround();
     // 전장 층: 여기서부터는 전장 좌표로 그린다 (카메라만큼 왼쪽으로 밀고, 아래 패널 영역은 잘라낸다)
@@ -3681,26 +3681,12 @@
   /* 로딩·메뉴 곡 (2026-11-17 사용자 요청: 로딩 때 해방부대 01 대신 다른 곡) — 해방부대 02(바이올린). 진영을 고르면 그 진영 곡으로 바뀐다. 묶음 번호 3 (this.bgm 목록 끝) */
   var MENU_BGM = { file: 'bgm0b.mp3', idx: 3 };   // 2026-11-17 사용자 지정: 바이올린이 나오는 해방부대 02 (처음엔 악령군 02였다)
   P._autoSound = function () { if (/[?&]mute=1/.test(root.location.search)) return; this.soundOn = true; this.sfx.on = true; if (!this.bgm.on) { this.bgm.set(MENU_BGM.idx); this.bgm.toggle(); } };   // ?mute=1 이면 켜지 않는다 (측정 봇·시험용)
-  /* 70% 에서 기다리는 동안 로딩 그림 위에 얹는 설명 판 (예전 시작 화면 첫 장의 글) */
+  /* 70% 에서 기다리는 동안: "화면을 눌러 시작" 한 줄만 (2026-11-19 사용자 요청 — 위쪽의 긴 설명 판을 빼고, 누른 뒤에 나오던 로고(거울전쟁)를 처음부터 보인다. 설명은 입문자 가이드가, 팬 게임 고지는 모드 선택 화면이 맡는다) */
   P._drawLoadIntro = function () {
-    var ctx = this.ctx, W = this.W, H = this.H, G = '#c9d1e3', self = this, pulse = 0.5 + 0.5 * Math.sin(Date.now() / 260);
-    var items = [['거울전쟁 디펜스', 26, '#ffd36e', 0], ['적 기지(마굴)까지 밀고 들어가 무너뜨리세요', 14, '#fff', 12],
-      ['탭에서 유닛을 소환하세요 — 길게 누르면 설명, [상성]에서 상성 확인', 12, G, 12],
-      ['마법은 칸을 누른 뒤 전장에서 쓸 곳을 누릅니다 (마나는 소환과 공유)', 12, G, 6],
-      ['적을 잡으면 전군 레벨업 — 불리하면 카드 3장 중 하나를 고릅니다', 12, G, 6],
-      ['전장은 좌우로 깁니다 — 화면을 끌어 둘러보세요', 12, G, 6],
-      ['벙커 수비대가 쏩니다 — 지나가는 아군은 멈춰서 벙커를 칩니다', 12, G, 6],
-      ['이 게임은 원작 「거울전쟁」에 대한 팬심으로 만든 비영리 팬 게임입니다.', 10, '#8b93a5', 16],
-      ['원작 자산의 저작권은 제작사 L&K Logic Korea에 있으며, 요청이 있으면 즉시 내리겠습니다.', 10, '#8b93a5', 3]];
-    var bh = Math.round(W * 188 / 560), by = Math.round(H * 0.45 - bh / 2), avail = by - 16, pw = Math.min(W - 20, 380), px = Math.round((W - pw) / 2), lines, total, k = 1;   // 눈 띠·막대 자리는 render/assets.js drawLoadingOrig 와 같다
-    var lay = function (k) { lines = []; total = 0; items.forEach(function (it) { var fs = Math.max(8, Math.round(it[1] * k)); ctx.font = (it[1] <= 10 ? '' : 'bold ') + fs + 'px sans-serif';
-      self._wrap(it[0], pw - 24).forEach(function (ln, n) { var gap = n ? 1 : Math.round(it[3] * k), lh = Math.round(fs * 1.28); lines.push([ln, fs, it[2], gap, lh, it[1] <= 10]); total += gap + lh; }); }); };
-    lay(1); while (total + 24 > avail && k > 0.7) { k -= 0.05; lay(k); }   // 위쪽 판(제목 자리)에 들어가게 — 작은 화면이면 글자를 조금 줄인다
-    var ph = total + 24, py = Math.max(8, Math.round(8 + (avail - ph) / 2));
-    ctx.save(); ctx.fillStyle = 'rgba(10,6,7,.62)'; ctx.fillRect(px, py, pw, ph); ctx.strokeStyle = 'rgba(176,138,60,.8)'; ctx.lineWidth = 1.5; ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; var y = py + 12;
-    lines.forEach(function (l) { y += l[3]; ctx.font = (l[5] ? '' : 'bold ') + l[1] + 'px sans-serif'; ctx.fillStyle = l[2]; ctx.fillText(l[0], W / 2, y + l[4] / 2, pw - 16); y += l[4]; });
+    var ctx = this.ctx, W = this.W, H = this.H, pulse = 0.5 + 0.5 * Math.sin(Date.now() / 260);
+    var bh = Math.round(W * 188 / 560), by = Math.round(H * 0.45 - bh / 2);   // 눈 띠·막대 자리는 render/assets.js drawLoadingOrig 와 같다
     var sy = by + bh + Math.min(70, Math.round((H - by - bh) * 0.3)) + 18 + 74;   // 막대 아래 (MB·효과음 줄 다음)
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#000'; ctx.fillText('화면을 눌러 시작  ♪', W / 2 + 1, sy + 1); ctx.fillStyle = 'rgba(255,233,176,' + (0.6 + 0.4 * pulse) + ')'; ctx.fillText('화면을 눌러 시작  ♪', W / 2, sy);
     ctx.restore();
   };

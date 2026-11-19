@@ -3,7 +3,7 @@
    포인터를 원에 대면 칼이 떨어져 동전에 꽂히고 빛이 흐른다. 그림은 tools/racebuild.py 가 원본 title.mwi·knife.mws 에서 굽는다
    (sim/race-bg.jpg = 배경 640×480 의 x 40~600, y 105~440 / sim/race-knife.png = 해방부대 칼 12장·이름표 12장·취소 6장).
    세 진영 모두 고를 수 있다(해방부대 → 악령군 2026-11-17 → 흑마술파 2026-11-18). on: false 인 진영은 어둡게 두고 누르면 "개발 예정"을 띄운다.
-   흐름: 첫 장(공지) → 진영 선택(여기) → 스테이지 고르기. [취소]는 공지로 돌아간다. 스페이스·엔터 = 해방부대.
+   흐름: 첫 장(공지) → 진영 선택(여기) → 스테이지 고르기. [취소]는 모드 선택(defense-mode.js)으로 돌아간다. 스페이스·엔터 = 해방부대.
    defense.js 쪽 연결: _drawOverlay 맨 앞(_raceShow → _drawRace), _tap 의 시작 화면 갈래(_raceTap), pointermove(_raceHover) */
 (function (root) {
   'use strict';
@@ -88,6 +88,8 @@
       else { var fi = 1 + Math.floor((el - FALL) * FPS) % 11; ctx.drawImage(sh, fi * 220, R.ky, 220, 320, kx, ky, 220 * s, 320 * s);
         if (el - FALL < 0.12) { ctx.save(); ctx.globalAlpha = 0.5 * (1 - (el - FALL) / 0.12); ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.ellipse(BX(R.c[0]), BY(R.c[1]), RX * s * 1.1, RY * s * 1.1, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }   // 꽂히는 순간 번쩍
       ctx.restore(); var li = Math.floor(el * FPS) % R.nl; ctx.drawImage(sh, li * 100, R.ly, 100, 32, BX(R.label[0]), BY(R.label[1]), 100 * s, 32 * s); }
+    // [취소] (2026-11-19 사용자 요청으로 되살림 — 누르면 모드 선택으로): 원본 knife.mws 58~63. 평소에는 가장 밝은 장(휴대폰은 포인터가 없어 늘 보여야 한다), 포인터를 대면 빛이 흐른다
+    if (sh && this._modeShow) { var ci = S.hover === 'cancel' ? Math.floor((now - S.t0) / 1000 * FPS) % 6 : 5; ctx.drawImage(sh, 1200 + ci * 96, 320, 96, 80, BX(CANCEL[0]), BY(CANCEL[1]), 96 * s, 80 * s); }
     // 글자: 제목 · 안내 · 팬 게임 고지
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     var hy = Math.max(30, Math.round(L.y0 - 110 * s - 40));
