@@ -64,7 +64,8 @@
          악령군: 데몬·데빌(등급 2 = 파이어 볼) · 사술사(등급 3 = 건물 둘레 광역) · 펜릴(사격 피해 +12)
          흑마술파: 대마술사 ×2(등급 1 = 썬더 스톰 — 흑마술파의 원거리 등급은 대마술사뿐) · 흑기사(등급 5 = 둘레 광역) · 요마술사(+20) */
     EFORT_SET: { evil: { key: 'efort1', name: '납골당', gar: [39, 40, 27, 45] }, dark: { key: 'efort2', name: '흉가', gar: [51, 51, 54, 50] }, both: { per: ['evil', 'dark'] },
-      libA: { key: 'libFort2', name: '방어기지', gar: [4, 5, 12, 11] }, libB: { key: 'libFort1', name: '타워', gar: [5, 5, 13, 14] }, lib: { per: ['libA', 'libB'] } },   // per = 벙커마다 다른 종족 (EFORTS 순서대로). 해방부대가 적일 때(2026-11-17): 궁수·명궁(등급 4 = 활) · 마법사·장로(등급 0 = 파이어 볼) · 정령사 +8 · 연금술사 +20
+      libA: { key: 'libFort2', name: '방어기지', gar: [4, 5, 12, 11] }, libB: { key: 'libFort1', name: '타워', gar: [5, 5, 13, 14] }, lib: { per: ['libA', 'libB'] },
+      libdark: { per: ['libA', 'dark'] }, libevil: { per: ['evil', 'libB'] } },   // 두 종족이 함께 나오는 매우 어려움(2026-11-19, README 257): 악령군 진영 = 아래 방어기지(해방부대)·위 흉가, 흑마술파 진영 = 아래 납골당·위 타워(해방부대)   // per = 벙커마다 다른 종족 (EFORTS 순서대로). 해방부대가 적일 때(2026-11-17): 궁수·명궁(등급 4 = 활) · 마법사·장로(등급 0 = 파이어 볼) · 정령사 +8 · 연금술사 +20
     /* 적 벙커의 무기 등급 (원본 FUN_004d0a40 / FUN_004d1760 / FUN_004d2470, 분석 8-35):
          act·from = 쏘는 원본 행동과 그 행동을 가진 유닛, mod·step = 사격 틱 조건(tick % mod == 자리 × step), loop = 가동 중 되풀이하는 그림 수(MW_DEF.arm1·arm2·arm3)
          aoe = 건물 둘레 광역: 반경 (1000 + 건물 사거리 보정 × 10) × RANGE_SCALE, 지상 유닛만, 피해 = 유닛 공격력 + 사격 보너스 + 레벨 × 2 (상성이면 × 배수 ÷ 8) − 방어 */
@@ -76,7 +77,9 @@
       lib: [{ id: 20, hero: '피렌디아 림플라이' }, { id: 5 }, { id: 5 }, { id: 4 }, { id: 13 }, { id: 12 }, { id: 14 }, { id: 11 }],   // 해방부대 성: 활 3 · 파이어 볼 2 · 보너스 +20 +8. 기지 영웅 = 소환사 피렌디아(나르 소환)
       both: [{ id: 51, hero: '쿨구레루 데스모네' }, { id: 41 }, { id: 40 }, { id: 39 }, { id: 51 }, { id: 54 }, { id: 27 }, { id: 60 }],
       evil: [{ id: 41, hero: '사울리안' }, { id: 40 }, { id: 39 }, { id: 39 }, { id: 27 }, { id: 27 }, { id: 44 }, { id: 45 }],   // 원거리(파이어 볼) 4 · 둘레 광역 2 · 보너스 +8 +12
-      dark: [{ id: 51, hero: '쿨구레루 데스모네' }, { id: 51 }, { id: 51 }, { id: 54 }, { id: 57 }, { id: 53 }, { id: 60 }, { id: 61 }]   // 원거리(썬더 스톰) 3 · 둘레 광역 3 · 보너스 +20 +15. 기지 영웅은 마법을 쓰는 쿨구레루(대마술사) — 이자비(흑기사)는 마법이 없어 길목에 선다
+      dark: [{ id: 51, hero: '쿨구레루 데스모네' }, { id: 51 }, { id: 51 }, { id: 54 }, { id: 57 }, { id: 53 }, { id: 60 }, { id: 61 }],
+      libdark: [{ id: 20, hero: '피렌디아 림플라이' }, { id: 5 }, { id: 4 }, { id: 13 }, { id: 51 }, { id: 54 }, { id: 14 }, { id: 61 }],   // 해방부대 성 + 흑마술파: 활 2 · 파이어 볼 1 · 썬더 스톰 1 · 둘레 광역 1 · 보너스 +20 +15 (README 257)
+      libevil: [{ id: 20, hero: '피렌디아 림플라이' }, { id: 5 }, { id: 4 }, { id: 13 }, { id: 41 }, { id: 40 }, { id: 27 }, { id: 45 }]   // 해방부대 성 + 악령군: 활 2 · 파이어 볼 3 · 둘레 광역 1 · 보너스 +12   // 원거리(썬더 스톰) 3 · 둘레 광역 3 · 보너스 +20 +15. 기지 영웅은 마법을 쓰는 쿨구레루(대마술사) — 이자비(흑기사)는 마법이 없어 길목에 선다
     },
     /* 길목의 적 영웅 (2026-11-14 사용자 요청): 기지 안에는 가장 강한 영웅 한 명만 두고(LAIR_GAR 의 첫 칸), 나머지 영웅은 적 진영 길목(x)에 주둔 적군처럼 세운다 — 자리에서 GUARD.leash 안의 아군만 상대, 다시 채워지지 않는다.
        스테이지 heroPosts = 앞에서부터 몇 명을 세울지(난이도 조절). 수치는 원작 영웅 기록(체력·공격·방어), 레벨 = 적 벙커 수비대 레벨 */
@@ -84,6 +87,8 @@
       lib: [{ id: 0, hero: '파인트 롤', x: 1400 }, { id: 3, hero: '벨리프 쇼링', x: 1160 }, { id: 6, hero: '다인 바운터', x: 1640 }, { id: 16, hero: '가웬 포라튼', x: 1300 }, { id: 1, hero: '문렙 선빌', x: 1520 }],
       evil: [{ id: 44, hero: '그랭키리우스', x: 1400 }, { id: 40, hero: '인시너레이터', x: 1160 }, { id: 30, hero: '코빌리우스', x: 1640 }],
       dark: [{ id: 57, hero: '카인 제틀링', x: 1400 }, { id: 53, hero: '산적짱', x: 1160 }, { id: 54, hero: '이자비', x: 1640 }, { id: 60, hero: '라미레스', x: 1300 }, { id: 61, hero: '네인 피리스', x: 1520 }],
+      libdark: [{ id: 0, hero: '파인트 롤', x: 1400 }, { id: 57, hero: '카인 제틀링', x: 1160 }, { id: 3, hero: '벨리프 쇼링', x: 1640 }, { id: 54, hero: '이자비', x: 1300 }, { id: 16, hero: '가웬 포라튼', x: 1060 }, { id: 60, hero: '라미레스', x: 1520 }, { id: 6, hero: '다인 바운터', x: 1720 }, { id: 53, hero: '산적짱', x: 1240 }],
+      libevil: [{ id: 0, hero: '파인트 롤', x: 1400 }, { id: 44, hero: '그랭키리우스', x: 1160 }, { id: 3, hero: '벨리프 쇼링', x: 1640 }, { id: 40, hero: '인시너레이터', x: 1300 }, { id: 16, hero: '가웬 포라튼', x: 1060 }, { id: 30, hero: '코빌리우스', x: 1520 }, { id: 6, hero: '다인 바운터', x: 1720 }, { id: 1, hero: '문렙 선빌', x: 1240 }],
       both: [{ id: 44, hero: '그랭키리우스', x: 1400 }, { id: 57, hero: '카인 제틀링', x: 1160 }, { id: 54, hero: '이자비', x: 1640 }, { id: 40, hero: '인시너레이터', x: 1300 }, { id: 53, hero: '산적짱', x: 1060 }, { id: 30, hero: '코빌리우스', x: 1520 }, { id: 41, hero: '사울리안', x: 1720 }, { id: 60, hero: '라미레스', x: 1240 }]
     },
     /* 덫·폭탄 (2026-11-14 사용자 요청): 적 진영(x from~to)에 깔려 있다가 아군 지상 유닛이 밟으면(trigger px) 터진다. 공중 유닛은 밟지 않는다. 덫끼리는 gap px 넘게 떨어뜨려 깐다.
@@ -92,7 +97,8 @@
        스테이지: traps = 깔린 수(최대), trapEvery = 몇 초마다 하나씩 다시 까는지 */
     TRAPS: { from: 1000, to: 1800, trigger: 16, gap: 44, slowSec: 6, slowMul: 0.5,
       evil: [{ act: 38, unit: 31 }], dark: [{ act: 62, unit: 55 }, { act: 64, unit: 56 }, { act: 77, unit: 69 }],
-      both: [{ act: 38, unit: 31 }, { act: 62, unit: 55 }, { act: 64, unit: 56 }, { act: 77, unit: 69 }] },
+      both: [{ act: 38, unit: 31 }, { act: 62, unit: 55 }, { act: 64, unit: 56 }, { act: 77, unit: 69 }],
+      libdark: [{ act: 62, unit: 55 }, { act: 64, unit: 56 }, { act: 77, unit: 69 }], libevil: [{ act: 38, unit: 31 }] },   // 해방부대에는 덫 행동이 없어 같이 나오는 종족의 덫만
     /* 주둔 적군 (2026-11-14 사용자 요청): 진군하는 적과 따로, 적 진영의 자리(post)를 지키는 부대. 자리에서 leash px 안에 들어온 아군만 상대하고 그 밖으로는 쫓지 않으며, 싸울 상대가 없으면 자리로 돌아가 선다.
        스테이지 guards = [{ at: 'bottom'(아래 적 벙커 앞) | 'top'(위 적 벙커 앞) | 'lair'(마굴 앞), list: [[유닛 번호, 수], …] }] — 난이도 조절용. 다시 채워지지 않는다 */
     GUARD: { leash: 220, ahead: 70 },
@@ -328,14 +334,18 @@
       { list: [[28, 13], [31, 4], [29, 10], [30, 6], [44, 4], [45, 4], [34, 4], [26, 2], [27, 2], [47, 2], [48, 6], [40, 6], [38, 2]], gap: 0.55, rest: 9 },
       { list: [[28, 17], [29, 11], [30, 8], [36, 6], [34, 4], [41, 2], [27, 2], [33, 4], [47, 4], [48, 7], [45, 6], [42, 2], [39, 6]], gap: 0.5, rest: 0 }
       ] },
-      both: { name: '악령군 + 흑마술파', lair: 'lair', glow: '190,90,220', fig: 41, hpMul: 0.95, waves: [] }   // 웨이브 표는 아래에서 두 종족의 표를 섞어 만든다
+      both: { name: '악령군 + 흑마술파', lair: 'lair', glow: '190,90,220', fig: 41, hpMul: 0.95, waves: [] },   // 웨이브 표는 아래에서 두 종족의 표를 섞어 만든다
+      /* 악령군·흑마술파 진영의 매우 어려움(2026-11-19, README 257): 해방부대 + 다른 한 종족 — both 와 같은 방식으로 섞는다. 기지 = 해방부대 성 그림 */
+      libdark: { name: '해방부대 + 흑마술파', lair: 'libBase', glow: '120,170,255', fig: 3, hpMul: 0.9, waves: [] },
+      libevil: { name: '해방부대 + 악령군', lair: 'libBase', glow: '120,170,255', fig: 3, hpMul: 0.9, waves: [] }
     },
     BOTH_MUL: 0.65   // 두 종족이 함께 나올 때 각 종족의 적 수 배수 (합 1.3배)
   };
   (function () { var E = CONFIG.ENEMIES, m = CONFIG.BOTH_MUL, cnt = function (w) { return w.list.reduce(function (n, e) { return n + e[1]; }, 0); };
-    E.both.waves = E.evil.waves.map(function (we, i) { var wd = E.dark.waves[i] || E.dark.waves[E.dark.waves.length - 1];
+    [['both', 'evil', 'dark'], ['libdark', 'lib', 'dark'], ['libevil', 'lib', 'evil']].forEach(function (k) {
+    E[k[0]].waves = E[k[1]].waves.map(function (we, i) { var wd = E[k[2]].waves[i] || E[k[2]].waves[E[k[2]].waves.length - 1];
       var list = we.list.concat(wd.list).map(function (e) { return [e[0], Math.max(1, Math.round(e[1] * m))]; }), n = list.reduce(function (a, e) { return a + e[1]; }, 0);
-      return { list: list, gap: (we.gap * cnt(we) + wd.gap * cnt(wd)) / 2 / n, rest: Math.max(we.rest, wd.rest) }; });   // 웨이브 길이는 두 종족의 평균
+      return { list: list, gap: (we.gap * cnt(we) + wd.gap * cnt(wd)) / 2 / n, rest: Math.max(we.rest, wd.rest) }; }); });   // 웨이브 길이는 두 종족의 평균
   })();
   CONFIG.WAVES = CONFIG.ENEMIES[CONFIG.ENEMY_DEFAULT].waves;   // 지금 고른 적 종족의 웨이브 표 (setEnemy 가 바꾼다)
 
@@ -438,7 +448,11 @@
           lairLv: 1, lairMul: 0.7, lairCast: 10, lairCastMul: 0.65, heroPosts: 1, traps: 0, guards: [{ at: 'bottom', list: [[1, 2]] }, { at: 'top', list: [[1, 2]] }, { at: 'lair', list: [[3, 1], [1, 2]] }] },   // 예전 악령군 1단계(마녀의 숲)의 쉬움 수치 그대로, 적만 해방부대. 덫은 없다(해방부대에 덫 행동이 없음)
         Object.assign({}, CONFIG.STAGES[1], { name: '흑마술의 탑', note: '어려움', cap: 100, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
           lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 12, trapEvery: 18, trapLv: 3,
-          guards: [{ at: 'bottom', list: [[54, 2], [57, 1]] }, { at: 'top', list: [[54, 2], [56, 1]] }, { at: 'lair', list: [[51, 1], [54, 2], [61, 1], [53, 2]] }] })   // 해방부대 3단계(악령의 성채)의 어려움 수치를 흑마술파 틀에. 기습(ambush)은 없다(해방부대 3단계의 기습 병력이 악령군 유닛이라)
+          guards: [{ at: 'bottom', list: [[54, 2], [57, 1]] }, { at: 'top', list: [[54, 2], [56, 1]] }, { at: 'lair', list: [[51, 1], [54, 2], [61, 1], [53, 2]] }] }),   // 해방부대 3단계(악령의 성채)의 어려움 수치를 흑마술파 틀에. 기습(ambush)은 없다(해방부대 3단계의 기습 병력이 악령군 유닛이라)
+        /* 3단계 매우 어려움 (2026-11-19 사용자 요청, README 257): 해방부대 + 흑마술파. 수치는 해방부대 '거울의 끝'과 같고 아군 상한만 악령군 배수(×2). 원본판 유닛 섞기·주둔·아군 주둔도 같다(아군 주둔 = 원본판 악령군, 영웅 카라드 하트세어) */
+        Object.assign({}, CONFIG.STAGES[2], { name: '심판의 날', enemy: 'libdark', cap: 120,
+          guards: [{ at: 'bottom', list: [[1, 2], [3, 1]] }, { at: 'top', list: [[54, 1], [53, 2]] }, { at: 'lair', list: [[3, 1], [51, 1], [13, 1], [54, 1], [12, 1], [61, 1]] }],
+          orig: { ratio: 0.3, guards: true, ally: { hero: '카라드 하트세어' } } })
       ] },
     /* 흑마술파 (2026-11-18 사용자 요청: "흑마술파 진영도 시작 — 쉬움 악령군, 어려움 해방부대", README 237). 스테이지는 악령군처럼 두 개.
        원본 생산비가 전부 0금이라(흑마술파는 미션에서 주어지는 병력) 마나 값을 따로 정했다 — 체력·공격을 해방부대·악령군 유닛과 견주어.
@@ -461,7 +475,11 @@
         Object.assign({}, CONFIG.STAGES[0], { name: '망자의 들판', note: '쉬움', mul: 1, ecap: 36, boost: { ids: [28, 29, 30, 31, 32, 33], waves: 3, k: 2 } }),
         { name: '해방부대의 성', note: '어려움', enemy: 'lib', flank: null, cap: 50, ecap: 36, waves: [0, 8], mul: 0.95, restMul: 1.5, loopRest: 22, loopLv: 0.5, lv: { start: 1, perWave: 0.4 }, hpMul: 1, lair: 7800, efort: { hp: 1300, lv: 4 },
           lairLv: 4, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7, heroPosts: 4, traps: 0,
-          guards: [{ at: 'bottom', list: [[1, 2], [5, 1]] }, { at: 'top', list: [[1, 2], [12, 1]] }, { at: 'lair', list: [[3, 1], [1, 2], [13, 1], [2, 2]] }] }   // 악령군 2단계(흑마술의 탑)의 어려움 수치를 해방부대 틀에. 덫은 없다(해방부대에 덫 행동이 없음)
+          guards: [{ at: 'bottom', list: [[1, 2], [5, 1]] }, { at: 'top', list: [[1, 2], [12, 1]] }, { at: 'lair', list: [[3, 1], [1, 2], [13, 1], [2, 2]] }] },   // 악령군 2단계(흑마술의 탑)의 어려움 수치를 해방부대 틀에. 덫은 없다(해방부대에 덫 행동이 없음)
+        /* 3단계 매우 어려움 (2026-11-19 사용자 요청, README 257): 해방부대 + 악령군. 수치는 해방부대 '거울의 끝'과 같다. 원본판 유닛 섞기·주둔·아군 주둔도 같다(아군 주둔 = 원본판 흑마술파, 영웅 쿨구레루 데스모네) */
+        Object.assign({}, CONFIG.STAGES[2], { name: '최후의 전쟁', enemy: 'libevil',
+          guards: [{ at: 'bottom', list: [[30, 2], [44, 1]] }, { at: 'top', list: [[1, 2], [5, 1]] }, { at: 'lair', list: [[34, 1], [3, 1], [44, 1], [13, 1], [41, 1], [12, 1]] }],
+          orig: { ratio: 0.3, guards: true, ally: { hero: '쿨구레루 데스모네' } } })
       ] }
   };
   DefenseGame.FACTIONS = FACTIONS;
@@ -517,7 +535,7 @@
     var ES = C.EFORT_SET[this.enemy]; if (C.PUSH && ES) (ES.per ? ES.per.map(function (k) { return C.EFORT_SET[k]; }) : [ES]).forEach(function (q) { q.gar.forEach(function (id) { ids[id] = 1; }); });   // 적 벙커 수비대
     if (C.PUSH && this.st && this.st.ambush) this.st.ambush.rear.concat(this.st.ambush.flank).forEach(function (e) { ids[e[0]] = 1; });   // 기습 병력
     if (C.PUSH) { (C.LAIR_GAR[this.enemy] || []).concat(C.HERO_POSTS[this.enemy] || []).forEach(function (g) { ids[g.id] = 1; }); (C.TRAPS[this.enemy] || []).forEach(function (k) { ids[k.unit] = 1; });   // 기지 수비대, 덫 주인(이펙트 그림을 받으려고)
-      C.STAGES.forEach(function (S) { if (S.enemy === this.enemy && S.orig && S.orig.ally && this.faction === 'lib') Object.keys(this.types).forEach(function (id) { var t = this.types[id]; if (t.orig && t.fac === 0) ids[id] = 1; }, this); }, this);   // 아군 주둔 (원본판 해방부대)
+      C.STAGES.forEach(function (S) { if (S.enemy === this.enemy && S.orig && S.orig.ally) Object.keys(this.types).forEach(function (id) { var t = this.types[id]; if (t.orig && t.fac === (FAC_RACE[this.faction] || 0)) ids[id] = 1; }, this); }, this);   // 아군 주둔 (원본판 해방부대)
       C.STAGES.forEach(function (S) { if (S.enemy === this.enemy) (S.guards || []).forEach(function (gd) { gd.list.forEach(function (e) { ids[e[0]] = 1; }); }); }, this); }   // 주둔 적군
     return Object.keys(ids).map(Number);
   };
@@ -2246,7 +2264,7 @@
       if (rec) { u.t = self._heroType(rec, self.types[hp.id]); self._applyType(u); }
       u.maxHp = 0; u.hp = 0; self._setLevel(u, (S.efort && S.efort.lv) || 1); u.hp = u.maxHp;
       u.x = hp.x; u.y = self.laneY + R[(2 + k * 3) % R.length]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.heroPost = true; u.ehero = !!rec; });
-    if (S.orig && S.orig.ally && this.faction === 'lib') this._placeAllyGuards(S);
+    if (S.orig && S.orig.ally) this._placeAllyGuards(S);
     if (!S.guards) return;
     S.guards.forEach(function (gd) {
       var F = gd.at === 'lair' ? null : (self.eforts || []).filter(function (f) { return f.at === gd.at; })[0], px = gd.at === 'lair' ? self.lairX - G.ahead : F ? F.x - G.ahead : null; if (px == null) return;
@@ -2262,7 +2280,7 @@
   P._placeAllyGuards = function (S) {
     var self = this, R = this.rows, half = Math.floor(R.length / 2), G = CONFIG.GUARD, lv = (S.efort && S.efort.lv) || 1, pk = root.MW_ORIGPACK || {};
     var F = { top: (this.forts || []).filter(function (f) { return f.at === 'top'; })[0], bottom: (this.forts || []).filter(function (f) { return f.at === 'bottom'; })[0] };
-    var ids = Object.keys(this.types).map(Number).filter(function (id) { var t = self.types[id]; return t.orig && t.fac === 0; }).sort(function (a, b) { return a - b; });
+    var race = FAC_RACE[this.faction] || 0, ids = Object.keys(this.types).map(Number).filter(function (id) { var t = self.types[id]; return t.orig && t.fac === race; }).sort(function (a, b) { return a - b; });
     var near = ids.filter(function (id) { var b = basicAct(self.types[id]); return b && b.range * CONFIG.RANGE_SCALE < 80; }), far = ids.filter(function (id) { return near.indexOf(id) < 0; });
     var auto = function (u) {   // 주둔 아군의 마법은 플레이어 패널에 올리지 않고 적 마법 유닛처럼 스스로 쓴다 (_enemyMagic — 쿨타임 ENEMY_SKILL.cool, 마나 없음)
       var E = CONFIG.ENEMY_SKILL, mi = self.magicUnits.indexOf(u); if (mi >= 0) self.magicUnits.splice(mi, 1);
@@ -3243,6 +3261,7 @@
   AFF['dark:lib'] = { name: AFF['evil:lib'].name, fam: AFF['evil:lib'].fam,
     rings: AFF.dark.rings.map(function (r) { return r.map(function (q) { return { n: q.n, fig: q.fig, m: q.m, ally: q.ally ? 0 : 1 }; }); }), open: AFF.dark.open,
     foot: ['상성이 맞으면 피해가 1.125~1.5배가 됩니다 (유닛 설명 카드의 "강함")', '지상 근접 유닛은 공중 유닛(엔젤 나이트)을 공격할 수 없습니다', '흑마술사·요마술사·대마술사는 상성이 없습니다'] };
+  AFF['evil:libdark'] = AFF['evil:lib']; AFF['dark:libevil'] = AFF['dark:lib'];   // 두 종족 매우 어려움: 해방부대 쪽 상성표로 (README 257)
   P._aff = function () { return AFF[this.faction + ':' + this.enemy] || AFF[this.enemy] || AFF.evil; };
   Object.keys(AFF).forEach(function (k) { var A = AFF[k]; A.famOf = {}; A.repOf = {}; A.fam.forEach(function (q) { q[1].forEach(function (id) { A.famOf[id] = A.name[q[0]]; A.repOf[id] = q[0]; }); }); });   // 적 유닛 → 묶음 이름·대표 유닛
   P.unitInfo = function (r) {
@@ -3505,11 +3524,11 @@
   };
   /* 원본판 유닛 주둔 (2026-11-19 사용자 요청 "적군 주둔지에도 오리지널 유닛들 다 나오게"): 그 스테이지 적 종족의 원본판 유닛을 한 기씩 모두 주둔 적군(guards)에 더한다.
      악령군 종족은 아래 벙커(납골당) 앞, 흑마술파 종족은 위 벙커(흉가) 앞에 서고, 기본 공격이 원거리이거나 없는 유닛(마법·지원)은 마굴 앞에 선다. 주민은 묶음에 없다 */
-  var ORIG_RACES = { evil: [1], dark: [2], both: [1, 2], lib: [0] };
+  var ORIG_RACES = { evil: [1], dark: [2], both: [1, 2], lib: [0], libdark: [0, 2], libevil: [0, 1] }, ORIG_AT = { both: { 1: 'bottom', 2: 'top' }, libdark: { 0: 'bottom', 2: 'top' }, libevil: { 1: 'bottom', 0: 'top' } }, FAC_RACE = { lib: 0, evil: 1, dark: 2 };   // ORIG_AT = 두 종족 스테이지에서 종족별 근접 주둔 자리(그 종족의 벙커 앞)
   P._origGuards = function (S) {
     var self = this, facs = ORIG_RACES[S.enemy] || [], at = { bottom: [], top: [], lair: [] };
     Object.keys(this.types).map(Number).sort(function (a, b) { return a - b; }).forEach(function (id) { var t = self.types[id]; if (!t.orig || facs.indexOf(t.fac) < 0) return;
-      var b = basicAct(t), far = !b || b.range * CONFIG.RANGE_SCALE >= 80; at[far ? 'lair' : (S.enemy === 'both' ? (t.fac === 1 ? 'bottom' : 'top') : (at.bottom.length <= at.top.length ? 'bottom' : 'top'))].push([id, 1]); });
+      var b = basicAct(t), far = !b || b.range * CONFIG.RANGE_SCALE >= 80; at[far ? 'lair' : (ORIG_AT[S.enemy] ? ORIG_AT[S.enemy][t.fac] : (at.bottom.length <= at.top.length ? 'bottom' : 'top'))].push([id, 1]); });
     S.guards = (S.guards || []).map(function (g) { return { at: g.at, list: g.list.concat(at[g.at] || []) }; });
     ['bottom', 'top', 'lair'].forEach(function (k) { if (at[k].length && !S.guards.some(function (g) { return g.at === k; })) S.guards.push({ at: k, list: at[k] }); });
   };
