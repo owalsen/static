@@ -36,6 +36,7 @@
   P._raceAt = function (x, y) {
     var b = this._raceToBg(x, y), i;
     for (i = 0; i < RACES.length; i++) { var R = RACES[i], dx = (b[0] - R.c[0]) / RX, dy = (b[1] - R.c[1]) / RY; if (dx * dx + dy * dy <= 1 || inBox(R.label, b[0], b[1])) return R.key; }
+    if (this._modeShow && inBox(CANCEL, b[0], b[1])) return 'cancel';   // [취소] → 모드 선택으로 (_raceTap)
     return null;
   };
   P._raceHover = function (x, y) {
@@ -48,6 +49,7 @@
   P._raceTap = function (x, y) {
     var S = this.raceS || (this.raceS = {}), now = Date.now(); if (S.go) return;
     var k = x < 0 ? (this.faction || 'lib') : this._raceAt(x, y);              // 스페이스·엔터 = 해방부대
+    if (k === 'cancel' && this._modeShow) { this.modeOk = false; this.raceS = null; if (this.cv) this.cv.style.cursor = ''; return; }   // [취소] = 모드 선택으로 (defense-mode.js, 2026-11-19)
     var R = RACES.filter(function (r) { return r.key === k; })[0]; if (!R) return;
     if (!R.on) { S.msg = { txt: R.name + ' — 개발 예정입니다', t0: now, r: R }; return; }
     if (x < 0) { if (S.hover !== k) { S.hover = k; S.t0 = now; S.landed = false; } S.pick = k; S.go = Math.max(now, S.t0 + FALL * 1000) + GO * 1000; this._raceSnd('click'); this._raceBgm(k); return; }   // 키보드: 떨어뜨리고 바로 출정

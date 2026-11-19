@@ -1327,6 +1327,7 @@
   /* ───────────────────────── 5. update ───────────────────────── */
   P._frame = function (ts) {
     var dt = Math.min(0.05, (ts - this._last) / 1000 || 0); this._last = ts;   // 탭이 멈췄다 돌아와도 한 번에 0.05초까지만 진행
+    if (this.sub) { this.sub.frame(dt); return; }            // 서바이벌(mw/modes/survival.js)이 캔버스를 쓰는 동안: 그 게임의 프레임만 (defense-mode.js)
     if (!this.ground && this.assets.ready()) {               // 그림이 다 왔다: 바닥을 만들고 시작 화면으로 (바닥이 없으면 어느 화면에서든 먼저 만든다)
       this.terrain = new MWE.TerrainRenderer(this.map, this.assets.get('tiles'));
       this._makeGround();
@@ -3166,6 +3167,7 @@
   var titleBgImg = null;
   P._titleBg = function () { if (!titleBgImg) { titleBgImg = new Image(); titleBgImg.src = (this.assets && this.assets.base || '') + 'title-bg.jpg'; } return titleBgImg.complete && titleBgImg.naturalWidth ? titleBgImg : null; };
   P._drawOverlay = function () {
+    if (this._modeShow && this._modeShow()) { this._drawMode(); return; }   // 모드 선택 화면: 디펜스 / 서바이벌 (defense-mode.js)
     if (this._raceShow && this._raceShow()) { this._drawRace(); return; }   // 진영 선택 화면 (defense-race.js, 원본판 시나리오 화면)
     var ctx = this.ctx, W = this.W, H = this.H, sc = this.screen, G = '#9aa3b8', items;
     var tb = sc === 'title' && CONFIG.PUSH && this.st ? this._titleBg() : null;
@@ -3270,6 +3272,7 @@
     if (this.screen === 'play' && !this.cards && inBox(this.affBtn, x, y)) { this.modal = 'aff'; this.modalT = 0; this.aim = null; this.info = null; this.sinfo = null; return; }
     if (this.screen === 'title') {   // 적 종족 버튼을 눌러 시작 (스페이스·엔터는 지금 고른 종족으로)
       if (CONFIG.PUSH && this.st && !this.titleSeen) { this.titleSeen = true; return; }   // 첫 장(공지): 아무 곳이나 누르면 진영 선택 → 스테이지 고르기로
+      if (this._modeShow && this._modeShow()) { this._modeTap(x, y); return; }   // 모드 선택 화면 (defense-mode.js)
       if (this._raceShow && this._raceShow()) { this._raceTap(x, y); return; }   // 진영 선택 화면 (defense-race.js)
       if (CONFIG.PUSH && this.st) { if (x < 0) { this.pickStage(this.stageI); return; }
         if (this.rankBtn && this._rankShow && inBox(this.rankBtn, x, y)) { this._rankShow(false); return; }   // 순위 보기 (defense-rank.js)
@@ -3708,6 +3711,7 @@
     var self = this, cv = this.cv;
     /* 누르기: 버튼이면 바로 실행, 진행 막대면 그곳으로 이동, 전장이면 끌어서 카메라 옮기기 시작 */
     cv.addEventListener('pointerdown', function (e) {
+      if (self.sub) return;                                  // 서바이벌 중: 그 게임이 입력을 받는다 (survival.js _bind)
       e.preventDefault(); var p = self._pos(e), x = p[0], y = p[1], m = self.miniBox; if (self.aim) self.aimPt = { x: x, y: y };
       self.bgm.resume();   // 멈춰 있는 배경음(자동 재생이 막혔거나 다른 소리에 끊김)은 아무 누르기에서나 다시 튼다 (2026-11-17)
       if (self.screen === 'play' && self.tut) { self.sfx.unlock(); self._tutPointer(x, y); return; }   // 입문자 가이드: 하이라이트된 곳과 [건너뛰기]만 받는다
@@ -3721,7 +3725,8 @@
       self._tap(x, y);
     });
     cv.addEventListener('pointermove', function (e) {
-      var p = self._pos(e); if (self.aim) self.aimPt = { x: p[0], y: p[1] }; if (self._raceHover) self._raceHover(p[0], p[1]);   // 진영 선택: 포인터를 대면 칼이 떨어진다   // 조준 중: 가리키는 곳에 반경 원 (마우스는 움직이기만 해도, 터치는 누르고 있는 동안)
+      if (self.sub) return;
+      var p = self._pos(e); if (self.aim) self.aimPt = { x: p[0], y: p[1] }; if (self._modeHover) self._modeHover(p[0], p[1]); if (self._raceHover) self._raceHover(p[0], p[1]);   // 진영 선택: 포인터를 대면 칼이 떨어진다   // 조준 중: 가리키는 곳에 반경 원 (마우스는 움직이기만 해도, 터치는 누르고 있는 동안)
       var d = self.drag; if (!d || d.id !== e.pointerId) return;
       if (d.mini) self._miniPan(p[0]);
       else if (d.slots) { var dx = p[0] - d.x; if (Math.abs(dx) > 8) d.moved = true; if (d.moved) { self.slotFirst = d.first; self.scrollSlots(-Math.round(dx / self.slotStep)); } }
@@ -3737,6 +3742,7 @@
     root.addEventListener('beforeunload', function (e) { if (self.screen === 'play' && !root.__noLeaveGuard) { e.preventDefault(); e.returnValue = ''; return ''; } });
     root.addEventListener('resize', function () { self._resize(); });
     root.addEventListener('keydown', function (e) {
+      if (self.sub) return;
       if (self.rankOpen) return;                               // 순위 창이 떠 있는 동안에는 게임 단축키를 받지 않는다 (닉네임 입력)
       self.bgm.resume();
       if (self.screen === 'play' && self.tut) { if (e.code === 'KeyM' && !e.repeat) { self.sfx.unlock(); self.toggleSound(); } return; }   // 입문자 가이드 중에는 단축키를 막는다 (소리 M 키만 받는다)
