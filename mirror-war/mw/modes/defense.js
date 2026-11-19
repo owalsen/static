@@ -291,7 +291,7 @@
         guards: [{ at: 'bottom', list: [[54, 2], [57, 1]] }, { at: 'top', list: [[54, 2], [56, 1]] }, { at: 'lair', list: [[51, 1], [54, 2], [61, 1], [53, 2]] }] },
       /* 마지막 단계 (2026-11-14 사용자 요청, 2026-11-18 부터 3단계): 악령군과 흑마술파가 함께 나온다 (ENEMIES.both — 두 종족의 같은 번호 웨이브를 BOTH_MUL 씩 섞은 표).
          벙커는 아래 = 납골당(악령군), 위 = 흉가(흑마술파). 기지 수비대는 두 종족 영웅 4명씩, 덫은 네 종류 전부 */
-      { name: '거울의 끝', amp: { from: 300, perMin: 0.15, max: 1 }, cap: 60, ecap: 40, enemy: 'both', note: '매우 어려움', waves: [0, 10], mul: 1, restMul: 1.3, loopRest: 20, loopLv: 0.5, lv: { start: 2, perWave: 0.5 }, hpMul: 1, lair: 9600, efort: { hp: 1500, lv: 5 }, lairLv: 5, lairCast: 5, heroPosts: 8, traps: 14, trapEvery: 15, trapLv: 4,
+      { name: '거울의 끝', amp: { from: 300, perMin: 0.15, max: 1 }, cap: 60, ecap: 40, enemy: 'both', note: '매우 어려움', waves: [0, 10], mul: 1, restMul: 1.3, loopRest: 20, loopLv: 0.5, lv: { start: 2, perWave: 0.5 }, hpMul: 1, lair: 6000,   /* 2026-11-19: 9600 → 6000 (사용자 요청, README 259 — 세 진영 3단계가 이 값을 같이 쓴다) */ efort: { hp: 1500, lv: 5 }, lairLv: 5, lairMul: 0.7, lairCast: 9, lairCastMul: 0.7,   /* 2026-11-19 사용자 요청 "적 기지 수비대 사격 약화"(README 261): 사격 배수 1.2(기본) → 0.7, 기지 영웅 마법 5초 → 9초·위력 ×0.7 — 2단계와 같은 값 */ heroPosts: 8, traps: 14, trapEvery: 15, trapLv: 4,
         orig: { ratio: 0.3, guards: true, ally: { hero: '글렌 주드' } },   // 원본판(2000) 유닛: 웨이브의 30% 를 같은 이름의 원본판 유닛으로, 주둔 적군에 원본판 유닛 전부 한 기씩 (README 255), 아군 주둔 = 원본판 해방부대 전부 + 원본판 영웅 1명 (README 256)
         guards: [{ at: 'bottom', list: [[30, 2], [44, 1]] }, { at: 'top', list: [[54, 1], [53, 2]] }, { at: 'lair', list: [[34, 1], [54, 1], [44, 1], [57, 1], [41, 1], [61, 1]] }] }
     ],
@@ -535,7 +535,7 @@
     var ES = C.EFORT_SET[this.enemy]; if (C.PUSH && ES) (ES.per ? ES.per.map(function (k) { return C.EFORT_SET[k]; }) : [ES]).forEach(function (q) { q.gar.forEach(function (id) { ids[id] = 1; }); });   // 적 벙커 수비대
     if (C.PUSH && this.st && this.st.ambush) this.st.ambush.rear.concat(this.st.ambush.flank).forEach(function (e) { ids[e[0]] = 1; });   // 기습 병력
     if (C.PUSH) { (C.LAIR_GAR[this.enemy] || []).concat(C.HERO_POSTS[this.enemy] || []).forEach(function (g) { ids[g.id] = 1; }); (C.TRAPS[this.enemy] || []).forEach(function (k) { ids[k.unit] = 1; });   // 기지 수비대, 덫 주인(이펙트 그림을 받으려고)
-      C.STAGES.forEach(function (S) { if (S.enemy === this.enemy && S.orig && S.orig.ally) Object.keys(this.types).forEach(function (id) { var t = this.types[id]; if (t.orig && t.fac === (FAC_RACE[this.faction] || 0)) ids[id] = 1; }, this); }, this);   // 아군 주둔 (원본판 해방부대)
+      C.STAGES.forEach(function (S) { if (S.enemy === this.enemy && S.orig && S.orig.ally) Object.keys(this.types).forEach(function (id) { var t = this.types[id]; if (t.orig && t.fac === (FAC_RACE[this.faction] || 0) && (S.orig.ally.units || (root.MW_ORIGPACK && root.MW_ORIGPACK.heroes || []).some(function (h) { return h.name === S.orig.ally.hero && h.type === +id; }))) ids[id] = 1; }, this); }, this);   // 아군 주둔 (원본판 해방부대)
       C.STAGES.forEach(function (S) { if (S.enemy === this.enemy) (S.guards || []).forEach(function (gd) { gd.list.forEach(function (e) { ids[e[0]] = 1; }); }); }, this); }   // 주둔 적군
     return Object.keys(ids).map(Number);
   };
@@ -990,8 +990,14 @@
     if (!g || this.screen !== 'play') return false;
     this.selBase = false;                                    // 마법을 쓰려 하면 성 선택은 풀린다 (단축키로 눌렀을 때도)
     if (g.aimed && was === g) return false;                  // 조준 중인 칸을 다시 누르면 취소
-    var why = this._whyNot(g); if (why) { if (why[2]) this._say(why[2].x, why[2].y - why[2].headY - 10, why[0], why[1]); return false; }
     var R = this._readyOf(g);
+    /* 2026-11-19 사용자 요청 "카메라 밖에 있는 시전자의 스킬을 누르면 시전이 아니라 시전자에게 카메라가 먼저 가게"(README 262): 쓸 수 있는 시전자가 하나도 화면 안에 없으면
+       이번 누름은 카메라만 옮긴다 — 화면 가운데에 가장 가까운 시전자에게, 머리 위 ▼. 화면에 들어온 뒤 다시 누르면 평소대로 쓴다 */
+    var vx0 = this.cam.x + 16, vx1 = this.cam.x + this.W - 16, CR = R.length ? R : g.slots.filter(function (q) { return q.unit && q.unit.state !== 'dead'; });   // 쓸 수 있는 시전자가 없으면(쿨타임·마나) 살아 있는 시전자 전부
+    if (CR.length && !CR.some(function (q) { return q.unit.x >= vx0 && q.unit.x <= vx1; })) {
+      var ccx = this.cam.x + this.W / 2, nq = CR.slice().sort(function (a, b) { return Math.abs(a.unit.x - ccx) - Math.abs(b.unit.x - ccx); })[0].unit;
+      this.camGoal = { x: nq.x - this.W / 2, until: this.time + CONFIG.CAM.skillSec }; this.manualUntil = 0; this._say(nq.x, nq.y - nq.headY - 14, '▼', '#c9d1e3'); return false; }
+    var why = this._whyNot(g); if (why) { if (why[2]) this._say(why[2].x, why[2].y - why[2].headY - 10, why[0], why[1]); return false; }
     if (g.act.races && !this._raceFoes(g.act).length) { var ru = (R[0] || g.slots[0]).unit; this._say(ru.x, ru.y - ru.headY - 10, '대상 없음 — 전장에 ' + raceLabel(g.act) + ' 없음', '#c9d1e3'); return false; }   // 조준에 들어가지 않는다
     if (!g.aimed && SELF_BLAST[g.act.name]) {                 // 발밑 범위 마법: 둘레에 적이 가장 많은 시전자가 바로, 없으면 적에게 가장 가까운 시전자가 다가가서
       var F = this.units.filter(function (o) { return o.side === 1 && o.state !== 'dead'; }), sb = null, sn = 0, nb = null, nd = Infinity, nf = null;
@@ -2267,6 +2273,7 @@
     if (S.orig && S.orig.ally) this._placeAllyGuards(S);
     if (!S.guards) return;
     S.guards.forEach(function (gd) {
+      if (gd.at === 'spread') { self._spreadGuards(gd, S); return; }
       var F = gd.at === 'lair' ? null : (self.eforts || []).filter(function (f) { return f.at === gd.at; })[0], px = gd.at === 'lair' ? self.lairX - G.ahead : F ? F.x - G.ahead : null; if (px == null) return;
       var rows = gd.at === 'top' ? R.slice(0, half + 1) : gd.at === 'bottom' ? R.slice(half) : R, n = 0;
       gd.list.forEach(function (e) { for (var k = 0; k < e[1]; k++, n++) { var u = self.spawn(e[0], 1); self._setLevel(u, (S.efort && S.efort.lv) || 1); u.hp = u.maxHp;
@@ -2287,10 +2294,19 @@
       u.slots = []; u.auto = true; skillsOf(u.t).forEach(function (a) { var q = new SkillSlot(u, a); if (q.kind === 'morph') return; q.cdMax = E.cool; q.cd = E.first[0] + self.rng.next() * (E.first[1] - E.first[0]); q.cost = 0; u.slots.push(q); }); self._regroup(); };
     var put = function (u, at, k, back) { auto(u); var f = F[at], rows = at === 'top' ? R.slice(0, half + 1) : R.slice(half), x0 = f ? f.x + G.ahead : 600;
       u.x = x0 - (back ? 46 : 0) - Math.floor(k / rows.length) * 28 + (k % 2) * 12; u.y = self.laneY + rows[k % rows.length]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.mir = false; };
-    [[near, false], [far, true]].forEach(function (g) { var n = { top: 0, bottom: 0 }; g[0].forEach(function (id, i) { var at = i % 2 ? 'bottom' : 'top', u = self.spawn(id, 0); self._setLevel(u, lv); u.hp = u.maxHp; put(u, at, n[at]++, g[1]); }); });
+    /* 2026-11-19 사용자 요청 "아군 주둔 원본판 유닛은 영웅 1기로만 — 너무 복잡함"(README 260): 기본은 영웅만. ally.units = true 면 예전처럼 원본판 유닛 전부 */
+    if (S.orig.ally.units) [[near, false], [far, true]].forEach(function (g) { var n = { top: 0, bottom: 0 }; g[0].forEach(function (id, i) { var at = i % 2 ? 'bottom' : 'top', u = self.spawn(id, 0); self._setLevel(u, lv); u.hp = u.maxHp; put(u, at, n[at]++, g[1]); }); });
     var rec = (pk.heroes || []).filter(function (h) { return h.name === S.orig.ally.hero; })[0], base = rec && this.types[rec.type];
     if (base) { var u = this.spawn(rec.type, 0), ht = this._heroType(rec, base); ht.pid = base.pid; ht.opid = rec.pid; u.t = ht; this._applyType(u); this._setLevel(u, Math.max(lv, rec.lv || 1)); u.hp = u.maxHp;
       auto(u); u.x = ((F.top ? F.top.x : 470) + (F.bottom ? F.bottom.x : 730)) / 2 + G.ahead; u.y = this.laneY + R[half]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.ehero = true; }
+  };
+  /* 흩어 놓는 주둔 적군 (at: 'spread', README 260): 적 진영 x from ~ (적 기지 − back) 사이에 격자로 — 칸 간격을 넓게 잡고 홀수 줄은 반 칸 밀어 엇갈리게.
+     한 칸에 한 기, 줄은 전투 줄 전부를 쓴다. 규칙은 다른 주둔 적군과 같다(u.post) */
+  P._spreadGuards = function (gd, S) {
+    var self = this, R = this.rows, L = []; gd.list.forEach(function (e) { for (var k = 0; k < e[1]; k++) L.push(e[0]); }); if (!L.length) return;
+    var x0 = gd.from || 1080, x1 = this.lairX - (gd.back || 110), cols = Math.max(1, Math.ceil(L.length / R.length)), dx = cols > 1 ? (x1 - x0) / (cols - 0.5) : 0;
+    L.forEach(function (id, n) { var r = n % R.length, c = Math.floor(n / R.length), u = self.spawn(id, 1); self._setLevel(u, (S.efort && S.efort.lv) || 1); u.hp = u.maxHp;
+      u.x = x0 + c * dx + (r % 2 ? dx / 2 : 0); u.y = self.laneY + R[(r * 4) % R.length]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; });   // 줄 순서를 4칸씩 건너 섞는다(9줄)
   };
   /* 아군 u 가 칠 적 벙커: 부서지지 않은 적 벙커 중 u 와 같은 쪽(위쪽 벙커 = 전투 줄 위쪽 절반, 아래쪽 = 아래쪽 절반)이고 가로로 사거리 안에 든 것 (적의 _fortFor 와 좌우 대칭) */
   P._efortFor = function (u) {
@@ -3529,8 +3545,10 @@
     var self = this, facs = ORIG_RACES[S.enemy] || [], at = { bottom: [], top: [], lair: [] };
     Object.keys(this.types).map(Number).sort(function (a, b) { return a - b; }).forEach(function (id) { var t = self.types[id]; if (!t.orig || facs.indexOf(t.fac) < 0) return;
       var b = basicAct(t), far = !b || b.range * CONFIG.RANGE_SCALE >= 80; at[far ? 'lair' : (ORIG_AT[S.enemy] ? ORIG_AT[S.enemy][t.fac] : (at.bottom.length <= at.top.length ? 'bottom' : 'top'))].push([id, 1]); });
-    S.guards = (S.guards || []).map(function (g) { return { at: g.at, list: g.list.concat(at[g.at] || []) }; });
-    ['bottom', 'top', 'lair'].forEach(function (k) { if (at[k].length && !S.guards.some(function (g) { return g.at === k; })) S.guards.push({ at: k, list: at[k] }); });
+    /* 2026-11-19 사용자 요청 "적 주둔 유닛이 너무 빽빽해서 사이에 낀 유닛이 이상하게 움직인다 — 분산 배치"(README 260): 세 자리에 몰지 않고 적 진영 전체에 고르게 흩는다(at: 'spread').
+       종족·근접/원거리를 번갈아 섞어 한 곳에 같은 종류가 몰리지 않게 한다 */
+    var all = [], k = 0; while (at.bottom.length || at.top.length || at.lair.length) { var q = [at.bottom, at.top, at.lair, at.lair][k++ % 4]; if (q.length) all.push(q.shift()); }
+    S.guards = (S.guards || []).concat([{ at: 'spread', list: all }]);
   };
   P.pickStage = function (i) { if (!this.setStage(i)) return; this.tut = null; this._tutWant = !!(this._tutWanted && this._tutWanted(i)); this.start(); };   // 1단계를 처음 고르면 입문자 가이드 (defense-tut.js, 2026-11-17)
   P.start = function () {
