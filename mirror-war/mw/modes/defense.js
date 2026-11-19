@@ -2718,7 +2718,7 @@
     ctx.save(); ctx.translate(x, y + drop); if (u.mir) ctx.scale(-1, 1);
     if (this.look && u.state !== 'dead') { ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = CONFIG.LOOK.outline * this.rs; }   // 어두운 번짐 테두리
     if (u.stunUntil > T && !(u.curseUntil > T)) ctx.drawImage(this._stoneSprite(this.assets.get(f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
-    else { var tc = this.theme && this.theme.tint && u.state !== 'dead' ? this.theme.tint[u.side] : null;   // 난이도 테마의 유닛 색조
+    else { var tc = u.state === 'dead' ? null : u.tint || (this.theme && this.theme.tint ? this.theme.tint[u.side] : null);   // 유닛 자신의 색조(서바이벌 트래퍼의 녹색) 또는 난이도 테마의 유닛 색조
       if (tc) ctx.drawImage(this._tintSprite(this.assets.get(f[6] || ('u' + u.t.id)), f, tc), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);
       else ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
     if (this.look && u.hitT != null && T - u.hitT < CONFIG.LOOK.flash && u.state !== 'dead') { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = CONFIG.LOOK.flashAlpha * (1 - (T - u.hitT) / CONFIG.LOOK.flash);   // 맞으면 번쩍
@@ -3690,7 +3690,7 @@
     ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#000'; ctx.fillText('화면을 눌러 시작  ♪', W / 2 + 1, sy + 1); ctx.fillStyle = 'rgba(255,233,176,' + (0.6 + 0.4 * pulse) + ')'; ctx.fillText('화면을 눌러 시작  ♪', W / 2, sy);
     ctx.restore();
   };
-  P.toggleSound = function () { this.soundOn = !this.soundOn; this.sfx.on = this.soundOn; if (this.bgm.on !== this.soundOn && this.screen !== 'title') this.bgm.toggle(); };
+  P.toggleSound = function () { this.soundOn = !this.soundOn; this.sfx.on = this.soundOn; if (this.bgm.on !== this.soundOn && (this.screen !== 'title' || this.sub)) this.bgm.toggle(); };   // this.sub = 서바이벌 중 (screen 은 'title' 그대로라 배경음이 안 꺼졌다 — 2026-11-19 사용자 지적)
 
   /* 단축키 (PC): 1~7 소환, Q·W·E·R 탭, A·S·D 보이는 스킬 칸, Z·X 스킬 칸 넘기기, ←·→ 카메라, M 소리, 스페이스·엔터 시작/다시 하기 */
   P._bind = function () {
