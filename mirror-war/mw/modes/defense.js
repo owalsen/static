@@ -286,6 +286,7 @@
       /* 마지막 단계 (2026-11-14 사용자 요청, 2026-11-18 부터 3단계): 악령군과 흑마술파가 함께 나온다 (ENEMIES.both — 두 종족의 같은 번호 웨이브를 BOTH_MUL 씩 섞은 표).
          벙커는 아래 = 납골당(악령군), 위 = 흉가(흑마술파). 기지 수비대는 두 종족 영웅 4명씩, 덫은 네 종류 전부 */
       { name: '거울의 끝', amp: { from: 300, perMin: 0.15, max: 1 }, cap: 60, ecap: 40, enemy: 'both', note: '매우 어려움', waves: [0, 10], mul: 1, restMul: 1.3, loopRest: 20, loopLv: 0.5, lv: { start: 2, perWave: 0.5 }, hpMul: 1, lair: 9600, efort: { hp: 1500, lv: 5 }, lairLv: 5, lairCast: 5, heroPosts: 8, traps: 14, trapEvery: 15, trapLv: 4,
+        orig: { ratio: 0.3, guards: true, ally: { hero: '글렌 주드' } },   // 원본판(2000) 유닛: 웨이브의 30% 를 같은 이름의 원본판 유닛으로, 주둔 적군에 원본판 유닛 전부 한 기씩 (README 255), 아군 주둔 = 원본판 해방부대 전부 + 원본판 영웅 1명 (README 256)
         guards: [{ at: 'bottom', list: [[30, 2], [44, 1]] }, { at: 'top', list: [[54, 1], [53, 2]] }, { at: 'lair', list: [[34, 1], [54, 1], [44, 1], [57, 1], [41, 1], [61, 1]] }] }
     ],
     ENEMY_DEFAULT: 'evil',
@@ -338,6 +339,26 @@
   })();
   CONFIG.WAVES = CONFIG.ENEMIES[CONFIG.ENEMY_DEFAULT].waves;   // 지금 고른 적 종족의 웨이브 표 (setEnemy 가 바꾼다)
 
+  /* ───────── 원본판(2000) 유닛 묶음 (2026-11-19, README 255 — mirrorwar-original/DEFENSE-PLAN.md) ─────────
+     sim/origpack.js(tools/origpack.js 가 굽는다)의 유닛·이펙트를 data 에 합친다. 번호 이름공간: 유닛 + 100, 이펙트 칸 + 100(시트 10 + n = orig/armsN.png), 소리 + ORIG_SFX.
+     규칙이 칸 번호로 정해진 곳은 칸 % 100 으로 읽는다(core/rules.js 무기·방어막 배수, 여기의 중독·저주·홀리 크로스 …).
+     origOf[어드밴스드 번호] = 같은 진영·같은 이름의 원본판 유닛 번호 — 스테이지 orig(섞는 비율)가 웨이브의 일부를 바꿔 넣을 때 쓴다.
+     상성: 원본판 유닛의 aff 에는 이미 어드밴스드 번호가 같이 들어 있다(origpack.js). 반대로 어드밴스드 유닛의 aff 에 그 상대의 원본판 번호를 더하고, 상성표 묶음(AFF.fam)에도 넣는다.
+     체력 바 폭·선택 원 크기(hpbar.units)는 같은 이름의 어드밴스드 유닛 것을 빌린다. 초상화는 원본판 초상화(orig/portraits.png, 126×126) */
+  var ORIG_SFX = 10000;
+  function mergeOrig(data) {
+    var pk = root.MW_ORIGPACK; if (!pk || data._orig) return {}; data._orig = true;
+    var off = data.fx.frames.length, R = function (L) { return L.map(function (i) { return i + off; }); }, origOf = {};
+    pk.fx.frames.forEach(function (f) { data.fx.frames.push(f); });
+    Object.keys(pk.fx.arms).forEach(function (k) { var d = pk.fx.arms[k], e = Object.assign({}, d, { fly: R(d.fly), hit: R(d.hit) }); if (d.seq) e.seq = R(d.seq); if (d.var) e.var = d.var.map(R); if (d.wv) e.wv = d.wv.map(function (p) { return p.map(R); }); data.fx.arms[k] = e; });
+    var advById = {}; data.units.forEach(function (d) { advById[d.id] = d; });
+    pk.units.forEach(function (d) { data.units.push(d); if (d.adv != null && origOf[d.adv] == null) origOf[d.adv] = d.id; });
+    data.units.forEach(function (d) { if (d.orig || !d.aff) return; var add = []; pk.units.forEach(function (o) { if (o.adv != null && d.aff.indexOf(o.adv) >= 0) add.push(o.id); }); d.aff = d.aff.concat(add); });
+    var HB = root.MW && root.MW.hpbar; if (HB && HB.units) pk.units.forEach(function (o) { if (HB.units[o.id] == null && o.adv != null && HB.units[o.adv]) HB.units[o.id] = HB.units[o.adv]; });
+    Object.keys(AFF).forEach(function (k) { var A = AFF[k]; A.fam.forEach(function (q) { pk.units.forEach(function (o) { if (o.adv != null && q[1].indexOf(o.adv) >= 0 && q[1].indexOf(o.id) < 0) { q[1].push(o.id); A.famOf[o.id] = A.name[q[0]]; A.repOf[o.id] = q[0]; } }); }); });
+    return origOf;
+  }
+
   /* ───────────────────────── 2. 준비 ───────────────────────── */
   function DefenseGame(canvas, data, opts) {
     this.cv = canvas; this.ctx = canvas.getContext('2d');
@@ -346,7 +367,8 @@
 
     // 원본 데이터 → 엔진 객체
     this.types = {}; var self = this;
-    data.units.forEach(function (d) { self.types[d.id] = new MWE.UnitType(d); });   // 유닛 번호로 찾는다 (77 같은 변형 형태도 있다)
+    this.origOf = mergeOrig(data);                           // 원본판 유닛 묶음 (sim/origpack.js)
+    data.units.forEach(function (d) { var t = self.types[d.id] = new MWE.UnitType(d); if (d.orig) { t.orig = 1; t.adv = d.adv; t.opid = d.opid; } });   // 유닛 번호로 찾는다 (77 같은 변형 형태도 있다). 원본판 유닛 = 100 + 원본판 번호   // 유닛 번호로 찾는다 (77 같은 변형 형태도 있다)
     this.rules = new MWE.OriginalRules(data.fx.arms);        // 원본 피해 공식
     this.rng = new MWE.Rng(Date.now() & 0xffff);
     this.look = CONFIG.LOOK.on; try { var lk = root.localStorage && root.localStorage.getItem('mwdef.hd'); if (lk != null) this.look = lk !== '0'; if (/[?&]look=0/.test(root.location.search)) this.look = false; else if (/[?&]look=1/.test(root.location.search)) this.look = true; } catch (err) {}
@@ -495,6 +517,7 @@
     var ES = C.EFORT_SET[this.enemy]; if (C.PUSH && ES) (ES.per ? ES.per.map(function (k) { return C.EFORT_SET[k]; }) : [ES]).forEach(function (q) { q.gar.forEach(function (id) { ids[id] = 1; }); });   // 적 벙커 수비대
     if (C.PUSH && this.st && this.st.ambush) this.st.ambush.rear.concat(this.st.ambush.flank).forEach(function (e) { ids[e[0]] = 1; });   // 기습 병력
     if (C.PUSH) { (C.LAIR_GAR[this.enemy] || []).concat(C.HERO_POSTS[this.enemy] || []).forEach(function (g) { ids[g.id] = 1; }); (C.TRAPS[this.enemy] || []).forEach(function (k) { ids[k.unit] = 1; });   // 기지 수비대, 덫 주인(이펙트 그림을 받으려고)
+      C.STAGES.forEach(function (S) { if (S.enemy === this.enemy && S.orig && S.orig.ally && this.faction === 'lib') Object.keys(this.types).forEach(function (id) { var t = this.types[id]; if (t.orig && t.fac === 0) ids[id] = 1; }, this); }, this);   // 아군 주둔 (원본판 해방부대)
       C.STAGES.forEach(function (S) { if (S.enemy === this.enemy) (S.guards || []).forEach(function (gd) { gd.list.forEach(function (e) { ids[e[0]] = 1; }); }); }, this); }   // 주둔 적군
     return Object.keys(ids).map(Number);
   };
@@ -747,7 +770,7 @@
   /* 아군 수 상한 (2026-11-14 사용자 요청 — 아군이 50~100기 덩어리가 되어 반격·측면이 묻혔다): 스테이지 st.cap, 없으면 CONFIG.ALLY_CAP(0 = 없음).
      세는 것 = 전장에 살아 있는 아군. 영웅(카드로 나온 아군 영웅)은 세지 않는다. 성 안 수비대는 전장 유닛이 아니라 들어가지 않는다 */
   P.allyCap = function () { return (this.st && this.st.cap != null ? this.st.cap : CONFIG.ALLY_CAP) || 0; };
-  P.allyCount = function () { var n = 0, L = this.units; for (var i = 0; i < L.length; i++) { var u = L[i]; if (u.side === 0 && u.state !== 'dead' && !u.hero) n++; } return n; };
+  P.allyCount = function () { var n = 0, L = this.units; for (var i = 0; i < L.length; i++) { var u = L[i]; if (u.side === 0 && u.state !== 'dead' && !u.hero && !u.guard) n++; } return n; };   // 아군 주둔(u.guard)은 세지 않는다
 
   /* 지금 탭의 i번째 소환 버튼을 누름 */
   P.summon = function (i) {
@@ -886,7 +909,7 @@
   P._regroup = function () {
     var map = {}, out = [], old = this.groups || [], i;
     for (i = 0; i < old.length; i++) { old[i].slots = []; map[old[i].act.id] = old[i]; }
-    for (i = 0; i < this.slots.length; i++) { var s = this.slots[i]; if (s.auto || !s.unit || s.unit.side !== 0 || s.unit.state === 'dead') continue;
+    for (i = 0; i < this.slots.length; i++) { var s = this.slots[i]; if (s.auto || !s.unit || s.unit.side !== 0 || s.unit.auto || s.unit.state === 'dead') continue;   // unit.auto = 스스로 마법을 쓰는 유닛(아군 주둔)
       var g = map[s.act.id]; if (!g) { g = map[s.act.id] = { act: s.act, kind: s.kind, aimed: s.aimed, cost: s.cost, slots: [], vi: null, isNew: true }; }
       g.slots.push(s); }
     for (i = 0; i < old.length; i++) if (old[i].slots.length) out.push(old[i]);
@@ -1172,7 +1195,7 @@
       if (S.friendlyFire[a.name]) { var fr = a.aoe ? S.radius * (S.radiusMul && S.radiusMul[a.name] || 1) * (u.side === 0 ? 1 + this.radiusUp : 1) : 60, fm = S.dmgMul * (u.side === 0 ? (1 + this.dmgUp) * blastTier(a) : 1);   // 아군도 맞는다
         this.units.forEach(function (o) { if (o.side === u.side && o.state !== 'dead' && Math.hypot(o.x - foe.x, o.y - foe.y) <= fr) self._damage(o, self.rules.damage(u, o, self.rng) * fm); }); }
       var HO = MWE.OriginalRules.HOLY;
-      if (HO && a.arm === HO.arm) {                          // 홀리 크로스 (원본 case 0x10, 분석 8-43): 범위 안의 아군은 회복 + 상태 이상 해제, 언데드 적은 석화
+      if (HO && a.arm % 100 === HO.arm) {                          // 홀리 크로스 (원본 case 0x10, 분석 8-43): 범위 안의 아군은 회복 + 상태 이상 해제, 언데드 적은 석화
         var hr = S.radius * (u.side === 0 ? 1 + this.radiusUp : 1), hv = Math.round((this.rules.attackValue(u) + HO.heal) * S.holyHeal);
         this.units.forEach(function (o) { if (o.state === 'dead' || Math.hypot(o.x - foe.x, o.y - foe.y) > hr) return;
           if (o.side === u.side) { var got = Math.min(o.maxHp - o.hp, hv); o.hp += got; if (got > 0) self._say(o.x, o.y - o.t.h - 6, '+' + got, '#8fe89a'); o.stunUntil = 0; delete o.buffs.meltw; delete o.buffs.melta; delete o.buffs.poison; delete o.buffs.slow; }   /* 아군 상태 이상 해제 (원본 case 0x10, 8-43): 석화·멜팅 웨폰·멜팅 아머·중독·감속 */
@@ -1537,7 +1560,7 @@
     if (u.post) {                                            // 주둔 적군: 자리에서 GUARD.leash 안에 들어온 아군만 상대한다. 아니면 자리로 돌아가 선다 (진군하지 않는다)
       if (!tgt || Math.abs(tgt.x - u.post.x) > C.GUARD.leash) { var gx = u.post.x - u.x, gy = u.post.y - u.y, gd = Math.hypot(gx, gy);
         if (gd > 4) { var gs = Math.min(gd, this._speed(u) * dt); u.x += gx / gd * gs; u.y += gy / gd * gs; u.state = 'move'; u.walkT += dt; this._faceVec(u, gx, gy); }
-        else { u.state = 'idle'; this._look(u, -1); }
+        else { u.state = 'idle'; this._look(u, u.side === 0 ? 1 : -1); }
         return; } }
     if (u.side === 0 && u.act && !u.castOrder) {              // 아군 AI: 물러서기와 교대 (CONFIG.AI)
       var AI = C.AI, T0 = this.time;
@@ -2223,6 +2246,7 @@
       if (rec) { u.t = self._heroType(rec, self.types[hp.id]); self._applyType(u); }
       u.maxHp = 0; u.hp = 0; self._setLevel(u, (S.efort && S.efort.lv) || 1); u.hp = u.maxHp;
       u.x = hp.x; u.y = self.laneY + R[(2 + k * 3) % R.length]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.heroPost = true; u.ehero = !!rec; });
+    if (S.orig && S.orig.ally && this.faction === 'lib') this._placeAllyGuards(S);
     if (!S.guards) return;
     S.guards.forEach(function (gd) {
       var F = gd.at === 'lair' ? null : (self.eforts || []).filter(function (f) { return f.at === gd.at; })[0], px = gd.at === 'lair' ? self.lairX - G.ahead : F ? F.x - G.ahead : null; if (px == null) return;
@@ -2230,6 +2254,25 @@
       gd.list.forEach(function (e) { for (var k = 0; k < e[1]; k++, n++) { var u = self.spawn(e[0], 1); self._setLevel(u, (S.efort && S.efort.lv) || 1); u.hp = u.maxHp;
         u.x = px + (n % 2) * 26 + Math.floor(n / rows.length) * 30; u.y = self.laneY + rows[n % rows.length]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; } });
     });
+  };
+  /* 아군 주둔 (2026-11-19 사용자 요청 "해방부대 아군 주둔에도 오리지널 유닛들 배치, 해방부대 영웅도 1기", README 256): 원본판 해방부대 유닛을 한 기씩 모두 아군 벙커 앞에 세운다.
+     주둔 적군과 같은 규칙(u.post — 자리에서 GUARD.leash 안에 들어온 적만 상대하고 자리로 돌아간다, 다시 채워지지 않는다). 근접은 앞줄, 원거리·지원은 그 뒤.
+     위 벙커(타워)와 아래 벙커(방어기지)에 번갈아. 아군 상한(allyCount)에는 세지 않는다. 영웅 = 원본판 미션의 영웅 기록(MW_ORIGPACK.heroes, 기본 유닛은 원본판) — 두 벙커 사이 가운데.
+     레벨 = 스테이지 적 벙커 수비대 레벨(주둔 적군과 같음) */
+  P._placeAllyGuards = function (S) {
+    var self = this, R = this.rows, half = Math.floor(R.length / 2), G = CONFIG.GUARD, lv = (S.efort && S.efort.lv) || 1, pk = root.MW_ORIGPACK || {};
+    var F = { top: (this.forts || []).filter(function (f) { return f.at === 'top'; })[0], bottom: (this.forts || []).filter(function (f) { return f.at === 'bottom'; })[0] };
+    var ids = Object.keys(this.types).map(Number).filter(function (id) { var t = self.types[id]; return t.orig && t.fac === 0; }).sort(function (a, b) { return a - b; });
+    var near = ids.filter(function (id) { var b = basicAct(self.types[id]); return b && b.range * CONFIG.RANGE_SCALE < 80; }), far = ids.filter(function (id) { return near.indexOf(id) < 0; });
+    var auto = function (u) {   // 주둔 아군의 마법은 플레이어 패널에 올리지 않고 적 마법 유닛처럼 스스로 쓴다 (_enemyMagic — 쿨타임 ENEMY_SKILL.cool, 마나 없음)
+      var E = CONFIG.ENEMY_SKILL, mi = self.magicUnits.indexOf(u); if (mi >= 0) self.magicUnits.splice(mi, 1);
+      u.slots = []; u.auto = true; skillsOf(u.t).forEach(function (a) { var q = new SkillSlot(u, a); if (q.kind === 'morph') return; q.cdMax = E.cool; q.cd = E.first[0] + self.rng.next() * (E.first[1] - E.first[0]); q.cost = 0; u.slots.push(q); }); self._regroup(); };
+    var put = function (u, at, k, back) { auto(u); var f = F[at], rows = at === 'top' ? R.slice(0, half + 1) : R.slice(half), x0 = f ? f.x + G.ahead : 600;
+      u.x = x0 - (back ? 46 : 0) - Math.floor(k / rows.length) * 28 + (k % 2) * 12; u.y = self.laneY + rows[k % rows.length]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.mir = false; };
+    [[near, false], [far, true]].forEach(function (g) { var n = { top: 0, bottom: 0 }; g[0].forEach(function (id, i) { var at = i % 2 ? 'bottom' : 'top', u = self.spawn(id, 0); self._setLevel(u, lv); u.hp = u.maxHp; put(u, at, n[at]++, g[1]); }); });
+    var rec = (pk.heroes || []).filter(function (h) { return h.name === S.orig.ally.hero; })[0], base = rec && this.types[rec.type];
+    if (base) { var u = this.spawn(rec.type, 0), ht = this._heroType(rec, base); ht.pid = base.pid; ht.opid = rec.pid; u.t = ht; this._applyType(u); this._setLevel(u, Math.max(lv, rec.lv || 1)); u.hp = u.maxHp;
+      auto(u); u.x = ((F.top ? F.top.x : 470) + (F.bottom ? F.bottom.x : 730)) / 2 + G.ahead; u.y = this.laneY + R[half]; u.post = { x: u.x, y: u.y }; u.state = 'idle'; u.guard = true; u.ehero = true; }
   };
   /* 아군 u 가 칠 적 벙커: 부서지지 않은 적 벙커 중 u 와 같은 쪽(위쪽 벙커 = 전투 줄 위쪽 절반, 아래쪽 = 아래쪽 절반)이고 가로로 사거리 안에 든 것 (적의 _fortFor 와 좌우 대칭) */
   P._efortFor = function (u) {
@@ -2262,6 +2305,7 @@
          풀린 뒤 CURSE.gap 초 동안은 다시 걸리지 않는다(여러 기가 번갈아 쏴서 영영 묶이는 일 방지). 면역 유닛·석화 중인 유닛에는 안 걸린다(원본 조건). 멈춤은 석화와 같은 stunUntil, 그림은 회색 대신 저주 기운(칸 18) */
   var CURSE = { sec: 2.5, gap: 6 };
   P._shotStatus = function (t, arm) {
+    arm = arm % 100;   // 원본판 유닛의 칸은 + 100 (tools/origpack.js)
     if (arm !== 17 && arm !== 18 || t.state === 'dead' || t.t.immune || t.isFort) return; var T = this.time, tps = this.rules.tps;
     if (arm === 17) { if (!(t.buffs.poison && t.buffs.poison.until > T)) this._say(t.x, t.y - t.headY - 6, '중독', '#9be36a'); t.buffs.poison = { until: T + 160 / tps }; return; }
     if (t.stunUntil > T || (t.curseFree || 0) > T) return;   // 석화·저주 중이거나 방금 풀린 유닛
@@ -2295,12 +2339,15 @@
      원본 순서표(arm 파일 머리 끝 20칸): 0 1 2 3 4 5 6 6 6 6 6 6 6 6 5 4 3 2 1 0 — 갈라지고(7틱) 벌어진 채 8틱 있다가 닫힌다, 틱 = 1/12초. 보통 합성으로, 유닛 아래(땅)에 그린다. shake = 화면 흔들림(초, 디펜스 고유) */
   var GROUND_FX = { 33: { seq: [0, 1, 2, 3, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 5, 4, 3, 2, 1, 0], shake: 0.9 } };
   P._addEffect = function (x, y, arm, delay) {
-    var d = this.data.fx.arms[arm], fr = d && (d.hit.length ? d.hit : d.fly.length ? d.fly : d.seq), G = GROUND_FX[arm];   // seq = 순간이동 이펙트의 틱 순서표
-    if (G && d && d.hit.length) { this.effects.push({ x: x, y: y, f: G.seq.map(function (k) { return d.hit[k]; }), t0: this.time + (delay || 0), add: false, fps: 12, ground: true }); if (G.shake) this.shakeUntil = this.time + G.shake; return; }
+    var d = this.data.fx.arms[arm], fr = d && (d.hit.length ? d.hit : d.fly.length ? d.fly : d.seq), G = GROUND_FX[arm % 100];   // seq = 순간이동 이펙트의 틱 순서표
+    if (G && d && d.hit.length > Math.max.apply(null, G.seq)) { this.effects.push({ x: x, y: y, f: G.seq.map(function (k) { return d.hit[k]; }), t0: this.time + (delay || 0), add: false, fps: 12, ground: true }); if (G.shake) this.shakeUntil = this.time + G.shake; return; }
     if (fr && fr.length) this.effects.push({ x: x, y: y, f: fr, t0: this.time + (delay || 0), add: !d.dir });
   };
 
-  P._play = function (id, vol) { if (this.soundOn && id != null && id >= 0) this.sfx.play(id, vol); };
+  P._play = function (id, vol) { if (!this.soundOn || id == null || id < 0) return;
+    if (id >= ORIG_SFX) { var o = this._origSfx(); if (!o) return; if (!o.ctx && this.sfx.ctx) o.ctx = this.sfx.ctx; o.on = this.sfx.on; o.play(id - ORIG_SFX, vol); return; }   // 원본판 유닛의 소리 (orig/sfx-pack.js — 원본판 유닛이 나오는 스테이지에서만 받는다)
+    this.sfx.play(id, vol); };
+  P._origSfx = function () { var pk = root.MW_ORIGPACK; if (!pk) return null; if (!this.osfx) this.osfx = new MWE.Sfx(this.assets.base + 'orig/sfx-pack.js', pk.sfx, 'MW_SFX2', true); return this.osfx; };
 
   /* ───────────────────────── 6. draw ───────────────────────── */
   P.draw = function () {
@@ -2544,7 +2591,8 @@
     if (u.state !== 'dead') { if (u === this.sel) { ctx.globalAlpha = 0.775 + 0.225 * Math.sin(T * 7.54); this._ring(u, x, y + 2, 28, 0, 1); ctx.globalAlpha = 1; } }
     // 공격 강화(웨폰): 발밑에서 도는 원본 이펙트. 방어 강화(베리어)는 몸 가운데 높이 — 전장 시뮬(worldview.js)과 같은 방식
     var wb = u.buffs.weapon, sb = u.buffs.shield;
-    if (wb && wb.until > T) this._loopFx(wb.arm, x, y);
+    var wr = wb && wb.until > T && u.state !== 'dead' ? MWE.weaponRing(this.data.fx.arms[wb.arm], u.t, T) : null;   // 원본판 웨폰(크기 3종 × 앞뒤 반고리, render/assets.js): 뒤쪽 반은 유닛보다 먼저, 앞쪽 반은 유닛 위에
+    if (wr) this._fxFrame(wr[0], x, y, true); else if (wb && wb.until > T) this._loopFx(wb.arm, x, y);
     ctx.save(); ctx.translate(x, y + drop); if (u.mir) ctx.scale(-1, 1);
     if (this.look && u.state !== 'dead') { ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = CONFIG.LOOK.outline * this.rs; }   // 어두운 번짐 테두리
     if (u.stunUntil > T && !(u.curseUntil > T)) ctx.drawImage(this._stoneSprite(this.assets.get(f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
@@ -2552,10 +2600,11 @@
     if (this.look && u.hitT != null && T - u.hitT < CONFIG.LOOK.flash && u.state !== 'dead') { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = CONFIG.LOOK.flashAlpha * (1 - (T - u.hitT) / CONFIG.LOOK.flash);   // 맞으면 번쩍
       ctx.drawImage(this.assets.get(f[6] || ('u' + u.t.id)), f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); }
     ctx.restore();
+    if (wr) this._fxFrame(wr[1], x, y, true);
     if (u.state !== 'dead') { if (u === this.sel) { ctx.globalAlpha = 0.775 + 0.225 * Math.sin(T * 7.54); this._ring(u, x, y + 2, 28, 1, 1); ctx.globalAlpha = 1; } }   // 원의 앞쪽 반 (발을 덮는다) ctx.globalAlpha = 1;
     if (u.curseUntil > T && u.state !== 'dead') { var cf = this.data.fx.arms[18]; cf = cf && cf.fly; if (cf && cf.length) this._fxFrame(cf[Math.floor(T * 12) % cf.length], x, y - u.headY * 0.5, true); }   // 저주: 몸에 저주 기운이 붙는다 (원본 FUN_004f7490)
     if (sb && sb.until > T) { var sd = this.data.fx.arms[sb.arm], si = sd ? MWE.shieldFrame(sd, sb, u.t, T) : -1;   // 파운틴 베리어: 시전 동작은 한 번, 그 뒤 물줄기 유지 (render/assets.js)
-      if (si >= 0) this._fxFrame(si, x, y - (sb.arm === 7 || sb.arm === 43 ? u.headY : u.headY >> 1), !sd.dir); }
+      if (si >= 0) this._fxFrame(si, x, y - (sb.arm % 100 === 7 || sb.arm % 100 === 43 ? u.headY : u.headY >> 1), !sd.dir); }
     var hb = u.buffs.haste; if (hb && hb.until > T && u.state !== 'dead') this._loopFx(44, x, y - u.headY);   // 가속: 머리 위 (원본 FUN_004f7490과 같은 자리)
     if (u.state === 'dead') return;
     var top = y - u.headY - 8;
@@ -2782,7 +2831,7 @@
   };
 
   /* 이펙트 시트 n번(armsN.png)을 받는다 (한 번만) */
-  P._loadFxSheet = function (n) { if (this.fxSheets[n]) return; this.fxSheets[n] = 1; this.assets.load('arms' + n, 'arms' + n + '.png'); };
+  P._loadFxSheet = function (n) { if (this.fxSheets[n]) return; this.fxSheets[n] = 1; this.assets.load('arms' + n, n >= 10 ? 'orig/arms' + (n - 10) + '.png' : 'arms' + n + '.png'); };   // 10 이상 = 원본판 이펙트 시트 (tools/origpack.js)
   /* 이펙트 그림 한 장 (프레임 번호 → 시트 armsN.png 안의 자리). add = 빛나는 가산 합성. 그 시트를 아직 안 받았으면 받기 시작하고 이번에는 건너뛴다 */
   P._fxFrame = function (idx, x, y, add) {
     var fr = this.data.fx.frames[idx], ctx = this.ctx; if (!fr) return;
@@ -3209,8 +3258,8 @@
     // 기본 공격의 부가 효과 (2026-11-18 사용자 요청 — 설명에 빠져 있던 것을 수치로). 판정은 실제 처리와 같은 값을 본다: 스플래시 = _strike 의 sr, 중독 = act.type 1 · 이펙트 칸 17, 묶임 = 칸 18(CURSE), 세 배 = act.type 2, 연속 타격 = EXTRA_HITS
     if (basic) { var tp = this.rules.tps, bx = [], bd = basic.arm >= 0 ? this.data.fx.arms[basic.arm] : null, F0 = this.fac || {}, sr0 = Math.max(bd && bd.r > 0 ? bd.r * C.RANGE_SCALE : 0, (F0.splashPx && F0.splashPx[t.id]) || 0), xh = this.rules.extraHits(basic);
       if (sr0 > 0 && !(basic.suicide || t.id === 31)) bx.push('맞은 곳 둘레 ' + Math.round(sr0) + ' 안의 적도 피해');   // 좀비는 닿으면 자폭하므로 따로 적는다
-      if (basic.type === 1 || basic.arm === 17) bx.push('중독 ' + Math.round((basic.type === 1 ? (basic.dur || 160) : 160) / tp) + '초(초당 체력 −' + Math.round(tp / 2) + ', 1까지)');
-      if (basic.arm === 18) bx.push('맞은 적을 ' + CURSE.sec + '초 묶음(같은 적은 ' + CURSE.gap + '초 뒤 다시)');
+      if (basic.type === 1 || basic.arm % 100 === 17) bx.push('중독 ' + Math.round((basic.type === 1 ? (basic.dur || 160) : 160) / tp) + '초(초당 체력 −' + Math.round(tp / 2) + ', 1까지)');
+      if (basic.arm % 100 === 18) bx.push('맞은 적을 ' + CURSE.sec + '초 묶음(같은 적은 ' + CURSE.gap + '초 뒤 다시)');
       if (basic.type === 2) bx.push('67% 확률로 공격값 3배');
       var MFi = C.MELEE_FX || {};
       if (basic.type === 4 && MFi.vamp) bx.push('준 피해만큼 체력 회복');
@@ -3232,7 +3281,7 @@
     if (bt.length) L.push('기술(자동): ' + bt.join(', '));
     // 사격 보너스 유닛(정령사·연금술사·마법전사·마법기사)은 혼자 넣으면 효과가 없다 — 쏘는 유닛(궁수·명궁·창검사·마법사·장로)과 함께여야 한다
     if (r.gar) { var gp = []; if (r.gar.cls >= 0) gp.push('성·벙커에 넣으면 사격'); else if (r.gar.bonus > 0) gp.push('쏘는 유닛과 함께 넣으면 사격 +' + r.gar.bonus); if (r.gar.def > 0) gp.push('성·벙커에 넣으면 건물 방어 +' + r.gar.def); L.push(gp.join(' · ')); }
-    return { name: t.name, cost: r.cost, stat: '체력 ' + t.maxHpAt(1 + (this.allyLv || 0)) + ' · 공격 ' + (this.fac && this.fac.atk && this.fac.atk[t.id] != null ? this.fac.atk[t.id] : t.atk) + ' · 방어 ' + t.def + (CONFIG.REVIVE && CONFIG.REVIVE.sides[0] && CONFIG.REVIVE.ids.indexOf(t.id) >= 0 ? ' · 부활 ' + (Math.min(CONFIG.REVIVE.cap, 1 + (this.allyLv || 0) + CONFIG.REVIVE.base) + 1) + '%' : ''), desc: (MWE.UNIT_DESC && MWE.UNIT_DESC[t.id]) || '', lines: L };
+    return { name: t.name, cost: r.cost, stat: '체력 ' + t.maxHpAt(1 + (this.allyLv || 0)) + ' · 공격 ' + (this.fac && this.fac.atk && this.fac.atk[t.id] != null ? this.fac.atk[t.id] : t.atk) + ' · 방어 ' + t.def + (CONFIG.REVIVE && CONFIG.REVIVE.sides[0] && CONFIG.REVIVE.ids.indexOf(t.id) >= 0 ? ' · 부활 ' + (Math.min(CONFIG.REVIVE.cap, 1 + (this.allyLv || 0) + CONFIG.REVIVE.base) + 1) + '%' : ''), desc: (MWE.UNIT_DESC && (MWE.UNIT_DESC[t.id] || (t.adv != null && MWE.UNIT_DESC[t.adv]))) || '', lines: L };
   };
   /* 마법 설명 카드의 내용 (스킬 칸을 길게 누르면): 손으로 쓴 설명(MWE.DEF_SKILL_DESC)의 {자리}를 CONFIG 값으로 채우고, 종류·마나·범위·시전 거리는 데이터에서 */
   P.skillInfo = function (g) {
@@ -3240,7 +3289,7 @@
     var WKI = CONFIG.WEAPON[a.name] || {}; var V = { wMul: WKI.mul, wMax: WKI.max || S.buffMax, wSec: WKI.sec || S.buffSec, healMax: S.healMax, healPct: Math.round(S.healRatio * 100), buffMax: S.buffMax, buffSec: S.buffSec, stun: stunSecOf(a), charmMax: charmN(a), dur: Math.round(a.sup === 'masshaste' ? S.hasteSec : (a.dur || 600) / tps), undead: S.undeadDmg[a.name] || 0 };
     // 2026-11-18 사용자 요청(수치 없는 설명 채우기): radius 효과 반경 · dmg 범위 마법의 공격값(지금 그 유닛의 레벨·카드 보정 포함, 적 방어를 빼기 전) · shield 방어막의 방어 배수(rules.js SHIELD) · haste 가속 배수 · cool 자기 강화 재사용 · massPct 말다 회복 % · holyHeal·holyStun 홀리 크로스 · tcool 자동 기술 간격 · pow 메타몰포시스 위력 % · statueAtk 석상 공격력
     var cu = s.unit, HOi = MWE.OriginalRules.HOLY || {}, gT = this.types[GARG.stone];
-    V.radius = Math.round(this.aimRadius(s)); V.shield = ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[a.arm] || 2; V.haste = S.hasteMul; V.cool = CONFIG.SELF_COOL[a.name] || S.cool; V.massPct = Math.round(S.massHeal * 100);
+    V.radius = Math.round(this.aimRadius(s)); V.shield = ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[a.arm % 100] || 2; V.haste = S.hasteMul; V.cool = CONFIG.SELF_COOL[a.name] || S.cool; V.massPct = Math.round(S.massHeal * 100);
     V.slowMax = CONFIG.SLOW.max[a.name] || 1; V.slowSec = CONFIG.SLOW.sec; V.slowMul = CONFIG.TRAPS.slowMul; V.tcool = (CONFIG.TECH[a.name] || {}).cool || 0; V.pow = Math.round(META.pow * 100); V.statueAtk = this.fac && this.fac.atk && this.fac.atk[GARG.stone] != null ? this.fac.atk[GARG.stone] : gT ? gT.atk : 0; V.holyStun = +((HOi.stoneTicks || 0) / tps).toFixed(1);
     if (cu && cu.state !== 'dead') { var kp = cu.act; cu.act = a; var av = this.rules.attackValue(cu); cu.act = kp; V.dmg = Math.round(av * S.dmgMul * (1 + (this.dmgUp || 0)) * blastTier(a)); V.holyHeal = Math.round((av + (HOi.heal || 0)) * S.holyHeal); }   // 홀리 크로스의 회복량도 그 마법의 공격값으로 센다 (castUnitSkill 과 같은 식)
     var desc = ((MWE.DEF_SKILL_DESC && MWE.DEF_SKILL_DESC[a.name]) || '').replace(/\{(\w+)\}/g, function (m, k) { return V[k] != null ? V[k] : m; });
@@ -3281,7 +3330,7 @@
     if (live(b.slow)) st.push({ si: STATUS_ICON.slow, name: '감속', eff: '걸음 ' + C.TRAPS.slowMul + '배 · 공격 대기 3배', left: left(b.slow.until), bad: 1 });
     if (u.charmed) st.push({ si: STATUS_ICON.charm, name: '매혹', eff: '편이 바뀌어 싸웁니다', left: 0, bad: 1 });
     if (live(b.weapon)) { var wa = actBy(function (a) { return a.sup === 'weapon' && a.arm === b.weapon.arm; }), wn = wa ? wa.name : '무기 강화', wm = (C.WEAPON[wn] || {}).mul; st.push({ ai: wa ? wa.icon : -1, si: 1, name: wn, eff: '공격력' + (wm ? ' ' + wm + '배' : ' 강화'), left: left(b.weapon.until) }); }
-    if (live(b.shield)) { var sa = b.shield.block ? actBy(function (a) { return a.name === '방패 막기'; }) : actBy(function (a) { return a.sup === 'shield' && a.arm === b.shield.arm; }); st.push({ ai: sa ? sa.icon : -1, si: 3, name: sa ? sa.name : '방어막', eff: '방어력 ' + (b.shield.block ? 2 : ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[b.shield.arm] || 2) + '배', left: b.shield.block ? 0 : left(b.shield.until) }); }
+    if (live(b.shield)) { var sa = b.shield.block ? actBy(function (a) { return a.name === '방패 막기'; }) : actBy(function (a) { return a.sup === 'shield' && a.arm === b.shield.arm; }); st.push({ ai: sa ? sa.icon : -1, si: 3, name: sa ? sa.name : '방어막', eff: '방어력 ' + (b.shield.block ? 2 : ({ 7: 2.5, 19: 2.5, 35: 2.5, 76: 2.5, 43: 2 })[b.shield.arm % 100] || 2) + '배', left: b.shield.block ? 0 : left(b.shield.until) }); }
     if (live(b.haste)) { var ha = actBy(function (a) { return a.sup === 'masshaste' || a.sup === 'haste'; }); st.push({ ai: ha ? ha.icon : -1, si: 9, name: '가속', eff: '걸음 ' + S.hasteMul + '배 · 공격 대기 없음', left: left(b.haste.until) }); }
     var foe = u.side === 1 && !u.charmed, addAct = function (a, slot) { if (!a || seen[a.name]) return; seen[a.name] = 1;
       var q = slot || new SkillSlot(u, a), I = self.skillInfo({ slots: [q], act: a, kind: q.kind, cost: q.cost }), passive = !!(q.auto || a.self || C.TECH[a.name] || foe);
@@ -3291,12 +3340,16 @@
       sk.push({ ai: a.icon, name: a.name, passive: true, cost: 0, desc: a.name === '방패 막기' ? '체력 ' + Math.round(B.hpBelow * 100) + '% 이하에서 방어 2배, ' + Math.round(B.hpRelease * 100) + '% 이상이면 해제' : a.name === '창 돌리기' ? '적 ' + B.foes + '기 이상에 둘러싸이면 둘레를 공격' : '' }); });
     if (u.side === 0 && C.REVIVE && C.REVIVE.sides[0] && C.REVIVE.ids.indexOf(t.id) >= 0) sk.push({ si: 2, name: '부활', passive: true, cost: 0, desc: '쓰러질 때 ' + (Math.min(C.REVIVE.cap, (u.level || 1) + C.REVIVE.base) + 1) + '% 확률로 체력을 가득 채워 다시 일어납니다' });
     var UI = this.unitInfo({ t: t, cost: 0, gar: null }), lines = UI.lines.filter(function (l, i) { return i === 0 || (!foe && /^(강함|약함)/.test(l)) || (/: /.test(l) && !/^(마법|기술|강함|약함)/.test(l)); });
-    return { name: t.name, job: u.hero || u.ehero || u.heroPost ? (t.job || '') : '', hero: !!(u.hero || u.ehero || u.heroPost), lv: u.level || 1, hp: Math.max(0, Math.round(u.hp)), max: u.maxHp, atk: u.atkOv != null ? u.atkOv : t.atk, def: t.def, pid: t.pid, foe: foe, lines: lines, st: st, sk: sk };
+    return { name: t.name, job: u.hero || u.ehero || u.heroPost ? (t.job || '') : '', hero: !!(u.hero || u.ehero || u.heroPost), lv: u.level || 1, hp: Math.max(0, Math.round(u.hp)), max: u.maxHp, atk: u.atkOv != null ? u.atkOv : t.atk, def: t.def, pid: t.opid != null ? 1000 + t.opid : t.pid, foe: foe, lines: lines, st: st, sk: sk };   // 1000 + n = 원본판 초상화 n
   };
   P._unitStripBox = function () { if (!this.sel || this.screen !== 'play' || this.cards || this.modal || this.info || this.sinfo || this.aim || this.tut) return null; return { x: 6, y: this.H - this.hudH - 50, w: this.W - 12, h: 46 }; };
   P._uiPortrait = function (pid, x, y, w, h, face) {
     var ctx = this.ctx, por = this.assets.get('portraits'), sx = (pid % 12) * 120, sy = Math.floor(pid / 12) * 160;
     ctx.fillStyle = '#0b0d12'; ctx.fillRect(x, y, w, h);
+    if (pid >= 1000) { var op = this.assets.get('oportraits'), q = pid - 1000, c = (root.MW_ORIGPACK && root.MW_ORIGPACK.portraitCell) || [126, 126];   // 원본판 초상화 (126×126 칸, 한 줄 12칸)
+      if (!op && this.assets.load) this.assets.load('oportraits', 'orig/portraits.png');
+      if (op && op.naturalWidth) { var ox = (q % 12) * c[0], oy = Math.floor(q / 12) * c[1]; if (face) ctx.drawImage(op, ox + 14, oy + 8, c[0] - 28, Math.round((c[0] - 28) * h / w), x, y, w, h); else ctx.drawImage(op, ox, oy, c[0], c[1], x, y + Math.round((h - w * c[1] / c[0]) / 2), w, Math.round(w * c[1] / c[0])); }
+      ctx.strokeStyle = '#c9a44a'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); return; }
     if (por && por.naturalWidth && pid >= 0) { if (face) ctx.drawImage(por, sx + 14, sy + 8, 92, Math.round(92 * h / w), x, y, w, h); else ctx.drawImage(por, sx, sy, 120, 160, x, y, w, h); }
     ctx.strokeStyle = '#c9a44a'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   };
@@ -3433,6 +3486,7 @@
     this._usedUnitIds().forEach(function (id) { var t = self.types[id]; if (!t) return;
       if (!A.img['u' + id]) A.load('u' + id, t.img);
       t.acts.forEach(function (a) { var d = a && a.arm >= 0 ? self.data.fx.arms[a.arm] : null; (d && d.sheets || []).forEach(function (n) { self._loadFxSheet(n); }); }); });
+    if (this._usedUnitIds().some(function (id) { return self.types[id] && self.types[id].orig; })) { if (!A.img.oportraits) A.load('oportraits', 'orig/portraits.png'); var os = this._origSfx(); if (os) os._fetch(); }   // 원본판 유닛이 나오는 스테이지: 원본판 초상화·소리 묶음(2.6MB)을 이때 받는다
     return true;
   };
   P.pickEnemy = function (key) { if (this.setEnemy(key)) this.start(); };
@@ -3444,7 +3498,20 @@
     var BO = this.st && this.st.boost;   // boost = { ids, waves, k }: 앞의 waves 개 웨이브에서 ids 유닛 수를 k 배 (흑마술파 1단계 — 초반에 언데드가 많이). 나오는 간격은 늘어난 수만큼 줄여 웨이브 길이는 비슷하게
     this._stageWaves = E.waves.slice(a[0], a[1]).map(function (w, wi) { var n0 = 0, n1 = 0, list = w.list.map(function (e) { var k = BO && wi < BO.waves && BO.ids.indexOf(e[0]) >= 0 ? BO.k : 1, b = Math.max(1, Math.round(e[1] * mul)), n = Math.max(1, Math.round(e[1] * mul * k)); n0 += b; n1 += n; return [e[0], n]; });
       return { list: list, gap: w.gap / mul * (n1 > 0 ? n0 / n1 : 1), rest: w.rest }; });
+    if (S.orig) { var OO = this.origOf || {}, ratio = S.orig.ratio || 0.3;   // 원본판 유닛 섞기 (2026-11-19): 웨이브마다 적 수의 ratio 만큼을 같은 이름의 원본판 유닛으로 바꾼다 — 적 총수는 그대로. 나머지 몫을 다음 칸으로 넘겨 1기짜리 칸이 많아도 비율이 맞는다
+      this._stageWaves.forEach(function (w) { var carry = 0.5, out = []; w.list.forEach(function (e) { var o = OO[e[0]]; if (o == null) { out.push(e); return; } carry += e[1] * ratio; var k = Math.min(e[1], Math.floor(carry)); carry -= k; if (e[1] - k > 0) out.push([e[0], e[1] - k]); if (k > 0) out.push([o, k]); }); w.list = out; });
+      if (S.orig.guards && !S._origGuards) { S._origGuards = 1; this._origGuards(S); } }
     return this.setEnemy(S.enemy);
+  };
+  /* 원본판 유닛 주둔 (2026-11-19 사용자 요청 "적군 주둔지에도 오리지널 유닛들 다 나오게"): 그 스테이지 적 종족의 원본판 유닛을 한 기씩 모두 주둔 적군(guards)에 더한다.
+     악령군 종족은 아래 벙커(납골당) 앞, 흑마술파 종족은 위 벙커(흉가) 앞에 서고, 기본 공격이 원거리이거나 없는 유닛(마법·지원)은 마굴 앞에 선다. 주민은 묶음에 없다 */
+  var ORIG_RACES = { evil: [1], dark: [2], both: [1, 2], lib: [0] };
+  P._origGuards = function (S) {
+    var self = this, facs = ORIG_RACES[S.enemy] || [], at = { bottom: [], top: [], lair: [] };
+    Object.keys(this.types).map(Number).sort(function (a, b) { return a - b; }).forEach(function (id) { var t = self.types[id]; if (!t.orig || facs.indexOf(t.fac) < 0) return;
+      var b = basicAct(t), far = !b || b.range * CONFIG.RANGE_SCALE >= 80; at[far ? 'lair' : (S.enemy === 'both' ? (t.fac === 1 ? 'bottom' : 'top') : (at.bottom.length <= at.top.length ? 'bottom' : 'top'))].push([id, 1]); });
+    S.guards = (S.guards || []).map(function (g) { return { at: g.at, list: g.list.concat(at[g.at] || []) }; });
+    ['bottom', 'top', 'lair'].forEach(function (k) { if (at[k].length && !S.guards.some(function (g) { return g.at === k; })) S.guards.push({ at: k, list: at[k] }); });
   };
   P.pickStage = function (i) { if (!this.setStage(i)) return; this.tut = null; this._tutWant = !!(this._tutWanted && this._tutWanted(i)); this.start(); };   // 1단계를 처음 고르면 입문자 가이드 (defense-tut.js, 2026-11-17)
   P.start = function () {

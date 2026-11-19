@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
   var MWE = root.MWE;
-  function Sfx(url, index) { this.url = url; this.index = index || {}; this.on = true; this.ctx = null; this.bin = null; this.buf = {}; this.last = {}; this.live = 0; this.volume = 0.6; this._loading = false; this.bytes = 0; this.total = (root.MW_SIZES && root.MW_SIZES['sfx.js']) || 0; this._fetch(); }
+  function Sfx(url, index, gvar, lazy) { this.gvar = gvar || 'MW_SFX'; this.url = url; this.index = index || {}; this.on = true; this.ctx = null; this.bin = null; this.buf = {}; this.last = {}; this.live = 0; this.volume = 0.6; this._loading = false; this.bytes = 0; this.total = (root.MW_SIZES && root.MW_SIZES[gvar ? url.replace(/^.*?sim\//, '') : 'sfx.js']) || 0; if (!lazy) this._fetch(); }   // gvar = 묶음 파일의 전역 이름(원본판 묶음은 MW_SFX2), lazy = 처음 쓸 때 받기
   var P = Sfx.prototype;
   /* 사용자 동작 안에서 호출: 오디오 컨텍스트를 만들고 묶음을 받아 둔다 */
   P.unlock = function () {
@@ -20,7 +20,7 @@
     var fromB64 = function (b64) { var raw = atob(b64), n = raw.length, u8 = new Uint8Array(n); for (var i = 0; i < n; i++) u8[i] = raw.charCodeAt(i); self.bin = u8.buffer; self.bytes = self.total = Math.max(self.total, self.bytes); };
     var viaScript = function () {
       var el = document.createElement('script'); el.src = self.url; el.async = true;
-      el.onload = function () { var b64 = root.MW_SFX; if (!b64) { self._loading = false; return; } fromB64(b64); root.MW_SFX = null; };
+      el.onload = function () { var b64 = root[self.gvar]; if (!b64) { self._loading = false; return; } fromB64(b64); root[self.gvar] = null; };
       el.onerror = function () { self._loading = false; };
       document.head.appendChild(el); };
     if (!useFetch) { viaScript(); return; }
@@ -32,7 +32,7 @@
         if (c.done) return text + td.decode();
         self.bytes += c.value.length; if (self.total && self.bytes > self.total) self.total = self.bytes; text += td.decode(c.value, { stream: true }); return pump(); }); })();
     }).then(function (text) {
-      var m = /MW_SFX\s*=\s*"([^"]*)"/.exec(text); if (!m) throw new Error('format'); fromB64(m[1]);
+      var m = new RegExp(self.gvar + '\\s*=\\s*"([^"]*)"').exec(text); if (!m) throw new Error('format'); fromB64(m[1]);
     }).catch(function () { self.bytes = 0; viaScript(); });
   };
   /* 효과음 묶음 진행률 0~1 (받았으면 1) */

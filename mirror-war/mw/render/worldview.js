@@ -200,6 +200,8 @@
       }
       if (fi < 0) continue;
       var f = u.t.frames[fi];
+      var wb = u.buffs.weapon, wring = wb && wb.arm >= 0 && wb.until > world.time && u.alive() && this.fx ? root.MWE.weaponRing(this.fx.arms[wb.arm], u.t, this.time) : null;
+      if (wring) this._sprite(this.fx.frames[wring[0]], p[0], p[1], false, true);   // 원본판 웨폰: 뒤쪽 반고리는 유닛보다 먼저 (가산 합성 — 그림의 어두운 바탕이 사라진다)
       ctx.save();
       if (u.state === 'dead') ctx.globalAlpha = Math.max(0, Math.min(1, (7 - u.deadT) / 2));
       else if (u.tp) ctx.globalAlpha = Math.max(0, Math.min(32, u.tp.f <= 16 ? (16 - u.tp.f) * 2 : (u.tp.f - 16) / 2)) / 32;   // 순간이동: 16틱 사라짐 → 64틱 나타남 (FUN_004f5370, 32단계)
@@ -213,8 +215,8 @@
       /* 웨폰 계열 강화(파이어·매직·아이스·다크 웨폰): 걸려 있는 동안 이펙트가 발밑에서 계속 돌고 유닛을 따라다닌다.
          매 프레임 유닛의 발밑 좌표에 다시 그리므로 이동과 함께 움직인다. 원본도 유닛마다 발밑 좌표에 그린다
          (FUN_004f7490: 인스턴스 +0x34 = 이펙트 번호, +0x38 = 프레임 카운터). */
-      var wb = u.buffs.weapon;
-      if (wb && wb.arm >= 0 && wb.until > world.time && u.alive() && this.fx) { var wd = this.fx.arms[wb.arm], wf = wd && (wd.fly.length ? wd.fly : wd.hit);
+      if (wring) this._sprite(this.fx.frames[wring[1]], p[0], p[1], false, true);   // 앞쪽 반고리는 유닛 위에
+      else if (wb && wb.arm >= 0 && wb.until > world.time && u.alive() && this.fx) { var wd = this.fx.arms[wb.arm], wf = wd && (wd.fly.length ? wd.fly : wd.hit);
         if (wf && wf.length) this._sprite(this.fx.frames[wf[Math.floor(this.time * 15) % wf.length]], p[0], p[1], false, !wd.dir); }
       /* 방어 강화(파운틴 베리어·이블 스피리츠 베리어·토네이도 실드·윈드 실드)도 같은 식으로 걸려 있는 동안 유닛을 따라다닌다.
          원본 FUN_004f7490: 인스턴스 +0x2C = 이펙트 번호, +0x30 = 프레임 카운터. 7(파운틴)·0x2B(윈드 실드)는 발밑에서 그림 높이(+0x26)만큼 위,

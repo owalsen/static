@@ -52,7 +52,7 @@
   O.buff = function (u, k) { var b = u.buffs[k]; return b && b.until > this.now ? b : null; };
   O.attackValue = function (a) {
     var c = a.act, v = ((c.k1 * a.level) >> 3) + ((c.k2 * (a.atkOv != null ? a.atkOv : a.t.atk)) >> 3), w = this.buff(a, "weapon");   // atkOv = 유닛별 공격력 (디펜스 진영 설정, 예: 악령군 펜릴 35)
-    if (w && WEAPON[w.arm]) v = (v * WEAPON[w.arm]) >> 3;                              // 무기 강화: 원본 배수 (FUN_004b83d0의 상태 6·9·10·0x22 = 이펙트 번호)
+    if (w && WEAPON[w.arm % 100]) v = (v * WEAPON[w.arm % 100]) >> 3;   // % 100: 원본판 유닛의 이펙트 칸은 + 100 (tools/origpack.js)                              // 무기 강화: 원본 배수 (FUN_004b83d0의 상태 6·9·10·0x22 = 이펙트 번호)
     if (this.buff(a, "meltw")) v = 1;                                                // 멜팅 웨폰: 공격값 1 (FUN_004b83d0 상태 0xD)
     if (this.buff(a, "berserk")) v = (v * 12) >> 3;                                   // 광폭화: 원본 ×12/8 (FUN_004b83d0)
     if (a.powMul) v = Math.max(1, Math.round(v * a.powMul));                         // 위력 배수 (디펜스: 메타몰포시스로 변신한 도펠갱거 0.7)
@@ -60,7 +60,7 @@
   };
   O.defenseValue = function (b) {
     var d = b.t.def + ((b.t.defGrow * b.level) >> 2), s = this.buff(b, "shield");
-    if (s) d = (d * (SHIELD[s.arm] || 16)) >> 3;                                       // 방어막: 원본 배수 (FUN_004b8000의 상태 7·0x13·0x23·0x4c ×20/8, 0x2b ×2, 방패 막기 ×2)
+    if (s) d = (d * (SHIELD[s.arm % 100] || 16)) >> 3;                                       // 방어막: 원본 배수 (FUN_004b8000의 상태 7·0x13·0x23·0x4c ×20/8, 0x2b ×2, 방패 막기 ×2)
     if (this.buff(b, "melta")) d = 0;                                                // 멜팅 아머: 방어값 0 (FUN_004b8000 상태 0x29)
     if (this.buff(b, "berserk")) d = (d * 10) >> 3;                                   // 광폭화: 원본 ×10/8 (FUN_004b8000)
     return d;
@@ -74,7 +74,7 @@
     var cost = { charm: 200, stone: 150, melt: 80, poison: 60, slow: 20 }, top = 0, k;
     for (k in cost) if (t.buffs[k] && t.buffs[k].until > this.now && u.mp >= cost[k]) { top = Math.max(top, cost[k]); if (k === 'charm') t.fac = t.buffs.charm.orig; delete t.buffs[k]; }
     if (top) { u.mp -= top; return; }
-    var kk = a.arm === 48 ? 3 : 4, need = t.maxHp - t.hp, can = Math.floor(u.mp * kk / 2);
+    var kk = a.arm % 100 === 48 ? 3 : 4, need = t.maxHp - t.hp, can = Math.floor(u.mp * kk / 2);
     if (can < need) { t.hp += can; u.mp = 0; } else { t.hp = t.maxHp; u.mp -= Math.floor(need * 2 / kk); }
   };
   O.aoeRadius = function (u) { return 2; };                                           // 범위 공격 반경(타일)은 추정

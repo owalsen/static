@@ -97,4 +97,12 @@
     var s = def.var[cls < 2 ? 0 : cls < 4 ? 1 : 2], f = Math.floor((now - buff.t0v) * 12), L = def.loop;
     return s[f < L ? f : L + (f - L) % (s.length - L)];
   };
+  /* 원본판 웨폰 이펙트(칸 6·9·10·34, 2026-11-19): def.wv = 크기 3종 × [뒤쪽 반고리 5장, 앞쪽 반고리 5장] (mirrorwar-original/tools/origfx.js).
+     유닛 크기(unitdata +0x22 반폭)로 묶음을 고른다 — 13 미만 작은 것, 16 미만 가운데, 그 이상 큰 것 (어드밴스드는 종류 +0xFE 등급으로 고른다; 원본판 값은 미해독이라 반폭으로 대신).
+     돌려주는 값 = [뒤 그림 번호, 앞 그림 번호] — 뒤는 유닛보다 먼저, 앞은 유닛 위에 그린다. wv 가 없는 이펙트(어드밴스드)는 null */
+  MWE.weaponRing = function (def, type, now) {
+    if (!def || !def.wv) return null;
+    var w = type && type.size ? type.size[0] : 12, s = def.wv[w < 13 ? 0 : w < 16 ? 1 : 2], k = Math.floor(now * 12) % s[0].length;
+    return [s[0][k], s[1][k % s[1].length]];
+  };
 })(window);
