@@ -9,7 +9,7 @@
   var MWE = root.MWE, DG = MWE && MWE.DefenseGame; if (!DG || !root.document) return;
   var P = DG.prototype, doc = root.document;
   var API = 'https://mw-rank.zardbird.workers.dev';           // 배포한 Workers 주소 (analysis/cloud/rank)
-  var VER = '264';                                           // 게임 버전 = README 번호 (참고용 — 밸런스를 바꾼 배포 때 올린다)
+  var VER = '266';                                           // 게임 버전 = README 번호 (참고용 — 밸런스를 바꾼 배포 때 올린다)
   DG.RANK = { api: API, ver: VER };
   var LS = { nick: 'mwdef.nick', did: 'mwdef.did' };
   function lsGet(k) { try { return root.localStorage.getItem(k) || ''; } catch (e) { return ''; } }

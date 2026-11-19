@@ -437,7 +437,7 @@
        성 사격: 데몬·데빌·사탄(원본 등급 2 = 파이어 볼)을 등급 0(마법사의 파이어 볼)으로 읽는다. 스테이지는 1단계(대 흑마술파)만 열려 있다 — 2~4단계는 soon(개발 예정) */
   var FACTIONS = {
     lib: { name: '해방부대', bgm: 0, base: 'base', baseName: '성', tabs: CONFIG.TABS, heroes: CONFIG.GROW.heroes, stages: CONFIG.STAGES },
-    evil: { name: '악령군', bgm: 1, hud: 'hud1', noCover: true, noSummonCd: true,   /* 소환 대기시간 없음 — 마나만 있으면 연달아 뽑는다 (2026-11-18 사용자 요청) */ base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
+    evil: { name: '악령군', bgm: 1, hud: 'hud1', noCover: true,   /* 소환 대기시간: 2026-11-18 에 없앴다가(noSummonCd) 2026-11-19 사용자 요청 "악령군 생산 쿨타임을 부활"로 되살렸다 — 다른 진영과 같은 식(마나 값 ÷ 20, 1~8초), README 266 */ base: 'lair', baseName: '마굴', fortPic: 'efort1', fortNames: { fort1: '납골당', fort2: '납골당' }, garCls: { 2: 0 },
       tabs: [
         { name: '근접', ids: [28, 31, 43, 29, 35, 36, 30, 44] },    // 해골전사 좀비 늑대 해골기사 흡혈귀 늑대인간 듀라한 켈베로스 (좀비 2026-11-17 추가 — 기본 공격은 핸드 밤, 적 2기가 붙거나 체력 45% 이하면 자폭)
         { name: '원거리', ids: [46, 32, 39, 40, 45, 47] },      // 박쥐 유령 데몬 데빌 펜릴 드래곤
