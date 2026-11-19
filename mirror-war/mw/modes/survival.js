@@ -19,7 +19,7 @@
     SLOTS: 6,
     /* 전투 (2단계). 수치는 원작에서 출발: 피해 = 원본 피해 공식(rules.damage), 적 걷는 속도 = 디펜스와 같은 식(walkPx × 틱 × 0.45) */
     ATK: { sec: q('atk', 0.8), lv: q('atklv', 0.016), min: 0.4, range: q('range', 170), shot: q('shot', 840), dmg: q('dmg', 1.32), life: 0.45, anim: 2.4 },   // 단도 던지기: 간격(초)·사거리(화면 폭 절반 안쪽)·단도 속도·피해 배수(원본 공격값 19 → 25: 첫 무리 해골전사(체력 52)·좀비(73) 모두 세 방 — 2026-11-19 사용자 요청, 전에는 2.8 = 53 으로 해골전사 한 방). 도둑의 모든 스킬 피해가 이 값에 곱해진다
-    FOE: { dmg: q('edmg', 0.6), hp: q('ehp', 1), reach: 24, rs: 0.07, rangeMax: 150, shot: 170, sep: 20, body: 20, far: 1000 },   // 적: 피해·체력 배수, 근접 닿는 거리, 사거리 배율(디펜스 RANGE_SCALE)·원거리 상한, 적 발사체 속도, 서로 밀어내는 거리, 이보다 멀어지면 화면 둘레로 다시 보낸다
+    FOE: { dmg: q('edmg', 0.6), hp: q('ehp', 1), reach: 24, rs: 0.07, rangeMax: 150, from3: 2, range3: q('erange', 210), shot: q('eshot', 190), sep: 20, body: 20, far: 1000 },   // 적: 피해·체력 배수, 근접 닿는 거리, 사거리 배율(디펜스 RANGE_SCALE)·원거리 상한, from3 단계(0부터)부터 원거리 적은 모두 사거리 range3 — 도둑 단도(170) 밖에서 멈춰 쏜다 (2026-11-19 사용자 "적 투사체가 없어서 쉬워, 3단계부터 투사체 날아오게" — 전에는 150 이라 쏘기 전에 단도에 쓰러졌다), 적 발사체 속도(170 → 190), 서로 밀어내는 거리, 이보다 멀어지면 화면 둘레로 다시 보낸다
     CRIT: { p: q('crit', 0.1), mul: 2, p2: q('crit2', 0.15), mul2: 4 },   // 치명타(붉은보석 도둑에서): 확률·피해 배수. 더블 크리티컬 = 치명타가 났을 때 p2 확률로, 피해 mul2 배. 숫자 색: 보통 흰색 · 치명타 노랑 · 더블 붉은색 (NUM)
     BOOM: { touch: 30, radius: 46 },   // 좀비 자폭: 닿으면 터진다
     HURT: { inv: 0.25, flash: 0.35 },  // 도둑이 맞은 뒤 무적 시간(여럿이 한 틱에 겹쳐 치는 것 방지)·화면 가장자리 붉은 빛
@@ -29,7 +29,7 @@
     WAVE: { sec: q('wavesec', 60), margin: 50, list: [
       { add: [28, 31], rate: 1.4, cap: 80, hp: 1 },                                   // 1 해골전사 좀비
       { add: [43, 46], rate: 1.8, cap: 110, hp: 1, mini: [43, 25] },                                   // 2 늑대 박쥐
-      { add: [32, 7, 29], rate: 2.5, cap: 150, hp: 1.2, mini: [29, 20] },                             // 3 유령 격투가 해골기사 (2026-11-19 사용자 "3·4단계 넘어갈 때 더 어렵게": rate 2.3·hp 1 → 2.5·1.2. 2.7·1.3 은 봇 셋 다 쓰러짐)
+      { add: [32, 7, 29, 52], rate: 2.5, cap: 150, hp: 1.2, mini: [29, 20] },                             // 3 유령 격투가 해골기사 궁수(4단계에서 앞당김 — 투사체) (2026-11-19 사용자 "3·4단계 넘어갈 때 더 어렵게": rate 2.3·hp 1 → 2.5·1.2. 2.7·1.3 은 봇 셋 다 쓰러짐)
       { add: [68, 0, 52, 4], rate: 3.0, cap: 180, hp: 1.4, boss: [30, 18], mini: [0, 20] },          // 4 개미 전사(해방) 전사(흑) 궁수 · 우두머리 듀라한 (2.8·1.1 → 3.0·1.4. 3.3·1.6 은 너무 어려움)
       { add: [36, 35, 11, 6, 33], rate: 3.3, cap: 200, hp: 1.5, mini: [36, 19] },                     // 5 늑대인간 흡혈귀 정령사 창검사 리치
       { add: [39, 15, 8, 53, 49, 1], rate: 3.8, cap: 230, hp: 2, mini: [39, 20] },                  // 6 데몬 마법전사 무도가 흑전사 흑마술사 기사
@@ -128,7 +128,7 @@
     if (bossId != null) { u.boss = true; u.maxHp = u.life; u.hp = u.life; u.speedPx *= CFG.BOSS.speed; }
     u.boom = t.acts.filter(function (a) { return a && a.suicide && a.dmg; })[0] || null;   // 자폭 유닛(좀비)
     if (!u.act && !u.boom) u.act = t.acts.filter(function (a) { return a && a.dmg; })[0] || null;
-    var rp = u.act ? u.act.range * CFG.FOE.rs : 0; u.ranged = rp > 80; u.reach = u.ranged ? Math.min(CFG.FOE.rangeMax, rp) : CFG.FOE.reach;
+    var rp = u.act ? u.act.range * CFG.FOE.rs : 0; u.ranged = rp > 80; u.reach = u.ranged ? (this.wave >= CFG.FOE.from3 ? CFG.FOE.range3 : Math.min(CFG.FOE.rangeMax, rp)) : CFG.FOE.reach;
     if (u.boss) u.boom = null;
     u.state = 'move'; u.cd = 0; this.foes.push(u); return u;
   };
@@ -199,7 +199,12 @@
         if (d < 20 && T >= (u.rushHit || 0)) { u.rushHit = T + 0.8; this._hitHero(R.damage(u, h, rng) * CFG.RUSH.dmg); }
         if (T > u.rush.until) { u.state = 'dead'; u.deadT = 9; u.fade = 1; }   // 화면을 지나 멀리 가면 사라진다 (처치로 세지 않는다)
         continue; }
-      if (T < this.stealthUntil) { u.state = 'idle'; continue; }                // 그림자 숨기: 도둑을 못 찾는다
+      if (T < this.stealthUntil) {   // 그림자 숨기: 도둑을 못 찾는다 — 숨은 자리 둘레로 몰려가 서성인다 (전에는 화면의 적이 전부 그 자리에 멈춰 서서 "적이 갑자기 다 멈추는 버그"로 보였다 — 2026-11-19 사용자 지적)
+        if (u.hideK !== this.hideK) { u.hideK = this.hideK; var ha = rng.next() * 6.2832, hr = 20 + rng.next() * 50; u.hx = this.hideX + Math.cos(ha) * hr; u.hy = this.hideY + Math.sin(ha) * hr; }
+        var wx = u.hx - u.x, wy = u.hy - u.y, wd = Math.hypot(wx, wy);
+        if (wd > 6) { var ws = Math.min(wd, u.speedPx * 0.7 * dt * (u.slowUntil > T ? SK.mouse.slow : 1)); u.x += wx / wd * ws; u.y += wy / wd * ws; u.state = 'move'; u.walkT += dt; D._faceVec(u, wx, wy); }
+        else { var wa = rng.next() * 6.2832; u.hx = this.hideX + Math.cos(wa) * (20 + rng.next() * 50); u.hy = this.hideY + Math.sin(wa) * (20 + rng.next() * 50); u.state = 'idle'; }
+        continue; }
       if (u.boom) { if (d <= CFG.BOOM.touch) { this._fx(u.x, u.y - 10, u.boom.arm); D._play(u.boom.snd, 0.5); u.act = u.boom; if (d <= CFG.BOOM.radius) this._hitHero(R.attackValue(u)); u.state = 'dead'; u.deadT = 9; u.fade = 1; this.kills++; this._drop(u); continue; } }
       if (u.state === 'attack') {
         var A = u.t.anim.atk, n = A ? A.n : 6, hitAt = A && A.hit != null ? A.hit : Math.floor(n * 0.6); u.at += dt * R.tps;
@@ -268,6 +273,7 @@
     for (i = 0; i < L.length; i++) { if (!hd && L[i].y > h.y) { hd = true; this._drawHero(); } if (L[i].boss) { var bu = L[i], bs = bu.mini ? CFG.MINI.scale : CFG.BOSS.scale; ctx.save(); ctx.translate(bu.x, bu.y); ctx.scale(bs, bs); ctx.translate(-bu.x, -bu.y); D._drawUnit(bu); ctx.restore(); } else D._drawUnit(L[i]); }
     if (!hd) this._drawHero();
     for (i = 0; i < this.shots.length; i++) { var s = this.shots[i], fl = s.def && !s.def.dir && s.def.fly;
+      if (s.foe) { var gl = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 11); gl.addColorStop(0, 'rgba(255,90,60,.85)'); gl.addColorStop(0.45, 'rgba(255,60,40,.35)'); gl.addColorStop(1, 'rgba(255,40,30,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(s.x, s.y, 11, 0, 6.2832); ctx.fill(); }   // 적 투사체: 붉은 빛무리 (원본 이펙트가 작아 눈에 안 띄었다)
       if (fl && fl.length) D._fxFrame(fl[Math.floor((D.time - s.t0) * 15) % fl.length], s.x, s.y, true);
       else { var sa = Math.atan2(s.vy, s.vx), ux = Math.cos(sa), uy = Math.sin(sa); ctx.lineCap = 'round';
         if (s.foe) { ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(s.x - ux * 7, s.y - uy * 7); ctx.lineTo(s.x + ux * 7, s.y + uy * 7); ctx.stroke(); ctx.strokeStyle = '#ff9a8a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s.x - ux * 7, s.y - uy * 7); ctx.lineTo(s.x + ux * 7, s.y + uy * 7); ctx.stroke(); }
@@ -702,7 +708,7 @@
         cand.forEach(function (best, bi) { self._fx(best.x, best.y - best.headY * 0.5, SK.surprise.fx); if (!bi) self._text(best.x, best.y - best.headY - 16, self._name('surprise'), '#c9a8ff');
           if (ev) for (var si = 0; si < F.length; si++) if (F[si].state !== 'dead' && Math.hypot(F[si].x - best.x, F[si].y - best.y) <= 55 * RC) F[si].stunUntil = T + 2;
           self._hitFoe(best, sdm, -1); }); } else tm.surprise = 0.4; }
-    if (due('shadow')) { l = this.sk.shadow; tm.shadow = CD('shadow', l); this.stealthUntil = T + (SK.shadow.dur(l) + (this._evo('shadow') ? 1.5 : 0)) * LS * UP('shadow'); this._text(h.x, h.y - h.headY - 22, this._name('shadow'), '#c9a8ff'); D._play(5011, 0.5); }
+    if (due('shadow')) { l = this.sk.shadow; tm.shadow = CD('shadow', l); this.hideK = (this.hideK || 0) + 1; this.hideX = h.x; this.hideY = h.y; this.stealthUntil = T + (SK.shadow.dur(l) + (this._evo('shadow') ? 1.5 : 0)) * LS * UP('shadow'); this._text(h.x, h.y - h.headY - 22, this._name('shadow'), '#c9a8ff'); D._play(5011, 0.5); }
     // 치명타 확률: 기본 + 그림자 숨기(숨은 동안) + 코인시던스 드로잉
     this.crit = Math.min(GROW.critMax, CFG.CRIT.p + (T < this.stealthUntil ? SK.shadow.crit(this.sk.shadow || 1) : 0) + (this.sk.double && this._evo('double') ? 0.05 : 0));
     // 경험치 보석: 범위 안이면 끌려온다
