@@ -18,7 +18,7 @@
     SAFE: { top: 20, bottom: 24 },   // 디펜스의 SAFE 와 같다 (상태 표시줄·홈 막대 자리)
     SLOTS: 6,
     /* 전투 (2단계). 수치는 원작에서 출발: 피해 = 원본 피해 공식(rules.damage), 적 걷는 속도 = 디펜스와 같은 식(walkPx × 틱 × 0.45) */
-    ATK: { sec: q('atk', 0.8), lv: q('atklv', 0.016), min: 0.4, range: q('range', 170), shot: q('shot', 840), dmg: q('dmg', 2.8), life: 0.45, anim: 2.4 },   // 단도 던지기: 간격(초)·사거리(화면 폭 절반 안쪽)·단도 속도·피해 배수(원본 19 → 28: 해골전사 두 방)
+    ATK: { sec: q('atk', 0.8), lv: q('atklv', 0.016), min: 0.4, range: q('range', 170), shot: q('shot', 840), dmg: q('dmg', 1.32), life: 0.45, anim: 2.4 },   // 단도 던지기: 간격(초)·사거리(화면 폭 절반 안쪽)·단도 속도·피해 배수(원본 공격값 19 → 25: 첫 무리 해골전사(체력 52)·좀비(73) 모두 세 방 — 2026-11-19 사용자 요청, 전에는 2.8 = 53 으로 해골전사 한 방). 도둑의 모든 스킬 피해가 이 값에 곱해진다
     FOE: { dmg: q('edmg', 0.6), hp: q('ehp', 1), reach: 24, rs: 0.07, rangeMax: 150, shot: 170, sep: 20, body: 20, far: 1000 },   // 적: 피해·체력 배수, 근접 닿는 거리, 사거리 배율(디펜스 RANGE_SCALE)·원거리 상한, 적 발사체 속도, 서로 밀어내는 거리, 이보다 멀어지면 화면 둘레로 다시 보낸다
     CRIT: { p: q('crit', 0.1), mul: 2, p2: q('crit2', 0.15), mul2: 4 },   // 치명타(붉은보석 도둑에서): 확률·피해 배수. 더블 크리티컬 = 치명타가 났을 때 p2 확률로, 피해 mul2 배. 숫자 색: 보통 흰색 · 치명타 노랑 · 더블 붉은색 (NUM)
     BOOM: { touch: 30, radius: 46 },   // 좀비 자폭: 닿으면 터진다
@@ -540,7 +540,7 @@
       desc: function () { return '도둑 둘레에 큰 독 구름이 8초 동안 깔립니다 (초당 피해 200%, 안의 적은 느려지고 받는 피해 +16%). 구름 안에 폭발 함정 여섯 개가 한꺼번에 놓입니다.'; } },
     shadow: { name: '처형', icon: 41, n: 6, r: 320, gap: 0.12, mul: 12, kill: 0.3,
       desc: function () { return '가장 튼튼한 적 여섯을 순식간에 차례로 벱니다 (피해 1200%). 체력 30% 이하인 적은 즉사합니다(우두머리 제외). 베는 동안 무적입니다.'; } } };
-  var GROW = { pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: 0.012, magnet: 0.008, bomb: 0.005, max: 10, life: 40, heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, critMax: 0.6, need: function (lv) { return Math.round(3 + lv * 2 + lv * lv * 0.12); }   /* 다음 레벨까지: 초반은 그대로, 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게" — 레벨 10 에 35, 20 에 91, 30 에 171) */ };
+  var GROW = { pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: 0.012, magnet: 0.008, bomb: 0.005, max: 10, life: 40, heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, critMax: 0.6, xpk: q('xpk', 0.6), need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
   SurvivalGame.SK = SK; SurvivalGame.CLS = CLS; SurvivalGame.GROW = GROW; SurvivalGame.ULT = ULT;
 
   P._growReset = function () {
