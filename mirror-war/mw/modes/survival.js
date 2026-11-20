@@ -123,7 +123,7 @@
     var D = this.D;
     if (D.time - (D._groundAt || 0) > 0.5 && D.terrain) D._makeGround();   // 아이폰이 보조 캔버스를 비우는 문제의 복구 (defense.js _frame 과 같은 이유)
     for (var k = 0; k < CFG.TS; k++) {
-      if (!this.menu && !D.paused && this.ready()) { if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else this.update(dt); }
+      if (!this.menu && !D.paused && this.ready()) { if (this.guide) this.guideT += dt; else if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else this.update(dt); }
       D.time += dt; }                                        // D._faceVec·_drawUnit 이 D.time 을 본다
     if (this.menu) this.menuT += dt;
     if (this.press && Date.now() - this.press.t0 >= 350 && !this.cards && !this.over && !this.menu) { var ik = this.press.key === 'ult' && !this.cls ? null : this.press.key; if (ik) { this.info = { key: ik }; this.infoT = 0; } this.press = null; this.stick = null; this.keys = {}; }   // 스킬 칸을 꾹 누르면 설명 (게임은 멈춘다)
@@ -399,6 +399,7 @@
     if (this.over) this._drawOver();
     if (this.cards) this._drawCards();
     if (this.info) this._drawInfo();
+    if (this.guide) this._drawGuide();
     if (this.menu) this._drawMenu();
   };
   P._drawHero = function () { var D = this.D, ctx = D.ctx, h = this.hero, T = D.time;
@@ -555,6 +556,7 @@
   P._bind = function () {
     var self = this, D = this.D, cv = D.cv, on = function () { return D.sub === self && !self.done; };
     cv.addEventListener('pointerdown', function (e) { if (!on()) return; e.preventDefault(); var p = D._pos(e), x = p[0], y = p[1];
+      if (self.guide) { if (self.guideT > 0.4) { self.guide = false; if (D._raceSnd) D._raceSnd('click'); } return; }   // 시작 안내: 아무 데나 누르면 시작
       D.sfx.unlock(); D.bgm.resume();
       if (self.menu) { self._menuTap(x, y); return; }
       if (self.cards) { self._cardTap(x, y); return; }
@@ -650,10 +652,11 @@
   };
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
   var CLS = {
+    /* lines = 전직 카드의 설명 — 짧고 쉬운 말로 세 줄(무엇을 하는 갈래인지 · 특징 · 궁극기). 2026-11-20 사용자 "사람이 읽기 쉬운 형태로 길지 않게". 자세한 수치는 스킬 칸을 꾹 눌러 본다 */
     venom: { name: '쓰로워', icon: 61,   // 이름 (2026-11-19 사용자): 베놈 쓰로워 → 쓰로워 · 사일런트 트래퍼 → 트래퍼 · 섀도우 인필트레이터 → 어쌔신
- col: '#ffcf7a', lines: ['궁극기 「다팅 퓨리」 — 적이 몰린 쪽으로 단검 폭풍을 쏟아 꿰뚫는다', '단검에 맞은 적이 3초 동안 피를 흘립니다', '더블 드로잉 → 코인시던스 드로잉 · 단도 흩뿌리기 → 단도 총공격(더 넓은 부채꼴)', '다팅 피버는 쓰로워만 계속 쓰고 강해진다 (한 번 더, 피해 1.3배)'] },
-    trapper: { name: '트래퍼', icon: 64, col: '#7fe36a', lines: ['궁극기 「독무」 — 큰 독 구름 + 폭발 함정 여섯', '주력: 독 묻힌 단도(쓰러지면 독 구름) · 암흑 단도(감염된 채 쓰러지면 폭발)', '덫이 더 멀리서 반응하고 일제 폭발이 두 번', '발목 함정 → 절단 함정 · 폭발 함정 → 연폭 함정'] },
-    shadow: { name: '어쌔신', icon: 80, col: '#c9a8ff', unit: 15, lines: ['궁극기 「처형」 — 가장 튼튼한 적 여섯을 벤다', '마법전사가 되어 칼 스킬이 근접 검술 6종으로 (단계 이어받음)', '전용 「그림자 숨기」 — 숨었다가 적을 눌러 기습', '받는 피해 −10% · 처치마다 체력 조금 회복'] }
+ col: '#ffcf7a', lines: ['단검을 가장 많이, 가장 넓게 던집니다', '맞은 적은 피를 흘리고 다팅 피버가 강해집니다', '궁극기: 적이 몰린 쪽으로 단검 폭풍'] },
+    trapper: { name: '트래퍼', icon: 64, col: '#7fe36a', lines: ['독과 암흑 단검으로 적을 터뜨립니다', '중독된 적이 쓰러지면 독 구름, 감염된 적은 폭발', '궁극기: 큰 독 구름과 폭발 함정 여섯'] },
+    shadow: { name: '어쌔신', icon: 80, col: '#c9a8ff', unit: 15, lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기: 가장 튼튼한 적 여섯을 처형'] }
   };
   /* 궁극기 (2026-11-19 사용자 안: "각 전직마다 대표되는 궁극기를 하나씩"): 전직하면 궁극기 칸(축지법 칸 왼쪽)에 그 전직의 궁극기가 들어온다. 직접 누르는 스킬은 축지법과 이것 둘뿐 — 나머지는 전부 자동.
      이름은 붉은보석 도둑의 전직별 상위 스킬에서. 대기 ULT.cd 초(전문 도구 패시브가 줄인다), 준비되면 칸이 금빛으로 맥박친다 */
@@ -671,7 +674,7 @@
     var self = this, D = this.D;
     this.lv = 1; this.exp = 0; this.expNeed = GROW.need(1); this.pend = 0; this.cards = null; this.cardT = 0; this.cls = null;
     this.sk = { dagger: 1, blink: 1 }; this.order = ['dagger']; this.tm = {}; this.traps = []; this.zones = []; this.gems = []; this.queue = [];
-    this.stealthUntil = 0; this.hide = null; this.hideT = 0; this.lastDir = [1, 0]; this.lastDown = null; this.fire = {}; this.press = null; this.info = null; this.infoT = 0;
+    this.stealthUntil = 0; this.hide = null; this.hideT = 0; this.lastDir = [1, 0]; this.lastDown = null; this.fire = {}; this.press = null; this.info = null; this.infoT = 0; this.guide = !D._svGuideSeen && !/[?&](tut=0|ts=)/.test(root.location.search); this.guideT = 0; D._svGuideSeen = true;   // 시작 안내: 들어와서 처음 한 번 (다시 하기에는 안 뜬다, 봇·시험 주소는 건너뜀)
     this.ult = null;   // (281번의 "고급 스킬을 궁극기 칸에 올리기"는 뺐다 — 궁극기는 전직이 준다. this.ult 는 늘 null)
     this.items = []; this.fans = []; this.storm = null; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
     Object.keys(SK).forEach(function (k) { var s = SK[k]; [s.arm, s.boom, s.fx].forEach(function (a) { var d = a != null && D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });
@@ -744,6 +747,19 @@
       ctx.textAlign = 'left'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9d1e3';
       var lines = c.cls ? CLS[c.cls].lines : D._wrap(c.heal ? '체력을 ' + GROW.heal + ' 회복합니다' : s.desc(l + 1, ev), b.w - 84);
       lines.slice(0, 4).forEach(function (ln, n) { ctx.fillText(ln, b.x + 68, b.y + 48 + n * 17, b.w - 80); }); });
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
+  };
+  /* 시작 안내 (2026-11-20 사용자: "서바이벌 모드 시작 시 게임 안내(소개, 전직 레벨, 10분 버티기) 추가"): 게임을 멈춘 채 한 장, 아무 데나 누르면 시작 */
+  P._drawGuide = function () {
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, pw = Math.min(W - 28, 330), px = Math.round((W - pw) / 2), mins = Math.round(CFG.WAVE.list.length * CFG.WAVE.sec / 60), k = Math.min(1, this.guideT / 0.25),
+      L = [['목표', '사방에서 몰려오는 적을 ' + mins + '분 동안 버티세요.'], ['조작', '화면을 끌어 움직입니다. 공격은 자동입니다.'], ['성장', '적을 잡아 경험치를 모으면 스킬 카드를 고릅니다.'], ['전직', '레벨 ' + GROW.classLv + '에 쓰로워·트래퍼·어쌔신 중 하나로.'], ['버튼', '오른쪽 아래 축지법, 전직 뒤에는 궁극기.']], rows = [], i;
+    ctx.font = '13px sans-serif'; L.forEach(function (e) { D._wrap(e[1], pw - 86).forEach(function (ln, n) { rows.push([n ? '' : e[0], ln]); }); });
+    var ph = 74 + rows.length * 21 + 40, py = Math.round((H - ph) / 2);
+    ctx.globalAlpha = k; ctx.fillStyle = 'rgba(4,6,10,.62)'; ctx.fillRect(0, 0, W, H); D._plate(px, py, pw, ph, 7, false);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('서바이벌', W / 2, py + 30);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#9cc0ff'; ctx.fillText('도둑 한 명으로 살아남기', W / 2, py + 52);
+    ctx.textAlign = 'left'; for (i = 0; i < rows.length; i++) { var ry = py + 82 + i * 21; if (rows[i][0]) { ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffcf7a'; ctx.fillText(rows[i][0], px + 22, ry); } ctx.font = '13px sans-serif'; ctx.fillStyle = '#dfe5f2'; ctx.fillText(rows[i][1], px + 64, ry); }
+    ctx.textAlign = 'center'; ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = 'rgba(255,233,176,' + (0.55 + 0.45 * Math.sin(this.guideT * 4)).toFixed(2) + ')'; ctx.fillText('화면을 누르면 시작', W / 2, py + ph - 22);
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
   };
   /* 스킬 설명 카드 (칸을 꾹 누르면): 이름·단계·지금 효과·다음 단계. 각성 조건. 고급 스킬(SK.man)은 [궁극기 칸에 올리기] — 올리면 자동으로 안 나가고 궁극기 칸을 눌러 쓴다(위력 ×1.5·대기 −25%) */
