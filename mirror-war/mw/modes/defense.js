@@ -1325,9 +1325,13 @@
   };
 
   /* ───────────────────────── 5. update ───────────────────────── */
+  /* 게임 버전 — 화면 오른쪽 아래 구석에 작고 흐리게 (2026-11-20 사용자: "게임 우측하단에 작게 버전을, 게임플레이 방해 안 되게. 현재는 0.2.0"). 모든 화면(로딩·모드 선택·디펜스·서바이벌)에 같은 자리.
+     배포할 때 올린다. 순위용 VER(defense-rank.js, README 번호)과는 별개 */
+  var GAME_VER = '0.2.0';
+  P._drawVer = function () { var ctx = this.ctx; ctx.save(); ctx.setTransform(this.rs, 0, 0, this.rs, 0, 0); ctx.globalAlpha = 0.4; ctx.font = '8px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#000'; ctx.fillText('v' + GAME_VER, this.W - 2.5, this.H - 1.5); ctx.fillStyle = '#fff'; ctx.fillText('v' + GAME_VER, this.W - 3, this.H - 2); ctx.restore(); };
   P._frame = function (ts) {
     var dt = Math.min(0.05, (ts - this._last) / 1000 || 0); this._last = ts;   // 탭이 멈췄다 돌아와도 한 번에 0.05초까지만 진행
-    if (this.sub) { this.sub.frame(dt); return; }            // 서바이벌(mw/modes/survival.js)이 캔버스를 쓰는 동안: 그 게임의 프레임만 (defense-mode.js)
+    if (this.sub) { this.sub.frame(dt); this._drawVer(); return; }            // 서바이벌(mw/modes/survival.js)이 캔버스를 쓰는 동안: 그 게임의 프레임만 (defense-mode.js)
     if (!this.ground && this.assets.ready()) {               // 그림이 다 왔다: 바닥을 만들고 시작 화면으로 (바닥이 없으면 어느 화면에서든 먼저 만든다)
       this.terrain = new MWE.TerrainRenderer(this.map, this.assets.get('tiles'));
       this._makeGround();
@@ -1342,7 +1346,7 @@
     if (this.cards) this.cardT += dt;
     if (this.modal) this.modalT += dt;
     if (!(this.screen === 'play' && (this.cards || this.modal || tutHold))) this.time += dt;   // 카드·모달로 멈춘 동안에는 게임 시간도 멈춘다 — 전에는 시간만 흘러 강화·석화·쿨타임이 그동안 닳았다 (2026-11-13)
-    this.draw();
+    this.draw(); this._drawVer();
   };
 
   P.update = function (dt) {
