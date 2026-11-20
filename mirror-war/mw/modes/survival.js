@@ -457,6 +457,14 @@
     g.drawImage(V[0], 25, gy + 2);
     return (this._plant = { c: C[0], ox: r[4], oy: r[5], w: W, h: H });
   };
+  P._swordSprite = function () {   // 환영검의 검: 마법전사 공격 프레임(_plantSprite 와 같은 프레임)의 칼날 + 코등이 — 칼끝이 위를 본다
+    if (this._sword !== undefined) return this._sword;
+    var D = this.D, t = D.types[15], img = D.assets.get('u15'); if (!t || !img || !img.complete || !img.naturalWidth) return null;
+    var FR = t.frames || t.fr, AF = t.anim && t.anim.atk && t.anim.atk.f, r = FR && AF ? FR[AF[3 * 7 + 1]] : null; if (!r || r[2] !== 35 || r[3] !== 66) return (this._sword = null);
+    var c = document.createElement('canvas'); c.width = 11; c.height = 37; var g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.drawImage(img, r[0] + 24, r[1], 7, 33, 2, 0, 7, 33); g.drawImage(img, r[0] + 24, r[1] + 35, 11, 2, 0, 33, 11, 2); g.fillStyle = 'rgb(122,58,26)'; g.fillRect(5, 35, 1, 2); g.fillStyle = 'rgb(70,30,14)'; g.fillRect(6, 35, 1, 2);
+    return (this._sword = c);
+  };
   P._drawHero = function () { var D = this.D, ctx = D.ctx, h = this.hero, T = D.time;
     if (h.state !== 'dead') {   // 발밑의 노란 고리: 옅은 타원 + 도는 밝은 호 + 따라오는 점들 (붉은보석 도둑 영상의 발밑 고리 느낌 — 이 게임에서 그린 것)
       ctx.save(); ctx.translate(h.x, h.y + 2); ctx.scale(1, 0.45); ctx.globalCompositeOperation = 'lighter';
@@ -679,10 +687,11 @@
       desc: function (l, ev) { return '단검에 맞은 적이 ' + pc(this.p(l) * (ev ? 1.5 : 1)) + ' 확률로 즉사합니다 (우두머리는 5배 피해)'; } },
     /* 그림자 검술 (tree: blade) — 섀도우 인필트레이터로 전직하면 칼 스킬이 전부 이것으로 바뀐다(_toBlade: 단계는 이어받는다). 전직 전에는 카드에 안 나온다 */
     /* Z 가르기 (317번 — 316번에서 궁극기로 만들었던 것을 사용자가 "궁극기가 아닌 일반 스킬로"): 어쌔신이 검을 들고 화면을 Z 자로 가로지르며 지나는 길(폭 w) 위의 적만 한 번씩 벤다. 달리는 동안 무적·조작 불가, 화면은 세워 둔다. 그림자 돌진(가까운 무리 쪽으로 한 줄 150~220)과 달리 화면 전체를 훑는다 */
-    zrun: { name: '설화난영참', tree: 'blade', icon: 41, slot: 1, cd: L5([14, 13, 12, 11, 10]), dmg: L5([1.5, 1.9, 2.3, 2.7, 3.2]), back: 0.6, range: L5([220, 240, 260, 280, 300]), speed: 1050, w: q('zw', 46),
-      /* 322번(2026-11-20 사용자: "Z 가르기 개편 — 현재는 컨트롤을 잃는데, 한 유닛의 안에서 동서남북 사방으로 검을 든 잔상이 동시에 퍼져나가는 형태로. 기술 이름은 설화난영참", 참고: 창세기전 2 의 설화난영참 — 본체가 네 잔상으로 갈라져 십자로 쇄도, 눈꽃 같은 흰·푸른 참격, 다시 하나로 합쳐짐):
-         무사는 그대로 움직이고, 발밑에서 **검을 뻗은 잔상 넷**이 동·서·남·북으로 동시에 뻗어 나가(range) 길(폭 w) 위의 적을 벤 뒤 끝에서 눈꽃 섬광을 터뜨리고 무사에게 **돌아오며 한 번 더** 벤다(× back). 잔상은 푸른 흰빛의 반투명. 조작을 잃지 않고 무적도 없다 (코드 키는 zrun 그대로) */
-      desc: function (l) { return this.cd(l) + '초마다 검을 든 잔상 넷이 동서남북으로 뻗어 나가 길 위의 적을 벱니다 (피해 ' + pc(this.dmg(l)) + ', 거리 ' + this.range(l) + '). 돌아오며 한 번 더 벱니다 (' + pc(this.dmg(l) * this.back) + ').'; } },
+    /* 환영검 (338번, 2026-11-20 사용자: "설화난영참을 제거하고 — 투검: 360도 방향으로 검들이 쪼개져 나와서 각각의 적을 Z 자로 꿰뚫음. 횟수는 처음엔 각 검당 3번, 업하면서 증가. 처음 쪼개진 검의 개수는 4개, 이것도 점점 증가" + "검 조각들은 한 번 뚫고 지나서 다음번 뚫을 때까지 살짝 딜레이. 모양은 길이는 같되 폭은 작은 검 모양. 스킬 이름: 환영검"):
+       무사의 몸에서 검 n 자루가 360° 로 고르게 갈라져 나와(out), 저마다 가까운 적을 꿰뚫고 지나간 뒤(over 만큼 더 나아감) 잠깐 멈춰 방향을 틀고(wait) 다음 적을 꿰뚫는다 — 검마다 hits 번. 곧은 선이 꺾이며 이어져 Z 자가 된다.
+       아직 안 찌른 적을 먼저 고르고, 없으면 방금 찌른 적이 아닌 적, 그것도 없으면 같은 적을 다시. 검 그림 = 마법전사 스프라이트의 칼날을 길이는 그대로·폭은 slim 배로 좁힌 것. 무사는 그대로 움직인다 (코드 키는 zrun 그대로) */
+    zrun: { name: '환영검', tree: 'blade', icon: 41, slot: 1, cd: L5([12, 11.5, 11, 10.5, 10]), n: L5([4, 5, 6, 7, 8]), hits: L5([3, 4, 5, 6, 7]), dmg: L5([0.9, 1, 1.1, 1.25, 1.4]), speed: 820, out: 70, over: 30, wait: q('zwait', 0.16), seek: 260, slim: 0.55,
+      desc: function (l) { return this.cd(l) + '초마다 검 ' + this.n(l) + '자루가 사방으로 갈라져 나와, 저마다 적을 ' + this.hits(l) + '번씩 Z자로 꿰뚫습니다 (한 번에 피해 ' + pc(this.dmg(l)) + ')'; } },
     slash: { awk: { pas: 'power', name: '초승달 베기', text: '베기가 둘레 전체(원)로 넓어진다' }, name: '수직 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([76, 76, 76, 76, 76]), sec: L5([1, 0.92, 0.84, 0.77, 0.7]), crit: L5([0, 0.04, 0.08, 0.12, 0.16]),   /* 316번(2026-11-20 사용자 "기본 스킬을 수평 베기로 하고 올릴수록 빠르기·데미지·크리티컬 확률"): 그림자 베기(단계마다 반경이 커짐 — 회오리 베기와 겹쳤다) → 반경은 그대로 두고 간격·피해·치명타 확률(어쌔신의 모든 타격에 더해진다) */
       desc: function (l) { return '가장 가까운 적 하나를 위에서 아래로 내려 벱니다 — 피해 ' + pc(this.dmg(l)) + ', 베는 간격 ' + pc(this.sec(l)) + ', 치명타 확률 +' + Math.round(this.crit(l) * 100) + '%'; } },
     combo: { name: '연속 베기', tree: 'blade', icon: 10, slot: 1, n: L5([1, 1, 2, 2, 3]), dmg: L5([0.5, 0.6, 0.6, 0.7, 0.75]),
@@ -756,7 +765,7 @@
     this.sk = { dagger: 1, blink: 1 }; this.order = ['dagger']; this.tm = {}; this.traps = []; this.zones = []; this.gems = []; this.queue = [];
     this.stealthUntil = 0; this.hide = null; this.hideT = 0; this.lastDir = [1, 0]; this.lastDown = null; this.fire = {}; this.press = null; this.info = null; this.infoT = 0; this.guide = !D._svGuideSeen && !/[?&](tut=0|ts=)/.test(root.location.search); this.guideT = 0; D._svGuideSeen = true;   // 시작 안내: 들어와서 처음 한 번 (다시 하기에는 안 뜬다, 봇·시험 주소는 건너뜀)
     this.ult = null;   // (281번의 "고급 스킬을 궁극기 칸에 올리기"는 뺐다 — 궁극기는 전직이 준다. this.ult 는 늘 null)
-    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.petals = []; this.waves = []; this.zrun = null; this.rift = null; this.storm = null; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
+    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.petals = []; this.waves = []; this.blades = []; this.zrun = null; this.rift = null; this.storm = null; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
     Object.keys(SK).forEach(function (k) { var s = SK[k]; [s.arm, s.boom, s.fx].forEach(function (a) { var d = a != null && D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });
     [3, 38].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var pre = /[?&]sk=([a-z,]+)/.exec(root.location.search); if (pre) pre[1].split(',').forEach(function (k) { if (SK[k]) { if (!self.sk[k] && SK[k].slot) self.order.push(k); self.sk[k] = q('sklv', 3); } });   // ?sk=fever,explo&sklv=5 : 시험용
@@ -1008,6 +1017,15 @@
         var hg = ctx.createRadialGradient(pe.x, pe.y - 14, 2, pe.x, pe.y - 14, 26); hg.addColorStop(0, 'rgba(170,220,255,.5)'); hg.addColorStop(1, 'rgba(120,180,255,0)'); ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(pe.x, pe.y - 14, 26, 0, 6.2832); ctx.fill(); ctx.restore();
         ctx.globalAlpha = 0.6; h.x = pe.x; h.y = pe.y; if (!pe.back) h.dir = pe.dir; else D._faceVec(h, pe.vx, pe.vy, true); D._drawUnit(h); }
       h.x = qx; h.y = qy; h.hp = qhp; h.dir = qd; h.state = qs; h.at = qa; ctx.globalAlpha = 1; }
+    if (this.blades.length) { var SW = this._swordSprite(), ZD = SK.zrun;   // 환영검: 지나온 꺾은선(옅은 푸른 흰빛 — Z 자가 보인다) + 날아가는 쪽을 보는 가는 검
+      for (i = 0; i < this.blades.length; i++) { var bd = this.blades[i], ba = bd.ph === 'fade' ? Math.max(0, bd.w / 0.18) : 1, bj;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; var pts2 = bd.tr.concat([[bd.x, bd.y]]);
+        for (bj = 1; bj < pts2.length; bj++) { var ta = ba * bj / pts2.length; ctx.strokeStyle = 'rgba(140,200,255,' + (0.35 * ta).toFixed(3) + ')'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(pts2[bj - 1][0], pts2[bj - 1][1] - 14); ctx.lineTo(pts2[bj][0], pts2[bj][1] - 14); ctx.stroke(); ctx.strokeStyle = 'rgba(240,250,255,' + (0.8 * ta).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(pts2[bj - 1][0], pts2[bj - 1][1] - 14); ctx.lineTo(pts2[bj][0], pts2[bj][1] - 14); ctx.stroke(); }
+        ctx.restore();
+        ctx.save(); ctx.translate(bd.x, bd.y - 14); ctx.rotate(Math.atan2(bd.vy, bd.vx) + 1.5708); ctx.globalAlpha = 0.9 * ba;
+        if (SW) { var simg = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; ctx.drawImage(SW, 0, 0, 11, 37, -5.5 * ZD.slim, -22, 11 * ZD.slim, 37); ctx.imageSmoothingEnabled = simg; }
+        else { ctx.strokeStyle = '#eef2fa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, 12); ctx.stroke(); }
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * ba; ctx.fillStyle = 'rgba(150,205,255,1)'; ctx.fillRect(-3, -24, 6, 30); ctx.restore(); } }
     for (i = 0; i < this.waves.length; i++) { var wv = this.waves[i], wk2 = Math.min(1, wv.go / 40) * Math.min(1, (wv.max - wv.go) / 50 + 0.15), wa2 = Math.atan2(wv.vy, wv.vx), wj2;   // 검기: 날아가는 쪽으로 볼록한 초승달 — 푸른 빛무리 + 흰 날, 뒤로 옅은 잔상 둘
       ctx.save(); ctx.translate(wv.x, wv.y - 14); ctx.rotate(wa2); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       for (wj2 = 2; wj2 >= 0; wj2--) { var wo = -wj2 * 14, wal = wk2 * (wj2 ? 0.28 / wj2 : 1); ctx.strokeStyle = 'rgba(110,170,255,' + (0.55 * wal).toFixed(3) + ')'; ctx.lineWidth = 11; ctx.beginPath(); ctx.arc(wo - 26, 0, 44, -0.95, 0.95); ctx.stroke(); ctx.strokeStyle = 'rgba(240,248,255,' + (0.95 * wal).toFixed(3) + ')'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(wo - 26, 0, 45, -0.85, 0.85); ctx.stroke(); }
@@ -1047,7 +1065,18 @@
               for (a = 0; a < hits; a++) (function (u, k) { self.queue.push({ at: self.D.time + k * 0.014, fn: function () { if (u.state !== 'dead') self._hitFoe(u, self._base() * mul * self._onDagger(u), self.hero.act.arm, 1.7); } }); })(tg[a % tg.length], a);
               self.ringT = self.D.time; self.ringN = cnt; self.ringA = wi * 0.5 / cnt * 6.2832; D._play(self.hero.act.snd, 0.4); } }); })(k); } else tm.fever = 0.3; }
     // 트래퍼 주력: 독 묻힌 단도 · 폭발 단도 — 대기마다 가까운 적에게 그 단검을 던진다 (2026-11-19 사용자 "패시브가 아닌 쿨타임 존재" — 전에는 모든 단검이 맞을 때마다 터졌다)
-    if (due('zrun')) { l = this.sk.zrun; if (!this.hide && this._nearest(1, SK.zrun.range(l), null).length) { tm.zrun = CD('zrun', l); var hd0 = h.dir; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (v2) { D._faceVec(h, v2[0], v2[1], true); self.petals.push({ x: h.x, y: h.y, vx: v2[0], vy: v2[1], dir: h.dir, go: 0, max: SK.zrun.range(l) * RC * (v2[1] ? 1.15 : 1), back: false, hit: {}, mul: SK.zrun.dmg(l) * UP('zrun'), t0: T }); }); h.dir = hd0; D._play(h.act.snd, 0.6); } else tm.zrun = 0.4; }
+    if (due('zrun')) { l = this.sk.zrun; var ZS = SK.zrun; if (!this.hide && this._nearest(1, ZS.seek, null).length) { tm.zrun = CD('zrun', l); var zn = ZS.n(l), za0 = D.rng.next() * 6.2832; for (k = 0; k < zn; k++) { var zang = za0 + k / zn * 6.2832; this.blades.push({ x: h.x, y: h.y, vx: Math.cos(zang), vy: Math.sin(zang), ph: 'out', go: 0, left: ZS.hits(l), hit: {}, last: null, tgt: null, mul: ZS.dmg(l) * UP('zrun'), tr: [[h.x, h.y]], w: 0 }); } D._play(h.act.snd, 0.6); } else tm.zrun = 0.4; }
+    for (k = this.blades.length - 1; k >= 0; k--) { var bl = this.blades[k], ZB = SK.zrun, bst = ZB.speed * dt, pick = function (b) { var best = null, bs = 1e9; for (var q4 = 0; q4 < F.length; q4++) { var u4 = F[q4]; if (u4.state === 'dead' || u4.rush) continue; var d4 = Math.hypot(u4.x - b.x, u4.y - b.y); if (d4 > ZB.seek) continue; var sc4 = d4 + (b.hit[u4.uid] ? 600 : 0) + (u4 === b.last ? 1200 : 0); if (sc4 < bs) { bs = sc4; best = u4; } } return best; };   // 환영검: 갈라져 나옴 → 꿰뚫음 → 더 나아감 → 잠깐 멈춤 → 다음 적
+      if (bl.ph === 'out') { bl.x += bl.vx * bst; bl.y += bl.vy * bst; bl.go += bst; if (bl.go >= ZB.out) { bl.ph = 'wait'; bl.w = ZB.wait * 0.6; bl.tr.push([bl.x, bl.y]); } }
+      else if (bl.ph === 'wait') { bl.w -= dt; if (!bl.tgt || bl.tgt.state === 'dead') bl.tgt = pick(bl); if (bl.tgt) { var tx4 = bl.tgt.x - bl.x, ty4 = bl.tgt.y - bl.y, tl4 = Math.hypot(tx4, ty4) || 1, kk = Math.min(1, dt * 14); bl.vx += (tx4 / tl4 - bl.vx) * kk; bl.vy += (ty4 / tl4 - bl.vy) * kk; var vl4 = Math.hypot(bl.vx, bl.vy) || 1; bl.vx /= vl4; bl.vy /= vl4; }   // 멈춘 동안 다음 적 쪽으로 날을 돌린다
+        if (bl.w <= 0) { if (bl.left <= 0 || !bl.tgt) { bl.ph = 'fade'; bl.w = 0.18; } else { bl.ph = 'seek'; } } }
+      else if (bl.ph === 'seek') { if (!bl.tgt || bl.tgt.state === 'dead') { bl.tgt = pick(bl); if (!bl.tgt) { bl.ph = 'fade'; bl.w = 0.18; continue; } }
+        var sx4 = bl.tgt.x - bl.x, sy4 = bl.tgt.y - bl.y, sl4 = Math.hypot(sx4, sy4) || 1; bl.vx = sx4 / sl4; bl.vy = sy4 / sl4;
+        if (sl4 <= bst + 10) { bl.x = bl.tgt.x; bl.y = bl.tgt.y; this._bladeHit(bl.tgt, this._base() * bl.mul); bl.hit[bl.tgt.uid] = 1; bl.last = bl.tgt; bl.left--; bl.tgt = null; bl.ph = 'over'; bl.go = 0;
+          if (T - (this.snowT || -9) > 0.04) { this.snowT = T; this.bursts.push({ x: bl.x, y: bl.y - 14, t0: T, a: Math.atan2(bl.vy, bl.vx), k: 'p', life: 0.2 }); } }
+        else { bl.x += bl.vx * bst; bl.y += bl.vy * bst; } }
+      else if (bl.ph === 'over') { bl.x += bl.vx * bst; bl.y += bl.vy * bst; bl.go += bst; if (bl.go >= ZB.over) { bl.ph = 'wait'; bl.w = ZB.wait; bl.tr.push([bl.x, bl.y]); if (bl.tr.length > 4) bl.tr.shift(); } }
+      else { bl.w -= dt; if (bl.w <= 0) this.blades.splice(k, 1); } }
     for (k = this.petals.length - 1; k >= 0; k--) { var pt2 = this.petals[k], ZK = SK.zrun, stp2 = ZK.speed * dt, px0 = pt2.x, py0 = pt2.y, pb = this._base() * pt2.mul * (pt2.back ? ZK.back : 1), tdx, tdy, td2;   // 설화난영참의 잔상: 뻗어 나갔다가(끝에서 눈꽃 섬광) 무사에게 돌아와 합쳐진다
       if (!pt2.back) { pt2.x += pt2.vx * stp2; pt2.y += pt2.vy * stp2; pt2.go += stp2; if (pt2.go >= pt2.max) { pt2.back = true; pt2.hit = {}; this.bursts.push({ x: pt2.x, y: pt2.y - 14, t0: T, a: D.rng.next() * 1.05, k: 'w', life: 0.4, r: 26 }); } }
       else { tdx = h.x - pt2.x; tdy = h.y - pt2.y; td2 = Math.hypot(tdx, tdy); if (td2 <= stp2 + 6) { this.petals.splice(k, 1); continue; } pt2.x += tdx / td2 * stp2; pt2.y += tdy / td2 * stp2; pt2.vx = tdx / td2; pt2.vy = tdy / td2; }
