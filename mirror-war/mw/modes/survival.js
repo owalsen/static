@@ -712,8 +712,8 @@
     /* 패시브 5종 추가 (2026-11-19, 뱀서류 분석 글의 "패시브 조건부 진화"): 이름은 붉은보석 도둑의 보조 스킬에서, 효과는 이 게임에 맞게 다시 풀었다 */
     power: { name: '비열한 전략', tree: 'pas', icon: 85, v: L5([0.08, 0.16, 0.24, 0.32, 0.4]), desc: function (l) { return '모든 피해 +' + pc(this.v(l)); } },
     haste: { name: '전문 도구', tree: 'pas', icon: 73, v: L5([0.06, 0.12, 0.18, 0.24, 0.3]), desc: function (l) { return '던지는 간격과 모든 스킬의 대기 −' + pc(this.v(l)); } },
-    reach: { name: '함정 개조', tree: 'pas', icon: 57, v: L5([0.1, 0.2, 0.3, 0.4, 0.5]), desc: function (l) { return '폭발·독 구름·덫이 닿는 범위 +' + pc(this.v(l)); } },
-    last: { name: '전문가의 기술', tree: 'pas', icon: 71, v: L5([0.15, 0.3, 0.45, 0.6, 0.75]), desc: function (l) { return '감속·묶기·독·숨기의 지속 시간 +' + pc(this.v(l)); } },
+    reach: { name: '함정 개조', tree: 'pas', icon: 57, evo: { cls: 'shadow', name: '검기 확장' }, v: L5([0.1, 0.2, 0.3, 0.4, 0.5]), desc: function (l, ev) { return ev ? '회오리 베기·설화난영참이 닿는 범위 +' + pc(this.v(l)) : '폭발·독 구름·덫이 닿는 범위 +' + pc(this.v(l)); } },   /* 무사의 길에서는 이름·설명이 검술용으로 바뀐다 (332번, 2026-11-20 사용자 "무사는 함정 관련 스킬이 아예 없어야 함") — 효과는 같은 범위 배수 */
+    last: { name: '전문가의 기술', tree: 'pas', icon: 71, evo: { cls: 'shadow', name: '전문가의 기술' }, v: L5([0.15, 0.3, 0.45, 0.6, 0.75]), desc: function (l, ev) { return (ev ? '그림자 숨기의 지속 시간 +' : '감속·묶기·독·숨기의 지속 시간 +') + pc(this.v(l)); } },   /* 무사에게는 함정·독 이야기를 빼고 보인다 */
     regen: { name: '해독', tree: 'pas', icon: 2, v: L5([0.5, 1, 1.5, 2, 2.5]), desc: function (l) { return '체력을 초당 ' + this.v(l) + ' 회복합니다'; } }
   };
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
@@ -1063,7 +1063,7 @@
     ['toxdag', 'darkdag'].forEach(function (key) { if (!due(key)) return; var lv = self.sk[key], tg = self._nearest(SK[key].n(lv) + 4, CFG.ATK.range, null).filter(function (u) { return !((key === 'toxdag' ? u.toxUntil : u.darkUntil) > T); }).slice(0, SK[key].n(lv));   // 이미 표시가 붙은 적은 건너뛴다
       if (!tg.length) { tm[key] = 0.3; return; } tm[key] = CD(key, lv); tg.forEach(function (u) { var bs = self._dagger(u, SK[key].dmg(lv)); bs.spl = key; bs.arm = -2; bs.bv = CFG.ATK.shot * GROW.bomb.speed; bs.life = CFG.ATK.life / GROW.bomb.speed; });   /* 독 폭탄·암흑 폭탄: 폭탄처럼 느리게 날아간다 (이름·모양만 폭탄 — 한 적만 맞히는 것은 그대로. 2026-11-20 사용자 "독과 암흑을 독 폭탄, 암흑 폭탄으로") */ D._play(self.hero.act.snd, 0.35); });
     // 그림자 검술: 회오리 베기 · 그림자 돌진
-    if (due('whirl')) { l = this.sk.whirl; var wr = SK.whirl.r * (this._awk('whirl') ? 1.5 : 1), wm = SK.whirl.dmg(l), wn = SK.whirl.w(l);
+    if (due('whirl')) { l = this.sk.whirl; var wr = SK.whirl.r * RC * (this._awk('whirl') ? 1.5 : 1), wm = SK.whirl.dmg(l), wn = SK.whirl.w(l);
       if (this._nearest(1, wr, null).length) { tm.whirl = CD('whirl', l); this.feverT0 = T; this.feverUntil = T + wn * 0.13 + 0.05;   // 도는 자세는 다팅 피버의 것을 빌린다
         for (k = 0; k < wn; k++) this.queue.push({ at: T + k * 0.13, fn: function () { var hh = self.hero; self._ring(hh.x, hh.y, wr, wm); D._play(hh.act.snd, 0.35); } }); } else tm.whirl = 0.3; }
     if (due('dash')) { l = this.sk.dash; var dd = SK.dash.dist(l), dm = SK.dash.dmg(l), dw = SK.dash.w, best = null, bc = 0, di, dc;
