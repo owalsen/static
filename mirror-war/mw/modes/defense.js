@@ -1327,7 +1327,7 @@
   /* ───────────────────────── 5. update ───────────────────────── */
   /* 게임 버전 — 화면 왼쪽 위 구석에 작고 흐리게 (처음엔 오른쪽 아래였는데 사용자 "버튼이랑 겹침, 좌측 상단에" — 2026-11-20) (2026-11-20 사용자: "게임 우측하단에 작게 버전을, 게임플레이 방해 안 되게. 현재는 0.2.0"). 모든 화면(로딩·모드 선택·디펜스·서바이벌)에 같은 자리.
      배포할 때 올린다. 순위용 VER(defense-rank.js, README 번호)과는 별개 */
-  var GAME_VER = '0.2.3';
+  var GAME_VER = '0.2.4';
   P._drawVer = function () { var ctx = this.ctx; ctx.save(); ctx.setTransform(this.rs, 0, 0, this.rs, 0, 0); ctx.globalAlpha = 0.4; ctx.font = '8px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#000'; ctx.fillText('v' + GAME_VER, 3.5, 2.5); ctx.fillStyle = '#fff'; ctx.fillText('v' + GAME_VER, 3, 2); ctx.restore(); };
   P._frame = function (ts) {
     var dt = Math.min(0.05, (ts - this._last) / 1000 || 0); this._last = ts;   // 탭이 멈췄다 돌아와도 한 번에 0.05초까지만 진행
