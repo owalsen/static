@@ -237,7 +237,7 @@
     // 도둑: 걷기
     if (this.zrun) { this._zStep(dt); v = [0, 0]; }   /* 처형으로 달리는 동안은 조작이 안 먹는다 */
     if (this.rift && T - this.rift.t0 > ULT.shadow.life) this.rift = null;
-    if (this.rift) { v = [0, 0]; var RA = h.t.anim.atk; var rq = T - this.rift.t0, RU = ULT.shadow; D._faceVec(h, 0, 1, true); h.state = 'attack'; h.at = rq < 0.25 ? RU.pose[0] : rq < RU.charge + RU.plant * 0.5 ? RU.pose[1] : RU.pose[2]; this.aimUntil = T + 0.2; this.stick = null; }   /* 329번(사용자 "칼 꽂는 게 캐릭터의 모션 자체가 바뀌어서 꽂아야지 갑자기 없던 칼이 등장하면 안 되지"): 따로 그린 칼은 없앴다 — 마법전사의 공격 동작을 아래 방향으로: 기를 모으는 동안 칼을 치켜들고(pose[1]), 꽂는 순간 내려찍은 자세(pose[2])로 끝까지 */   /* 천지파열무: 스킬이 끝날 때까지(균열이 사라질 때까지) 칼을 꽂은 자세로 못 움직인다 (323번, 2026-11-20 사용자) — 그동안 무적 */
+    if (this.rift) { v = [0, 0]; var RA = h.t.anim.atk; var rq = T - this.rift.t0, RU = ULT.shadow; D._faceVec(h, RU.face[0], RU.face[1], true); h.state = 'attack'; h.at = rq < 0.25 ? RU.pose[0] : rq < RU.charge + RU.plant * 0.5 ? RU.pose[1] : RU.pose[2]; this.aimUntil = T + 0.2; this.stick = null; }   /* 329번(사용자 "칼 꽂는 게 캐릭터의 모션 자체가 바뀌어서 꽂아야지 갑자기 없던 칼이 등장하면 안 되지"): 따로 그린 칼은 없앴다 — 마법전사의 공격 동작을 아래 방향으로: 기를 모으는 동안 칼을 치켜들고(pose[1]), 꽂는 순간 내려찍은 자세(pose[2])로 끝까지 */   /* 천지파열무: 스킬이 끝날 때까지(균열이 사라질 때까지) 칼을 꽂은 자세로 못 움직인다 (323번, 2026-11-20 사용자) — 그동안 무적 */
     var moving = !!(v[0] || v[1]);
     var hs = this.speed * (T < this.stealthUntil && this._evo('shadow') ? 1.24 : 1) * (T < this.chillUntil ? CFG.MAGIC.frost.slow : 1);   // 냉기탄에 맞으면 잠깐 느려진다
     if (moving) { this.lastDir = v; h.x += v[0] * hs * dt; h.y += v[1] * hs * dt; if (h.state !== 'attack') h.state = 'move'; h.walkT += dt * Math.max(0.5, Math.hypot(v[0], v[1])) * CFG.SPEED; if (!(T < this.aimUntil)) D._faceVec(h, v[0], v[1]); }   // 단검을 던진 직후에는 던진 쪽을 본 채로 걷는다 (aimUntil)
@@ -437,6 +437,26 @@
     if (this.guide) this._drawGuide();
     if (this.menu) this._drawMenu();
   };
+  /* 천지파열무의 '칼을 꽂은 자세' (331번, 2026-11-20 사용자가 시안 A·B·C 중 "원래 C 안으로"): 마법전사의 앞쪽 대각선 방향 공격 프레임 1(칼을 정면에 곧게 든 자세)에서
+     든 칼날과 코등이를 지우고, 손 아래에 코등이 → 뒤집은 칼날(발밑 아래는 잘라 땅에 박힌 것처럼)을 붙이고, 손 위로 자루를 올린다. 원작 시트의 픽셀을 옮긴 것이라 색·질감이 그대로다.
+     시안은 Pillow 로 만들었고(analysis/ref/art/plant_mock.png) 같은 손질을 여기서 캔버스로 한 번 해 둔다 — 그림 파일을 따로 싣지 않는다. 둘째 팔을 그려 넣은 C2 는 품질이 안 나와 쓰지 않는다 */
+  P._plantSprite = function () {
+    if (this._plant !== undefined) return this._plant;
+    var D = this.D, t = D.types[15], img = D.assets.get('u15'); if (!t || !img || !img.complete || !img.naturalWidth) return null;
+    var FR = t.frames || t.fr, AF = t.anim && t.anim.atk && t.anim.atk.f, r = FR && AF ? FR[AF[3 * 7 + 1]] : null; if (!r || r[2] !== 35 || r[3] !== 66) return (this._plant = null);   // 프레임이 예상한 그 그림이 아니면 쓰지 않는다
+    var W = r[2], H = r[3], mk = function (w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; var g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
+    var C = mk(W, H), g = C[1], B = mk(7, 33), G = mk(11, 2), y, x;
+    g.drawImage(img, r[0], r[1], W, H, 0, 0, W, H); B[1].drawImage(img, r[0] + 24, r[1], 7, 33, 0, 0, 7, 33); G[1].drawImage(img, r[0] + 24, r[1] + 35, 11, 2, 0, 0, 11, 2);
+    for (y = 0; y < 33; y++) g.clearRect(y <= 16 ? 24 : 25, y, W, 1);                 // 든 칼날
+    g.clearRect(24, 33, W, 3); g.clearRect(26, 36, W, 1); g.clearRect(27, 37, W, 1);   // 코등이·칼밑 (손 y 39~42 는 남긴다)
+    g.fillStyle = 'rgb(122,58,26)'; g.fillRect(28, 34, 1, 5); g.fillRect(28, 32, 1, 1); g.fillStyle = 'rgb(70,30,14)'; g.fillRect(29, 34, 1, 5); g.fillRect(27, 33, 4, 1); g.fillRect(29, 32, 1, 1);   // 손 위로 올라온 자루
+    var gy = 43, vh = Math.max(1, r[5] + 1 - (gy + 2)); g.drawImage(G[0], 24, gy);
+    var V = mk(7, vh); V[1].translate(0, vh); V[1].scale(1, -1); V[1].drawImage(B[0], 0, 33 - vh, 7, vh, 0, 0, 7, vh);   // 뒤집은 칼날의 땅 위로 보이는 만큼
+    var d = V[1].getImageData(0, 0, 7, vh).data; g.fillStyle = 'rgb(34,36,44)';
+    for (y = 0; y < vh; y++) { var x0 = -1, x1 = -1; for (x = 0; x < 7; x++) if (d[(y * 7 + x) * 4 + 3] > 40) { if (x0 < 0) x0 = x; x1 = x; } if (x0 >= 0) { g.fillRect(24 + x0, gy + 2 + y, 1, 1); g.fillRect(26 + x1, gy + 2 + y, 1, 1); } }   // 흰 바지 위에서 묻히지 않게 양옆 어두운 테두리
+    g.drawImage(V[0], 25, gy + 2);
+    return (this._plant = { c: C[0], ox: r[4], oy: r[5], w: W, h: H });
+  };
   P._drawHero = function () { var D = this.D, ctx = D.ctx, h = this.hero, T = D.time;
     if (h.state !== 'dead') {   // 발밑의 노란 고리: 옅은 타원 + 도는 밝은 호 + 따라오는 점들 (붉은보석 도둑 영상의 발밑 고리 느낌 — 이 게임에서 그린 것)
       ctx.save(); ctx.translate(h.x, h.y + 2); ctx.scale(1, 0.45); ctx.globalCompositeOperation = 'lighter';
@@ -445,7 +465,9 @@
       var ra = T * 3.2; ctx.strokeStyle = 'rgba(255,250,200,.95)'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, 0, 23, ra, ra + 1.5); ctx.stroke();
       ctx.fillStyle = 'rgba(255,250,210,.9)'; for (var ri = 1; ri <= 5; ri++) { ctx.globalAlpha = 1 - ri * 0.17; ctx.beginPath(); ctx.arc(Math.cos(ra - ri * 0.2) * 23, Math.sin(ra - ri * 0.2) * 23, 1.6, 0, 6.3); ctx.fill(); }
       ctx.restore(); ctx.globalAlpha = 1; }
-    D._drawUnit(h); ctx.globalAlpha = 1;
+    var PS = this.rift && T - this.rift.t0 >= ULT.shadow.charge + ULT.shadow.plant * 0.5 && h.state !== 'dead' ? this._plantSprite() : null;
+    if (PS) ctx.drawImage(PS.c, 0, 0, PS.w, PS.h, Math.round(h.x) - PS.ox, Math.round(h.y) - PS.oy, PS.w, PS.h); else D._drawUnit(h);   /* 천지파열무: 꽂은 뒤로는 전용 자세 그림 */
+    ctx.globalAlpha = 1;
     if (T < this.stealthUntil && h.state !== 'dead') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';   // 그림자 숨기: 몸을 감싸고 위로 흐르는 보라색 빛줄기
       for (var si = 0; si < 9; si++) { var sx = h.x - 14 + si * 3.5 + Math.sin(T * 3 + si) * 1.5, ph = (T * 1.6 + si * 0.37) % 1, sy0 = h.y - 2 - ph * (h.headY + 6); ctx.strokeStyle = 'rgba(150,90,255,' + (0.55 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(sx, sy0); ctx.lineTo(sx, sy0 - 12); ctx.stroke(); }
       ctx.restore(); }
@@ -721,7 +743,7 @@
         ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         pass.forEach(function (ps) { ctx.strokeStyle = ps[0]; ctx.lineWidth = ps[1]; for (i = 0; i < 4; i += 2) { var a = P2[i], b = P2[i + 1]; ctx.beginPath(); ctx.moveTo(cx + a[0] * rx, cy + a[1] * ry); ctx.lineTo(cx + a[0] * rx * 0.45 + b[1] * w * 0.05, cy + a[1] * ry * 0.5); ctx.lineTo(cx - a[1] * w * 0.03, cy); ctx.lineTo(cx + b[0] * rx * 0.5 - a[1] * w * 0.05, cy + b[1] * ry * 0.45); ctx.lineTo(cx + b[0] * rx, cy + b[1] * ry); ctx.stroke(); } });
         P2.forEach(function (c, n) { for (i = 0; i < 3; i++) { var k = 0.35 + i * 0.3, fx = cx + c[0] * rx * k, fy = cy + c[1] * ry * k, fh = h * (0.16 + 0.05 * ((n + i) % 2)); ctx.fillStyle = i % 2 ? '#ffd24a' : '#ff8a1e'; ctx.beginPath(); ctx.moveTo(fx - w * 0.06, fy); ctx.lineTo(fx + c[0] * w * 0.02, fy - fh); ctx.lineTo(fx + w * 0.06, fy); ctx.closePath(); ctx.fill(); } });
-        var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.2); cg.addColorStop(0, 'rgba(255,250,220,.95)'); cg.addColorStop(1, 'rgba(255,180,60,0)'); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, w * 0.2, 0, 6.2832); ctx.fill(); ctx.restore(); }, mul: q('pamul', 3.2), near: 560, burn: 0.25, fxMax: 36, pose: [1, 2, 3], charge: 0.9, plant: 0.25, grow: 0.7, hold: 0.15, stage: 0.42, bands: [170, 340], tail: 0.05, out: 0.85, life: 4.15,   /* tail: 셋째 폭발이 끝나자마자 피해 (사용자 "1차 폭 → 2차 폭 → 3차 폭 끝나자마자 데미지") */   /* 326번(2026-11-20 사용자 — 창세기전3 영상을 보고): 기 모으기(charge, 보랏빛 기운이 연기처럼 몸으로 모인다) → 칼 꽂기(plant, 흰 섬광·고리·금빛 빛기둥) → 갈라짐(grow + hold) → **터짐 3단계**(stage 초씩, 가까운 곳 bands[0] 안 → 가운데 → 먼 곳) → tail 초 뒤 **모든 적이 한꺼번에 피해** → out 초 동안 사그라짐. life 는 이 합. 끝날 때까지 칼을 꽂은 자세·무적 */ /* plant = 칼을 바닥에 꽂는 시간 — 그 뒤에 땅이 갈라진다 (사용자 "칼을 바닥에 꽂으면 땅이 갈라지고 불꽃이 튀어나오는 느낌") */   /* 317번(2026-11-20 사용자: "진짜 궁극기는 '천지파열무' — 모티브는 창세기전3 의 살라딘·데미안이 쓰는 기술, 전체 맵 대상, 이펙트 최대한 비슷하게" + 참고 화면): 검으로 땅을 내리치면 발밑에서 사방(네 귀퉁이 + 좌우)으로 **용암 빛 균열**이 화면 끝까지 갈라져 나가고, 화면의 모든 적 발밑에서 불기둥이 솟는다.
+        var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.2); cg.addColorStop(0, 'rgba(255,250,220,.95)'); cg.addColorStop(1, 'rgba(255,180,60,0)'); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, w * 0.2, 0, 6.2832); ctx.fill(); ctx.restore(); }, mul: q('pamul', 3.2), near: 560, burn: 0.25, fxMax: 36, face: [-1, 1], pose: [0, 1, 1], charge: 0.9, plant: 0.25, grow: 0.7, hold: 0.15, stage: 0.42, bands: [170, 340], tail: 0.05, out: 0.85, life: 4.15,   /* tail: 셋째 폭발이 끝나자마자 피해 (사용자 "1차 폭 → 2차 폭 → 3차 폭 끝나자마자 데미지") */   /* 326번(2026-11-20 사용자 — 창세기전3 영상을 보고): 기 모으기(charge, 보랏빛 기운이 연기처럼 몸으로 모인다) → 칼 꽂기(plant, 흰 섬광·고리·금빛 빛기둥) → 갈라짐(grow + hold) → **터짐 3단계**(stage 초씩, 가까운 곳 bands[0] 안 → 가운데 → 먼 곳) → tail 초 뒤 **모든 적이 한꺼번에 피해** → out 초 동안 사그라짐. life 는 이 합. 끝날 때까지 칼을 꽂은 자세·무적 */ /* plant = 칼을 바닥에 꽂는 시간 — 그 뒤에 땅이 갈라진다 (사용자 "칼을 바닥에 꽂으면 땅이 갈라지고 불꽃이 튀어나오는 느낌") */   /* 317번(2026-11-20 사용자: "진짜 궁극기는 '천지파열무' — 모티브는 창세기전3 의 살라딘·데미안이 쓰는 기술, 전체 맵 대상, 이펙트 최대한 비슷하게" + 참고 화면): 검으로 땅을 내리치면 발밑에서 사방(네 귀퉁이 + 좌우)으로 **용암 빛 균열**이 화면 끝까지 갈라져 나가고, 화면의 모든 적 발밑에서 불기둥이 솟는다.
          화면(near) 안의 적 모두에게 피해 mul, 3초 동안 불탐(초당 burn). 그림은 전부 캔버스로 그린다(균열 = 들쭉날쭉한 꺾은선 + 가지, 주황 빛무리·붉은 속·검은 틈, 가장자리 불꽃) — 원작 그림은 쓰지 않는다 */
       desc: function () { return '검으로 땅을 내리쳐 사방으로 대지를 가릅니다 — 화면의 모든 적에게 피해 ' + Math.round(this.mul * 100) + '%, 3초 동안 불탑니다. 끝날 때까지 움직일 수 없고, 그동안 무적입니다.'; } } };
   var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: 0.02, magnet: 0.012, bomb: 0.008, pick: 44, max: 12, life: 45,   /* 327번: 아이템이 떨어지자마자 저절로 먹어지던 버그를 고친 뒤 — 이제 직접 주워야 하므로 나오는 확률을 1.6배쯤, 줍는 거리 26 → 44 */ heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, trapPlus: 3, bomb: { mul: q('bombmul', 0.6), r: 32, rLv: 3, speed: 0.5, sec: 1.1 },   /* 트래퍼의 기본 공격 = 폭탄 던지기 (309번, 2026-11-20 사용자 "기본 단도 공격보단 약하게, 대신 소범위 공격"): 단도 피해 × mul 을 맞은 자리 반경 r + rLv × 단계 안의 적 모두에게. 날아가는 속도 × speed(보이게), 던지는 간격 × sec */ critMax: 0.6, xpk: q('xpk', 0.33),   /* 0.6 × 0.7 — 한 판이 7분이 되어 같은 굴곡에서 같은 레벨이 나오게 */ need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
@@ -966,7 +988,7 @@
   /* 칼자국(반원·원) · 잔상(옅은 분신) */
   P._drawArcs = function () {
     var D = this.D, ctx = D.ctx, T = D.time, h = this.hero, i;
-    if (this.rift && T - this.rift.t0 >= ULT.shadow.charge + ULT.shadow.plant * 0.5) { var UZ = ULT.shadow, zi = T - this.rift.t0 - UZ.charge - UZ.plant * 0.5, zf = T - this.rift.t0 > UZ.life - UZ.out ? Math.max(0, (UZ.life - (T - this.rift.t0)) / UZ.out) : 1, zx = this.rift.x + 13, zg = this.rift.y + 3;   // 천지파열무: 무사가 내려찍은 칼끝 자리 — 꽂히는 순간의 빛살과 틈 (칼은 캐릭터의 동작이 보여 준다, 329번)
+    if (this.rift && T - this.rift.t0 >= ULT.shadow.charge + ULT.shadow.plant * 0.5) { var UZ = ULT.shadow, zi = T - this.rift.t0 - UZ.charge - UZ.plant * 0.5, zf = T - this.rift.t0 > UZ.life - UZ.out ? Math.max(0, (UZ.life - (T - this.rift.t0)) / UZ.out) : 1, zx = this.rift.x + 9, zg = this.rift.y + 1;   // 천지파열무: 무사가 내려찍은 칼끝 자리 — 꽂히는 순간의 빛살과 틈 (칼은 캐릭터의 동작이 보여 준다, 329번)
       ctx.save(); ctx.globalAlpha = zf; ctx.lineCap = 'round';
       if (zi < 0.3) { var zs = 1 - zi / 0.3; ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,240,200,' + zs.toFixed(2) + ')'; ctx.lineWidth = 3; for (var zj = 0; zj < 8; zj++) { ctx.beginPath(); ctx.moveTo(zx, zg); ctx.lineTo(zx + Math.cos(zj * 0.785) * (18 + 50 * (1 - zs)), zg + Math.sin(zj * 0.785) * (9 + 25 * (1 - zs))); ctx.stroke(); } ctx.globalCompositeOperation = 'source-over'; }
       ctx.fillStyle = 'rgba(10,3,2,.8)'; ctx.beginPath(); ctx.ellipse(zx, zg, 7, 3, 0, 0, 6.2832); ctx.fill(); ctx.strokeStyle = 'rgba(255,140,40,' + (0.5 + 0.3 * Math.sin(T * 10)).toFixed(2) + ')'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(zx, zg, 7, 3, 0, 0, 6.2832); ctx.stroke(); ctx.restore(); }
