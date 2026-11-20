@@ -186,7 +186,7 @@
   Bgm.prototype.toggle = function () { this.on = !this.on; if (this.on) this._play(); else if (this.el) this.el.pause(); return this.on; };
   Bgm.prototype._play = function () {
     var self = this, list = this.files[this.cur < 0 ? 0 : this.cur];
-    if (!this.el) { this.el = new Audio(); this.el.volume = 0.5;
+    if (!this.el) { this.el = new Audio(); this.el.volume = this.vol != null ? this.vol : 0.5;   /* vol = 배경음 크기 (디펜스·서바이벌은 0.22 — 2026-11-20 사용자 "배경음을 효과음보다 살짝 낮게, 처음부터 너무 큼". 전장은 0.5 그대로). iOS 사파리는 이 값을 무시한다(기기 음량만) */
       this.el.addEventListener('ended', function () { var l = self.files[self.cur < 0 ? 0 : self.cur]; self.track = (self.track + 1) % l.length; if (self.on) self._play(); }); }
     this.el.loop = list.length < 2;                          // 한 곡뿐이면 되풀이, 여러 곡이면 'ended'에서 다음 곡
     var src = this.base + list[this.track % list.length];
