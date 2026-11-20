@@ -92,7 +92,8 @@
     this.D = D; this.keys = {}; this.stick = null; this.menu = false; this.menuT = 0; this.done = false;
     var A = D.assets, ids = [CFG.HERO];
     this.fxNeed = {};
-    this._need(ids); this._need([56, 15]);   // 15 = 마법전사 (섀도우 인필트레이터로 전직하면 이 모습)
+    this._need(ids); this._need([56, 15, 59]);   // 59 = 환술사 (트래퍼의 모습)
+      // 15 = 마법전사 (섀도우 인필트레이터로 전직하면 이 모습)
     this._need(CFG.WAVE.list[0].add);   // 56 = 대도 (전직하면 이 모습)
     this._need(CFG.WAVE.list[1].add);   // 도둑과 1·2단계 유닛만 먼저 받는다 — 나머지는 한 단계 앞서 받는다 (_need)
     this._theme = D.theme; D.theme = null;                   // 디펜스의 난이도 테마(색조·바닥)는 끈다 — 나갈 때 돌려준다
@@ -315,20 +316,21 @@
       D._faceVec(h, tx, ty, true); this.aimUntil = T + h.t.anim.atk.n / (R.tps * CFG.ATK.anim) + 0.05;   // 걷는 중에도 던지는 쪽으로 몸을 돌린다 (2026-11-19 사용자 지적: 등에서 단검이 나가는 것처럼 보였다)
       h.state = 'attack'; h.at = 0;
       var ms = this._dagger(near, SK.dagger.dmg(dl)), xl = this._lvOf('double'); this.glintT = T; this.glintA = Math.atan2(ty, tx);
+      if (this.cls === 'trapper') { var BM = GROW.bomb; ms.dmg *= BM.mul; ms.bomb = BM.r + BM.rLv * dl; ms.bv = CFG.ATK.shot * BM.speed; ms.life = CFG.ATK.life / BM.speed; this.atkCd *= BM.sec; }   // 트래퍼: 단검 대신 폭탄
       ms.main = true; if (xl) ms.extra = { n: SK.double.n(xl) + (this._evo('double') ? 2 : 0) + (this._awk('double') ? 1 : 0), mul: SK.double.dmg(xl) };   // 더블 드로잉: 단검(동작)은 하나, 맞으면 피해가 여러 번 겹쳐 뜬다 (2026-11-19 사용자 요청 — 붉은보석의 타격 수)
       D._play(h.act.snd, 0.3); }
     this._growStep(dt, G, near);
     // 발사체: 도둑의 단도는 겨눈 적을 따라가고(적이 쓰러지면 곧게), 적의 것은 곧게 날아와 피할 수 있다
     for (i = 0; i < this.shots.length; i++) { var s = this.shots[i];
-      if (s.tgt && s.tgt.state !== 'dead') { var qx = s.tgt.x - s.x, qy = s.tgt.y - s.tgt.headY * 0.5 - s.y, qd = Math.hypot(qx, qy) || 1; s.vx = qx / qd * CFG.ATK.shot; s.vy = qy / qd * CFG.ATK.shot;
-        if (qd <= CFG.ATK.shot * dt + 8) { if (s.spl) this._dagMark(s.tgt, s.spl); this._hitFoe(s.tgt, s.dmg * (s.dg ? this._onDagger(s.tgt) : 1), s.arm); this._extra(s, s.tgt); if (s.spl) this._dagMark(s.tgt, s.spl);
+      if (s.tgt && s.tgt.state !== 'dead') { var qx = s.tgt.x - s.x, qy = s.tgt.y - s.tgt.headY * 0.5 - s.y, qd = Math.hypot(qx, qy) || 1; var sv2 = s.bv || CFG.ATK.shot; s.vx = qx / qd * sv2; s.vy = qy / qd * sv2;
+        if (qd <= sv2 * dt + 8) { if (s.bomb) this._bombHit(s, s.tgt); if (s.spl) this._dagMark(s.tgt, s.spl); this._hitFoe(s.tgt, s.dmg * (s.dg ? this._onDagger(s.tgt) : 1), s.arm); this._extra(s, s.tgt); if (s.spl) this._dagMark(s.tgt, s.spl);
           if (s.main && this._awk('dagger')) { var pt = s.tgt, po = null, pd = 70; for (j = 0; j < F.length; j++) { var pf = F[j]; if (pf === pt || pf.state === 'dead') continue; var pq = Math.hypot(pf.x - pt.x, pf.y - pt.y); if (pq < pd) { pd = pq; po = pf; } } if (po) this._hitFoe(po, s.dmg * 0.6 * this._onDagger(po), s.arm); }   // 관통 단검(각성)
           s.dead = true; continue; } }
       s.x += s.vx * dt; s.y += s.vy * dt;
       if (!s.foe && !(s.tgt && s.tgt.state !== 'dead')) { var gx = Math.floor(s.x / CS), gy = Math.floor((s.y + 16) / CS), ga, gb, gj, got = null;   // 겨눈 적이 없는 단검(다팅 피버·적이 먼저 쓰러진 단검): 처음 닿는 적을 맞힌다
         for (ga = gx - 1; ga <= gx + 1 && !got; ga++) for (gb = gy - 1; gb <= gy + 1 && !got; gb++) { var GL = G[ga + ',' + gb]; if (GL) for (gj = 0; gj < GL.length; gj++) if (GL[gj].state !== 'dead' && !(s.vol && (s.vol.hit[GL[gj].uid] || Math.hypot(GL[gj].x - s.x0, GL[gj].y - s.y0) > CFG.ATK.range + 12)) && Math.hypot(GL[gj].x - s.x, GL[gj].y - GL[gj].headY * 0.5 - s.y) < (s.vol ? Math.max(15, Math.hypot(s.x - s.x0, s.y - s.y0) * s.wk) : 15)) { got = GL[gj]; break; } }   // 흩뿌리기 단검(vol): 이미 맞은 적은 건너뛰고, 멀어질수록 단검 사이가 벌어지는 만큼 폭을 넓혀 부채꼴 안을 빈틈없이
         if (got && s.vol) { if (s.vol.left > 0) { s.vol.left--; s.vol.hit[got.uid] = 1; this._hitFoe(got, s.dmg * (1 - (1 - s.far) * Math.min(1, Math.hypot(got.x - s.x0, got.y - s.y0) / CFG.ATK.range)) * this._onDagger(got), s.arm); this.bursts.push({ x: got.x, y: got.y - got.headY * 0.5, t0: T, a: Math.atan2(s.vy, s.vx), k: 'p', life: 0.2 }); if (s.spl) this._dagMark(got, s.spl); } else { s.dead = true; continue; } }   // 꿰뚫고 계속 난다 — 먼 적일수록 약하게(far), 한 번에 n명까지
-        else if (got) { if (s.spl) this._dagMark(got, s.spl); this._hitFoe(got, s.dmg * (s.dg ? this._onDagger(got) : 1), s.arm); this._extra(s, got); if (s.spl) this._dagMark(got, s.spl); s.dead = true; continue; } }
+        else if (got) { if (s.bomb) this._bombHit(s, got); if (s.spl) this._dagMark(got, s.spl); this._hitFoe(got, s.dmg * (s.dg ? this._onDagger(got) : 1), s.arm); this._extra(s, got); if (s.spl) this._dagMark(got, s.spl); s.dead = true; continue; } }
       if (s.mg === 'orb') { var oa = Math.atan2(s.vy, s.vx), ta = Math.atan2(h.y - h.headY * 0.5 - s.y, h.x - s.x), od = Math.atan2(Math.sin(ta - oa), Math.cos(ta - oa)), ot = CFG.MAGIC.orb.turn * dt; oa += Math.max(-ot, Math.min(ot, od)); s.vx = Math.cos(oa) * CFG.MAGIC.orb.speed; s.vy = Math.sin(oa) * CFG.MAGIC.orb.speed; }   // 따라오는 구체: 천천히 방향을 튼다 (끝까지 따라오지는 못한다)
       if (s.foe && Math.hypot(h.x - s.x, h.y - h.headY * 0.5 - s.y) < (s.mg === 'orb' ? 17 : 13)) { if (s.arm >= 0) this._fx(s.x, s.y, s.arm); var hp0 = h.hp; this._hitHero(s.dmg); if (s.mg === 'frost' && h.hp < hp0) { this.chillUntil = T + CFG.MAGIC.frost.sec; this._text(h.x, h.y - h.headY - 30, '감속', '#9fd8ff'); } s.dead = true; }
       else if (T - s.t0 > s.life) s.dead = true; }
@@ -361,7 +363,8 @@
     for (i = 0; i < this.shots.length; i++) { var s = this.shots[i], fl = s.def && !s.def.dir && s.def.fly;
       if (s.spl) { var sg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 9), sc = s.spl === 'toxdag' ? '90,230,70' : '150,70,255'; sg.addColorStop(0, 'rgba(' + sc + ',.95)'); sg.addColorStop(1, 'rgba(' + sc + ',0)'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, 6.2832); ctx.fill(); }   // 트래퍼의 독·폭발 단검
       if (s.foe) { var gR = s.mg === 'orb' ? 18 : s.mg ? 13 : 11, gC = s.mg === 'frost' ? ['150,220,255', '90,170,255', '60,120,255'] : s.mg === 'orb' ? ['230,150,255', '170,70,255', '110,30,220'] : s.mg === 'fan' ? ['255,200,90', '255,130,40', '255,80,20'] : ['255,90,60', '255,60,40', '255,40,30'], gl = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, gR); gl.addColorStop(0, 'rgba(' + gC[0] + ',.9)'); gl.addColorStop(0.45, 'rgba(' + gC[1] + ',.4)'); gl.addColorStop(1, 'rgba(' + gC[2] + ',0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(s.x, s.y, gR, 0, 6.2832); ctx.fill(); if (s.mg === 'orb') { ctx.fillStyle = '#f4dcff'; ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, 6.2832); ctx.fill(); } }   // 적 투사체: 붉은 빛무리 (원본 이펙트가 작아 눈에 안 띄었다)
-      if (fl && fl.length) D._fxFrame(fl[Math.floor((D.time - s.t0) * 15) % fl.length], s.x, s.y, true);
+      if (s.bomb || s.spl) { var bh = Math.sin(Math.min(1, (D.time - s.t0) / 0.3) * 3.1416) * 10; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(s.x, s.y + 12, 4, 2, 0, 0, 6.2832); ctx.fill(); ctx.fillStyle = s.spl === 'toxdag' ? '#1f5a1a' : s.spl ? '#2a1050' : '#1b1d26'; ctx.strokeStyle = s.spl === 'toxdag' ? '#8be07a' : s.spl ? '#b98aff' : '#8a8f9f'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(s.x, s.y - bh, 4.5, 0, 6.2832); ctx.fill(); ctx.stroke(); ctx.fillStyle = Math.floor(D.time * 20) % 2 ? '#fff3a0' : '#ff9a3a'; ctx.fillRect(s.x + 2, s.y - bh - 7, 2.5, 2.5); }   // 트래퍼의 폭탄: 검은 공 + 깜빡이는 심지 (살짝 떠서 난다)
+      else if (fl && fl.length) D._fxFrame(fl[Math.floor((D.time - s.t0) * 15) % fl.length], s.x, s.y, true);
       else { var sa = Math.atan2(s.vy, s.vx), ux = Math.cos(sa), uy = Math.sin(sa); ctx.lineCap = 'round';
         if (s.foe) { ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(s.x - ux * 7, s.y - uy * 7); ctx.lineTo(s.x + ux * 7, s.y + uy * 7); ctx.stroke(); ctx.strokeStyle = '#ff9a8a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s.x - ux * 7, s.y - uy * 7); ctx.lineTo(s.x + ux * 7, s.y + uy * 7); ctx.stroke(); }
         else {   // 도둑의 단검 (붉은보석 영상처럼): 거의 안 보일 만큼 가늘고 빠르다 — 뒤로 끊어진 옅은 자국, 앞에 짧고 밝은 날
@@ -375,7 +378,8 @@
     // 단검이 맞은 자리의 섬광 (붉은보석 도둑 영상을 보고 — 이 게임에서 그린 것): 보통 = 흰 별 모양 빛살, 치명타·더블 = 검보라 가시 덩어리 + 흰 속, 쓰러진 자리 = 노란 반짝임
     var spikes = function (b, k, n, r0, r1, wid) { for (var j = 0; j < n; j++) { var a = b.a + j * 6.283 / n + (j % 2) * 0.25, l = (r0 + r1 * k) * (j % 2 ? 0.62 : 1), w = wid * (1 - k) + 0.6; ctx.beginPath(); ctx.moveTo(b.x + Math.cos(a) * l, b.y + Math.sin(a) * l); ctx.lineTo(b.x + Math.cos(a + 1.57) * w, b.y + Math.sin(a + 1.57) * w); ctx.lineTo(b.x - Math.cos(a + 1.57) * w, b.y - Math.sin(a + 1.57) * w); ctx.closePath(); ctx.fill(); } };
     for (i = 0; i < this.bursts.length; i++) { var bu2 = this.bursts[i], bk = Math.max(0, Math.min(1, (D.time - bu2.t0) / bu2.life)); ctx.save(); if (bu2.sc) { ctx.translate(bu2.x, bu2.y); ctx.scale(bu2.sc, bu2.sc); ctx.translate(-bu2.x, -bu2.y); }
-      if (bu2.k === 'k') { var kr = bu2.r * (0.35 + 0.65 * Math.sqrt(bk)); ctx.translate(bu2.x, bu2.y); ctx.scale(1, 0.62); var kg = ctx.createRadialGradient(0, 0, kr * 0.15, 0, 0, kr); kg.addColorStop(0, 'rgba(20,0,40,' + (0.85 * (1 - bk)).toFixed(3) + ')'); kg.addColorStop(0.7, 'rgba(90,30,170,' + (0.55 * (1 - bk)).toFixed(3) + ')'); kg.addColorStop(1, 'rgba(170,90,255,0)'); ctx.fillStyle = kg; ctx.beginPath(); ctx.arc(0, 0, kr, 0, 6.2832); ctx.fill(); ctx.strokeStyle = 'rgba(200,140,255,' + (0.9 * (1 - bk)).toFixed(3) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, kr, 0, 6.2832); ctx.stroke(); }   // 암흑 단도의 폭발: 검보라 원이 퍼진다
+      if (bu2.k === 'b') { var br = bu2.r * (0.4 + 0.6 * Math.sqrt(bk)); ctx.globalCompositeOperation = 'lighter'; ctx.translate(bu2.x, bu2.y); ctx.scale(1, 0.62); var bg = ctx.createRadialGradient(0, 0, 0, 0, 0, br); bg.addColorStop(0, 'rgba(255,240,180,' + (0.9 * (1 - bk)).toFixed(3) + ')'); bg.addColorStop(0.5, 'rgba(255,150,50,' + (0.6 * (1 - bk)).toFixed(3) + ')'); bg.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, br, 0, 6.2832); ctx.fill(); ctx.strokeStyle = 'rgba(255,200,120,' + (0.7 * (1 - bk)).toFixed(3) + ')'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, br, 0, 6.2832); ctx.stroke(); }   // 폭탄의 터짐: 범위만큼 퍼지는 주황 불빛
+      else if (bu2.k === 'k') { var kr = bu2.r * (0.35 + 0.65 * Math.sqrt(bk)); ctx.translate(bu2.x, bu2.y); ctx.scale(1, 0.62); var kg = ctx.createRadialGradient(0, 0, kr * 0.15, 0, 0, kr); kg.addColorStop(0, 'rgba(20,0,40,' + (0.85 * (1 - bk)).toFixed(3) + ')'); kg.addColorStop(0.7, 'rgba(90,30,170,' + (0.55 * (1 - bk)).toFixed(3) + ')'); kg.addColorStop(1, 'rgba(170,90,255,0)'); ctx.fillStyle = kg; ctx.beginPath(); ctx.arc(0, 0, kr, 0, 6.2832); ctx.fill(); ctx.strokeStyle = 'rgba(200,140,255,' + (0.9 * (1 - bk)).toFixed(3) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, kr, 0, 6.2832); ctx.stroke(); }   // 암흑 단도의 폭발: 검보라 원이 퍼진다
       else if (bu2.k === 'p') { ctx.globalCompositeOperation = 'lighter'; ctx.translate(bu2.x, bu2.y); ctx.rotate(bu2.a); var pl = 10 + 26 * bk; ctx.globalAlpha = 1 - bk; ctx.strokeStyle = '#bfe4ff'; ctx.lineWidth = 3 * (1 - bk) + 0.5; ctx.beginPath(); ctx.moveTo(-pl * 0.35, 0); ctx.lineTo(pl, 0); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-pl * 0.35, 0); ctx.lineTo(pl, 0); ctx.moveTo(0, -5 * (1 - bk)); ctx.lineTo(0, 5 * (1 - bk)); ctx.stroke(); }   // 단도 흩뿌리기: 꿰뚫고 지나간 방향의 푸른 흰 빛줄기 (다팅 피버의 둥근 큰 별과 구별)
       else if (bu2.k === 'g') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffe24a'; for (var gj = 0; gj < 7; gj++) { var ga2 = bu2.a + gj * 0.9, gr = 4 + 16 * bk * (0.6 + (gj % 3) * 0.25); ctx.globalAlpha = (1 - bk) * (0.6 + 0.4 * Math.sin(D.time * 40 + gj)); ctx.fillRect(bu2.x + Math.cos(ga2) * gr - 1, bu2.y + Math.sin(ga2) * gr * 0.6 - 10 * bk - 1, 2, 2); } }
       else if (bu2.k === 'n') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 1 - bk * bk; spikes(bu2, bk, 8, 8, 20, 2.6); ctx.beginPath(); ctx.arc(bu2.x, bu2.y, 5 * (1 - bk) + 1, 0, 6.3); ctx.fill(); }
@@ -592,8 +596,8 @@
   var L5 = function (a) { return function (l) { return a[Math.max(1, Math.min(5, l)) - 1]; }; };
   var pc = function (v) { return Math.round(v * 100) + '%'; };
   var SK = {
-    dagger: { awk: { pas: 'power', name: '관통 단검', text: '맞은 적 옆의 적 하나도 60% 피해' }, name: '단도 던지기', tree: 'throw', icon: 63, slot: 1, dmg: L5([1, 1.2, 1.4, 1.65, 1.9]), sec: L5([1, 0.93, 0.86, 0.8, 0.72]),
-      desc: function (l) { return '가장 가까운 적에게 단검을 던집니다. 피해 ' + pc(this.dmg(l)) + ', 던지는 간격 ' + pc(this.sec(l)); } },
+    dagger: { awk: { pas: 'power', name: '관통 단검', text: '맞은 적 옆의 적 하나도 60% 피해' }, name: '단도 던지기', tree: 'throw', icon: 63, slot: 1, evo: { cls: 'trapper', name: '폭탄 던지기' }, dmg: L5([1, 1.2, 1.4, 1.65, 1.9]), sec: L5([1, 0.93, 0.86, 0.8, 0.72]),
+      desc: function (l, ev) { return ev ? '가장 가까운 적에게 폭탄을 던집니다. 맞은 자리 반경 ' + (GROW.bomb.r + GROW.bomb.rLv * l) + ' 안의 적 모두에게 피해 ' + pc(this.dmg(l) * GROW.bomb.mul) + ', 던지는 간격 ' + pc(this.sec(l) * GROW.bomb.sec) : '가장 가까운 적에게 단검을 던집니다. 피해 ' + pc(this.dmg(l)) + ', 던지는 간격 ' + pc(this.sec(l)); } },
     double: { awk: { pas: 'haste', name: '연속 드로잉', text: '타격이 한 번 더' }, name: '더블 드로잉', tree: 'throw', icon: 5, slot: 1, evo: { cls: 'venom', name: '코인시던스 드로잉' }, n: L5([1, 1, 2, 2, 3]), dmg: L5([0.6, 0.75, 0.75, 0.9, 0.9]),
       desc: function (l, ev) { return '단검 하나가 ' + (this.n(l) + (ev ? 2 : 0)) + '번 더 타격합니다 (각 피해 ' + pc(this.dmg(l)) + ')' + (ev ? ', 치명타 확률 +5%' : ''); } },
     scatter: { name: '단도 흩뿌리기', tree: 'throw', icon: 4, slot: 1, evo: { cls: 'venom', name: '단도 총공격' }, cd: L5([2.4, 2.4, 2.2, 2.2, 2]), n: L5([6, 8, 10, 12, 14]), m: L5([4, 5, 6, 7, 8]), evoAng: 1.4, ang: L5([50, 65, 80, 95, 110]), far: L5([0.4, 0.55, 0.7, 0.85, 1]), dmg: L5([0.7, 0.8, 0.9, 1, 1.1]),   // 300번(2026-11-20 사용자): 가까운 n명 → 가장 가까운 적 쪽 부채꼴(각도 ang°, 사거리 안)로 단검 m개가 고르게 퍼져 곧게 날아가며 적을 꿰뚫는다(한 번에 n명까지, 같은 적은 한 번). 다팅 피버(단검 없이 제자리에서 돌며 둘레를 즉시 타격)와 연출이 겹치지 않게 — 사용자. far = 사거리 끝에서의 피해 비율(가까울수록 온전히, 5단계는 거리와 무관). 쓰로워 진화 = 각도 ×1.4·단검 +2·대상 +4 (한쪽 방향만)
@@ -637,10 +641,10 @@
        스킬 칸을 차지하지 않는다(trait — 패시브 줄에 작은 칸). 단검이 맞은 자리에서 터진다(같은 적에게는 0.15초에 한 번 — 더블 드로잉의 추가 타격마다 터지지 않게) */
     /* 트래퍼 주력 둘 (303번, 2026-11-20 사용자 컨셉): 독 묻힌 단도 = 한 적만 세게 치고 중독 — 중독된 채 쓰러지면 그 자리에 독 구름(둘레에 큰 피해).
        암흑 단도(폭발 단도를 대체) = 맞은 적이 sec 초 동안 암흑 물질에 감염 — 그동안 쓰러지면 폭발해 둘레에 피해, sec 초가 지나면 풀린다. 전에는 둘 다 "맞은 자리에서 바로 터지는 범위 피해"라 폭발 함정·유독가스와 겹쳤다 */
-    toxdag: { only: 'trapper', trait: 1, name: '독 묻힌 단도', tree: 'trap', icon: 106, cd: L5([4, 3.6, 3.2, 2.8, 2.4]), n: L5([1, 1, 2, 2, 3]), dmg: L5([1.2, 1.5, 1.8, 2.1, 2.5]), dot: L5([0.4, 0.5, 0.6, 0.75, 0.9]), sec: 4, r: L5([50, 55, 60, 65, 72]), cloud: L5([1, 1.25, 1.5, 1.75, 2.1]), csec: 3,
-      desc: function (l) { return this.cd(l) + '초마다 독 묻힌 단검 ' + this.n(l) + '개를 한 적씩에게 던집니다 (피해 ' + pc(this.dmg(l)) + ', ' + this.sec + '초 동안 초당 ' + pc(this.dot(l)) + '). 중독된 적이 쓰러지면 그 자리에 독 구름 — 반경 ' + this.r(l) + ', ' + this.csec + '초 동안 초당 ' + pc(this.cloud(l)); } },
-    darkdag: { only: 'trapper', trait: 1, name: '암흑 단도', tree: 'trap', icon: 103, cd: L5([5, 4.5, 4, 3.5, 3]), n: L5([1, 1, 2, 2, 3]), dmg: L5([0.5, 0.6, 0.7, 0.8, 0.9]), sec: 3, r: L5([60, 66, 72, 80, 90]), boom: L5([1.6, 2, 2.5, 3, 3.6]),
-      desc: function (l) { return this.cd(l) + '초마다 암흑 단검 ' + this.n(l) + '개를 던집니다 (피해 ' + pc(this.dmg(l)) + '). 맞은 적은 ' + this.sec + '초 동안 암흑 물질에 감염 — 그동안 쓰러지면 폭발해 반경 ' + this.r(l) + ' 안의 적 모두에게 피해 ' + pc(this.boom(l)); } },
+    toxdag: { only: 'trapper', trait: 1, name: '독 폭탄', tree: 'trap', icon: 106, cd: L5([4, 3.6, 3.2, 2.8, 2.4]), n: L5([1, 1, 2, 2, 3]), dmg: L5([1.2, 1.5, 1.8, 2.1, 2.5]), dot: L5([0.4, 0.5, 0.6, 0.75, 0.9]), sec: 4, r: L5([50, 55, 60, 65, 72]), cloud: L5([1, 1.25, 1.5, 1.75, 2.1]), csec: 3,
+      desc: function (l) { return this.cd(l) + '초마다 독 폭탄 ' + this.n(l) + '개를 한 적씩에게 던집니다 (피해 ' + pc(this.dmg(l)) + ', ' + this.sec + '초 동안 초당 ' + pc(this.dot(l)) + '). 중독된 적이 쓰러지면 그 자리에 독 구름 — 반경 ' + this.r(l) + ', ' + this.csec + '초 동안 초당 ' + pc(this.cloud(l)); } },
+    darkdag: { only: 'trapper', trait: 1, name: '암흑 폭탄', tree: 'trap', icon: 103, cd: L5([5, 4.5, 4, 3.5, 3]), n: L5([1, 1, 2, 2, 3]), dmg: L5([0.5, 0.6, 0.7, 0.8, 0.9]), sec: 3, r: L5([60, 66, 72, 80, 90]), boom: L5([1.6, 2, 2.5, 3, 3.6]),
+      desc: function (l) { return this.cd(l) + '초마다 암흑 폭탄 ' + this.n(l) + '개를 던집니다 (피해 ' + pc(this.dmg(l)) + '). 맞은 적은 ' + this.sec + '초 동안 암흑 물질에 감염 — 그동안 쓰러지면 폭발해 반경 ' + this.r(l) + ' 안의 적 모두에게 피해 ' + pc(this.boom(l)); } },
     sense: { name: '육감', tree: 'pas', icon: 9, v: L5([0.06, 0.12, 0.18, 0.24, 0.3]), desc: function (l) { return '적의 공격을 ' + pc(this.v(l)) + ' 확률로 피합니다'; } },
     pick: { name: '소매치기', tree: 'pas', icon: 53, v: L5([1.25, 1.5, 1.75, 2, 2.3]), desc: function (l) { return '경험치를 끌어오는 범위 ' + pc(this.v(l)); } },
     /* 패시브 5종 추가 (2026-11-19, 뱀서류 분석 글의 "패시브 조건부 진화"): 이름은 붉은보석 도둑의 보조 스킬에서, 효과는 이 게임에 맞게 다시 풀었다 */
@@ -653,9 +657,10 @@
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
   var CLS = {
     /* lines = 전직 카드의 설명 — 짧고 쉬운 말로 세 줄(무엇을 하는 갈래인지 · 특징 · 궁극기). 2026-11-20 사용자 "사람이 읽기 쉬운 형태로 길지 않게". 자세한 수치는 스킬 칸을 꾹 눌러 본다 */
-    venom: { name: '쓰로워', icon: 61,   // 이름 (2026-11-19 사용자): 베놈 쓰로워 → 쓰로워 · 사일런트 트래퍼 → 트래퍼 · 섀도우 인필트레이터 → 어쌔신
- col: '#ffcf7a', lines: ['단검을 가장 많이, 가장 넓게 던집니다', '맞은 적은 피를 흘리고 다팅 피버가 강해집니다', '궁극기: 적이 몰린 쪽으로 단검 폭풍'] },
-    trapper: { name: '트래퍼', icon: 64, col: '#7fe36a', lines: ['독과 암흑 단검으로 적을 터뜨립니다', '중독된 적이 쓰러지면 독 구름, 감염된 적은 폭발', '궁극기: 큰 독 구름과 폭발 함정 여섯'] },
+    venom: { name: '쓰로워', icon: 61, drop: ['poison', 'gas'],   // 쓰로워는 물리 공격만 — 독 단도·유독가스를 못 쓴다 (2026-11-20 사용자 "쓰로워의 독 단도 제거, 물리 공격만으로 승부"). 출혈은 물리라 그대로
+   // 이름 (2026-11-19 사용자): 베놈 쓰로워 → 쓰로워 · 사일런트 트래퍼 → 트래퍼 · 섀도우 인필트레이터 → 어쌔신
+ col: '#ffcf7a', lines: ['독 없이 단검만으로 — 가장 많이, 가장 넓게', '맞은 적은 피를 흘리고 다팅 피버가 강해집니다', '궁극기: 적이 몰린 쪽으로 단검 폭풍'] },
+    trapper: { name: '트래퍼', icon: 64, unit: 59, stat: 56,   /* 모습 = 확장판 환술사(59) 그대로 (2026-11-20 사용자 "이제부터 트래퍼의 아트는 확장판의 환술사의 아트를 그대로"). 능력치·단도 던지기는 대도(stat 56) 것 — 그림만 바뀐다. 전에는 대도 그림의 보라색만 녹색으로 돌렸다 */ drop: ['fever', 'surprise', 'assassin'], col: '#7fe36a', lines: ['단검 대신 폭탄 — 한 발은 약하지만 둘레까지 터집니다', '독 폭탄·암흑 폭탄과 더 많은 함정(+3개씩)', '궁극기: 큰 독 구름과 폭발 함정 여섯'] },
     shadow: { name: '어쌔신', icon: 80, col: '#c9a8ff', unit: 15, lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기: 가장 튼튼한 적 여섯을 처형'] }
   };
   /* 궁극기 (2026-11-19 사용자 안: "각 전직마다 대표되는 궁극기를 하나씩"): 전직하면 궁극기 칸(축지법 칸 왼쪽)에 그 전직의 궁극기가 들어온다. 직접 누르는 스킬은 축지법과 이것 둘뿐 — 나머지는 전부 자동.
@@ -667,7 +672,7 @@
       desc: function () { return '도둑 둘레에 큰 독 구름이 8초 동안 깔립니다 (초당 피해 200%, 안의 적은 느려지고 받는 피해 +16%). 구름 안에 폭발 함정 여섯 개가 한꺼번에 놓입니다.'; } },
     shadow: { name: '처형', icon: 41, n: 6, r: 320, gap: 0.12, mul: 12, kill: 0.3,
       desc: function () { return '가장 튼튼한 적 여섯을 순식간에 차례로 벱니다 (피해 1200%). 체력 30% 이하인 적은 즉사합니다(우두머리 제외). 베는 동안 무적입니다.'; } } };
-  var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: 0.012, magnet: 0.008, bomb: 0.005, max: 10, life: 40, heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, critMax: 0.6, xpk: q('xpk', 0.6), need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
+  var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: 0.012, magnet: 0.008, bomb: 0.005, max: 10, life: 40, heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, trapPlus: 3, bomb: { mul: q('bombmul', 0.6), r: 32, rLv: 3, speed: 0.5, sec: 1.1 },   /* 트래퍼의 기본 공격 = 폭탄 던지기 (309번, 2026-11-20 사용자 "기본 단도 공격보단 약하게, 대신 소범위 공격"): 단도 피해 × mul 을 맞은 자리 반경 r + rLv × 단계 안의 적 모두에게. 날아가는 속도 × speed(보이게), 던지는 간격 × sec */ critMax: 0.6, xpk: q('xpk', 0.6), need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
   SurvivalGame.SK = SK; SurvivalGame.CLS = CLS; SurvivalGame.GROW = GROW; SurvivalGame.ULT = ULT;
 
   P._growReset = function () {
@@ -684,12 +689,13 @@
   };
   /* 전직: 갈래를 정하고 도둑 → 대도로 모습이 바뀐다 (2026-11-19 사용자 요청). 공격력·방어력·걷는 속도·기본 공격(단도 던지기)은 원작 대도의 것, 최대 체력은 GROW.clsHp 만큼만 더한다(원작 차이 +130 을 다 주면 너무 단단하다) */
   P._promote = function (cls) {
-    var D = this.D, h = this.hero, T2 = D.types[CLS[cls].unit || GROW.clsUnit]; this.cls = cls; if (cls === 'trapper' && this.sk.fever) { this.pend += this.sk.fever; delete this.sk.fever; this.order = this.order.filter(function (k) { return k !== 'fever'; }); this._text(h.x, h.y - h.headY - 40, '다팅 피버 → 카드 +' + this.pend, '#9cc0ff'); }   // 2026-11-19 사용자 "전직 후에 다팅 피버는 제거" (어쌔신은 검술로 바뀐다)
+    var D = this.D, h = this.hero, T2 = D.types[CLS[cls].unit || GROW.clsUnit]; this.cls = cls; if (CLS[cls].drop) { var selfP = this, back = 0; CLS[cls].drop.forEach(function (k) { if (!selfP.sk[k]) return; back += selfP.sk[k]; delete selfP.sk[k]; selfP.order = selfP.order.filter(function (o) { return o !== k; }); }); if (back) { this.pend += back; this._text(h.x, h.y - h.headY - 40, '안 쓰는 스킬 → 카드 +' + back, '#9cc0ff'); } if (cls === 'venom') this.zones = []; }   // CLS[].drop = 그 갈래가 못 쓰는 스킬 — 전직하면 사라지고 그 단계만큼 카드로 돌려받는다, 카드에도 안 나온다. 트래퍼: 다팅 피버·암살 스킬(기습·암살) 대신 함정을 3개씩 더 둔다 (2026-11-20 사용자 "트래퍼에게 암살 스킬 빼 줘, 대신 기본 함정이 3개씩 추가")   // 2026-11-19 사용자 "전직 후에 다팅 피버는 제거" (어쌔신은 검술로 바뀐다)
     if (cls === 'shadow') { this._toBlade(); if (!this.sk.shadow) { this.sk.shadow = 1; this.tm.shadow = 5; } }   // 그림자 숨기는 어쌔신만 — 전직하면 생긴다 (2026-11-20 사용자)
     if (cls === 'trapper') { if (!this.sk.toxdag) this.sk.toxdag = 1; if (!this.sk.darkdag) this.sk.darkdag = 1; } if (!T2 || h.t === T2) return;
     if (this.tm.ult == null) this.tm.ult = 4;
-    var sp0 = this.speed, mh = h.maxHp + GROW.clsHp, hp = h.hp + GROW.clsHp; h.setType(T2); D._applyType(h); h.maxHp = mh; h.hp = Math.min(mh, hp); this.speed = h.speedPx * CFG.SPEED;
-    if (cls === 'trapper') { var gk = 'u' + T2.id + 'g'; if (!D.assets.img[gk]) D.assets.img[gk] = recolor(D.assets.get('u' + T2.id), 240, 330, -165); h.imgKey = gk; }   // 트래퍼: 대도의 포인트색(보라)만 녹색으로 (2026-11-19 사용자 "전체가 녹색이 아니라 포인트색만 녹색으로" — 전에는 그림 전체에 녹색을 덮었다)
+    var sp0 = this.speed, mh = h.maxHp + GROW.clsHp, hp = h.hp + GROW.clsHp; var BT = CLS[cls].stat != null ? D.types[CLS[cls].stat] : null, bact, batk, bsp; if (BT) { h.setType(BT); D._applyType(h); bact = h.act; batk = h.t.atk; bsp = h.speedPx; }   // stat: 능력치·기본 공격은 이 유닛 것, 그림·동작만 unit 것
+    h.setType(T2); D._applyType(h); if (BT) { h.act = Object.assign({}, bact); h.atkOv = batk; h.speedPx = bsp; h.imgKey = null; } h.maxHp = mh; h.hp = Math.min(mh, hp); this.speed = h.speedPx * CFG.SPEED;
+    // (트래퍼의 녹색 대도 그림 `recolor` 는 쓰지 않는다 — 환술사 그림을 그대로 쓴다)
     if (cls === 'shadow') { this.speed = Math.max(this.speed, sp0); h.act = Object.assign({}, h.act, { k1: 8, arm: -5 }); }   // 마법전사: 걸음은 느리므로 전직 전 속도를 지키고, 공격값의 레벨 계수(원작 16)는 다른 갈래와 같은 8 로(아니면 후반에 두 배로 세진다). arm −5 = 베기 타격 표시용 (−1 은 폭발·출혈과 겹친다)
     this._fx(h.x, h.y - 8, 3); this.ringT = D.time; this.ringN = 12; this.ringA = 0;
     this.tm.ult = 4; this.banner = { s: '궁극기 「' + ULT[cls].name + '」 — 오른쪽 아래 칸', t0: D.time + 0.8, col: CLS[cls].col };
@@ -714,7 +720,7 @@
     var self = this, rng = this.D.rng, out = [], pool = [], used = this.order.length, npas = Object.keys(this.sk).filter(function (k) { return SK[k].tree === 'pas'; }).length, hasTrap = ['mouse', 'booby', 'explo'].some(function (k) { return self.sk[k]; });
     if (this.lv >= GROW.classLv && !this.cls) return Object.keys(CLS).map(function (k) { return { cls: k }; });
     Object.keys(SK).forEach(function (k) { var s = SK[k], l = self._lvOf(k); if (l >= 5) return;
-      if (s.only && self.cls !== s.only) return; if (k === 'fever' && self.cls && self.cls !== 'venom') return;   // 다팅 피버는 전직 전에만   // 갈래 전용 (트래퍼의 독 묻힌 단도·폭발 단도)
+      if (s.only && self.cls !== s.only) return; if (k === 'fever' && self.cls && self.cls !== 'venom') return; if (self.cls && CLS[self.cls].drop && CLS[self.cls].drop.indexOf(k) >= 0) return;   // 갈래가 못 쓰는 스킬 (CLS[].drop)   // 다팅 피버는 전직 전에만   // 갈래 전용 (트래퍼의 독 묻힌 단도·폭발 단도)
       if (s.tree === 'blade' ? self.cls !== 'shadow' : (self.cls === 'shadow' && s.tree !== 'pas' && k !== 'blink' && k !== 'shadow')) return;   // 그림자 검술은 섀도우만, 섀도우는 칼 스킬이 검술뿐
       if (!l && s.slot && used >= CFG.SLOTS) return; if (!l && s.need === 'trap' && !hasTrap) return; if (!l && s.tree === 'pas' && npas >= GROW.pasMax) return;
       var clsTree = self.cls === 'venom' ? 'throw' : self.cls === 'trapper' ? 'trap' : self.cls === 'shadow' ? 'blade' : null;
@@ -802,6 +808,11 @@
   /* 트래퍼: 단검이 맞은 자리의 스플래시 — 독(피해 + 3초 독, 녹색 구름) · 폭발(피해, 폭발 이펙트) */
   P._dagSplash = function (x, y, kind) {   // (303번부터 쓰지 않는다 — 표시는 _dagMark, 터지는 것은 _hitFoe 의 쓰러질 때)
     return; };
+  P._bombHit = function (s, main) {   // 트래퍼의 폭탄: 맞은 적(main — 부른 쪽이 따로 친다) 둘레의 적도 같은 피해
+    var F = this.foes, T = this.D.time, r = s.bomb * (1 + this._pv('reach')), i, u;
+    for (i = 0; i < F.length; i++) { u = F[i]; if (u !== main && u.state !== 'dead' && Math.hypot(u.x - main.x, u.y - main.y) <= r) this._hitFoe(u, s.dmg * this._onDagger(u), -1); }
+    this.bursts.push({ x: main.x, y: main.y - 6, t0: T, a: 0, k: 'b', life: 0.26, r: r }); if (T - (this.bombSndT || -9) > 0.18) { this.bombSndT = T; this.D._play(5064, 0.16); }
+  };
   P._dagMark = function (u, kind) {   // 트래퍼 단검이 맞은 적에게 표시를 남긴다 (그 적이 쓰러질 때 _hitFoe 가 본다)
     var T = this.D.time, l, LS = 1 + this._pv('last');
     if (kind === 'toxdag' && (l = this.sk.toxdag)) { u.toxUntil = T + SK.toxdag.sec * LS; u.toxLv = l; u.bleedUntil = Math.max(u.bleedUntil || 0, u.toxUntil); u.bleed = Math.max(u.bleed || 0, this._base() * SK.toxdag.dot(l)); }
@@ -921,7 +932,7 @@
               self.ringT = self.D.time; self.ringN = cnt; self.ringA = wi * 0.5 / cnt * 6.2832; D._play(self.hero.act.snd, 0.4); } }); })(k); } else tm.fever = 0.3; }
     // 트래퍼 주력: 독 묻힌 단도 · 폭발 단도 — 대기마다 가까운 적에게 그 단검을 던진다 (2026-11-19 사용자 "패시브가 아닌 쿨타임 존재" — 전에는 모든 단검이 맞을 때마다 터졌다)
     ['toxdag', 'darkdag'].forEach(function (key) { if (!due(key)) return; var lv = self.sk[key], tg = self._nearest(SK[key].n(lv) + 4, CFG.ATK.range, null).filter(function (u) { return !((key === 'toxdag' ? u.toxUntil : u.darkUntil) > T); }).slice(0, SK[key].n(lv));   // 이미 표시가 붙은 적은 건너뛴다
-      if (!tg.length) { tm[key] = 0.3; return; } tm[key] = CD(key, lv); tg.forEach(function (u) { self._dagger(u, SK[key].dmg(lv)).spl = key; }); D._play(self.hero.act.snd, 0.35); });
+      if (!tg.length) { tm[key] = 0.3; return; } tm[key] = CD(key, lv); tg.forEach(function (u) { var bs = self._dagger(u, SK[key].dmg(lv)); bs.spl = key; bs.bv = CFG.ATK.shot * GROW.bomb.speed; bs.life = CFG.ATK.life / GROW.bomb.speed; });   /* 독 폭탄·암흑 폭탄: 폭탄처럼 느리게 날아간다 (이름·모양만 폭탄 — 한 적만 맞히는 것은 그대로. 2026-11-20 사용자 "독과 암흑을 독 폭탄, 암흑 폭탄으로") */ D._play(self.hero.act.snd, 0.35); });
     // 그림자 검술: 회오리 베기 · 그림자 돌진
     if (due('whirl')) { l = this.sk.whirl; var wr = SK.whirl.r * (this._awk('whirl') ? 1.5 : 1), wm = SK.whirl.dmg(l), wn = SK.whirl.w(l);
       if (this._nearest(1, wr, null).length) { tm.whirl = CD('whirl', l); this.feverT0 = T; this.feverUntil = T + wn * 0.13 + 0.05;   // 도는 자세는 다팅 피버의 것을 빌린다
@@ -931,7 +942,7 @@
       if (best && bc >= 2) { tm.dash = CD('dash', l); this._dash(best[0], best[1], dd, dm); if (this._awk('dash')) this.queue.push({ at: T + 0.3, fn: function () { self._dash(-best[0], -best[1], dd, dm); } }); } else tm.dash = 0.4; }
     // 덫 놓기
     ['mouse', 'booby', 'explo'].forEach(function (key) { if (!due(key)) return; var s = SK[key], lv = self.sk[key]; tm[key] = s.cd(lv) * HS;
-      var mine = self.traps.filter(function (t) { return t.k === key; }); if (mine.length >= (key === 'mouse' && self._awk('mouse') ? 14 : s.max)) self.traps.splice(self.traps.indexOf(mine[0]), 1);
+      var mine = self.traps.filter(function (t) { return t.k === key; }); if (mine.length >= (key === 'mouse' && self._awk('mouse') ? 14 : s.max) + (self.cls === 'trapper' ? GROW.trapPlus : 0)) self.traps.splice(self.traps.indexOf(mine[0]), 1);
       self.traps.push({ k: key, x: h.x, y: h.y, t0: T }); });
     // 덫 밟기
     var TR = GROW.trapR * (this.cls === 'trapper' ? GROW.trapRx : 1) * RC;
