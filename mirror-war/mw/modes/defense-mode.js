@@ -7,7 +7,7 @@
   var MWE = root.MWE, DG = MWE.DefenseGame, P = DG.prototype, CONFIG = DG.CONFIG;
   var MODES = [
     { key: 'defense', name: '디펜스', sub: 'Defense', lines: ['유닛을 소환해 전선을 밀고', '적 기지를 무너뜨립니다'], col: '#ffd36e' },
-    { key: 'survival', name: '서바이벌', sub: 'Survival', lines: ['도둑 한 명으로 사방에서', '몰려오는 적을 버팁니다'], col: '#9cc0ff', tag: '개발 중' }
+    { key: 'survival', name: '서바이벌', sub: 'Survival', lines: ['도둑 한 명으로 사방에서', '몰려오는 적을 버팁니다'], col: '#9cc0ff', tag: '신규' }
   ];
   function inBox(b, x, y) { return b && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h; }
   var loading = false, failed = false;
