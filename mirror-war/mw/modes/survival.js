@@ -298,8 +298,9 @@
           s.dead = true; continue; } }
       s.x += s.vx * dt; s.y += s.vy * dt;
       if (!s.foe && !(s.tgt && s.tgt.state !== 'dead')) { var gx = Math.floor(s.x / CS), gy = Math.floor((s.y + 16) / CS), ga, gb, gj, got = null;   // 겨눈 적이 없는 단검(다팅 피버·적이 먼저 쓰러진 단검): 처음 닿는 적을 맞힌다
-        for (ga = gx - 1; ga <= gx + 1 && !got; ga++) for (gb = gy - 1; gb <= gy + 1 && !got; gb++) { var GL = G[ga + ',' + gb]; if (GL) for (gj = 0; gj < GL.length; gj++) if (GL[gj].state !== 'dead' && Math.hypot(GL[gj].x - s.x, GL[gj].y - GL[gj].headY * 0.5 - s.y) < 15) { got = GL[gj]; break; } }
-        if (got) { this._hitFoe(got, s.dmg * (s.dg ? this._onDagger(got) : 1), s.arm); this._extra(s, got); if (s.spl) this._dagSplash(got.x, got.y, s.spl); s.dead = true; continue; } }
+        for (ga = gx - 1; ga <= gx + 1 && !got; ga++) for (gb = gy - 1; gb <= gy + 1 && !got; gb++) { var GL = G[ga + ',' + gb]; if (GL) for (gj = 0; gj < GL.length; gj++) if (GL[gj].state !== 'dead' && !(s.vol && (s.vol.hit[GL[gj].uid] || Math.hypot(GL[gj].x - s.x0, GL[gj].y - s.y0) > CFG.ATK.range + 12)) && Math.hypot(GL[gj].x - s.x, GL[gj].y - GL[gj].headY * 0.5 - s.y) < (s.vol ? Math.max(15, Math.hypot(s.x - s.x0, s.y - s.y0) * s.wk) : 15)) { got = GL[gj]; break; } }   // 흩뿌리기 단검(vol): 이미 맞은 적은 건너뛰고, 멀어질수록 단검 사이가 벌어지는 만큼 폭을 넓혀 부채꼴 안을 빈틈없이
+        if (got && s.vol) { if (s.vol.left > 0) { s.vol.left--; s.vol.hit[got.uid] = 1; this._hitFoe(got, s.dmg * (1 - (1 - s.far) * Math.min(1, Math.hypot(got.x - s.x0, got.y - s.y0) / CFG.ATK.range)) * this._onDagger(got), s.arm); this.bursts.push({ x: got.x, y: got.y - got.headY * 0.5, t0: T, a: Math.atan2(s.vy, s.vx), k: 'p', life: 0.2 }); if (s.spl) this._dagSplash(got.x, got.y, s.spl); } else { s.dead = true; continue; } }   // 꿰뚫고 계속 난다 — 먼 적일수록 약하게(far), 한 번에 n명까지
+        else if (got) { this._hitFoe(got, s.dmg * (s.dg ? this._onDagger(got) : 1), s.arm); this._extra(s, got); if (s.spl) this._dagSplash(got.x, got.y, s.spl); s.dead = true; continue; } }
       if (s.foe && Math.hypot(h.x - s.x, h.y - h.headY * 0.5 - s.y) < 13) { this._fx(s.x, s.y, s.arm); this._hitHero(s.dmg); s.dead = true; }
       else if (T - s.t0 > s.life) s.dead = true; }
     this.shots = this.shots.filter(function (s) { return !s.dead; });
@@ -345,7 +346,8 @@
     // 단검이 맞은 자리의 섬광 (붉은보석 도둑 영상을 보고 — 이 게임에서 그린 것): 보통 = 흰 별 모양 빛살, 치명타·더블 = 검보라 가시 덩어리 + 흰 속, 쓰러진 자리 = 노란 반짝임
     var spikes = function (b, k, n, r0, r1, wid) { for (var j = 0; j < n; j++) { var a = b.a + j * 6.283 / n + (j % 2) * 0.25, l = (r0 + r1 * k) * (j % 2 ? 0.62 : 1), w = wid * (1 - k) + 0.6; ctx.beginPath(); ctx.moveTo(b.x + Math.cos(a) * l, b.y + Math.sin(a) * l); ctx.lineTo(b.x + Math.cos(a + 1.57) * w, b.y + Math.sin(a + 1.57) * w); ctx.lineTo(b.x - Math.cos(a + 1.57) * w, b.y - Math.sin(a + 1.57) * w); ctx.closePath(); ctx.fill(); } };
     for (i = 0; i < this.bursts.length; i++) { var bu2 = this.bursts[i], bk = Math.max(0, Math.min(1, (D.time - bu2.t0) / bu2.life)); ctx.save(); if (bu2.sc) { ctx.translate(bu2.x, bu2.y); ctx.scale(bu2.sc, bu2.sc); ctx.translate(-bu2.x, -bu2.y); }
-      if (bu2.k === 'g') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffe24a'; for (var gj = 0; gj < 7; gj++) { var ga2 = bu2.a + gj * 0.9, gr = 4 + 16 * bk * (0.6 + (gj % 3) * 0.25); ctx.globalAlpha = (1 - bk) * (0.6 + 0.4 * Math.sin(D.time * 40 + gj)); ctx.fillRect(bu2.x + Math.cos(ga2) * gr - 1, bu2.y + Math.sin(ga2) * gr * 0.6 - 10 * bk - 1, 2, 2); } }
+      if (bu2.k === 'p') { ctx.globalCompositeOperation = 'lighter'; ctx.translate(bu2.x, bu2.y); ctx.rotate(bu2.a); var pl = 10 + 26 * bk; ctx.globalAlpha = 1 - bk; ctx.strokeStyle = '#bfe4ff'; ctx.lineWidth = 3 * (1 - bk) + 0.5; ctx.beginPath(); ctx.moveTo(-pl * 0.35, 0); ctx.lineTo(pl, 0); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-pl * 0.35, 0); ctx.lineTo(pl, 0); ctx.moveTo(0, -5 * (1 - bk)); ctx.lineTo(0, 5 * (1 - bk)); ctx.stroke(); }   // 단도 흩뿌리기: 꿰뚫고 지나간 방향의 푸른 흰 빛줄기 (다팅 피버의 둥근 큰 별과 구별)
+      else if (bu2.k === 'g') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffe24a'; for (var gj = 0; gj < 7; gj++) { var ga2 = bu2.a + gj * 0.9, gr = 4 + 16 * bk * (0.6 + (gj % 3) * 0.25); ctx.globalAlpha = (1 - bk) * (0.6 + 0.4 * Math.sin(D.time * 40 + gj)); ctx.fillRect(bu2.x + Math.cos(ga2) * gr - 1, bu2.y + Math.sin(ga2) * gr * 0.6 - 10 * bk - 1, 2, 2); } }
       else if (bu2.k === 'n') { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 1 - bk * bk; spikes(bu2, bk, 8, 8, 20, 2.6); ctx.beginPath(); ctx.arc(bu2.x, bu2.y, 5 * (1 - bk) + 1, 0, 6.3); ctx.fill(); }
       else { var big = bu2.k === 'd' ? 1.35 : 1; ctx.globalAlpha = 1 - bk * bk * bk; ctx.fillStyle = '#1a0a3a'; spikes(bu2, bk, 14, 10 * big, 16 * big, 3.4); ctx.beginPath(); ctx.arc(bu2.x, bu2.y, (9 + 5 * bk) * big, 0, 6.3); ctx.fill();
         ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(120,90,255,.9)'; ctx.globalAlpha = (1 - bk) * 0.9; spikes(bu2, bk, 7, 6 * big, 22 * big, 1.6); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(bu2.x, bu2.y, 4 * (1 - bk) * big + 0.5, 0, 6.3); ctx.fill(); }
@@ -562,8 +564,8 @@
       desc: function (l) { return '가장 가까운 적에게 단검을 던집니다. 피해 ' + pc(this.dmg(l)) + ', 던지는 간격 ' + pc(this.sec(l)); } },
     double: { awk: { pas: 'haste', name: '연속 드로잉', text: '타격이 한 번 더' }, name: '더블 드로잉', tree: 'throw', icon: 5, slot: 1, evo: { cls: 'venom', name: '코인시던스 드로잉' }, n: L5([1, 1, 2, 2, 3]), dmg: L5([0.6, 0.75, 0.75, 0.9, 0.9]),
       desc: function (l, ev) { return '단검 하나가 ' + (this.n(l) + (ev ? 2 : 0)) + '번 더 타격합니다 (각 피해 ' + pc(this.dmg(l)) + ')' + (ev ? ', 치명타 확률 +5%' : ''); } },
-    scatter: { name: '단도 흩뿌리기', tree: 'throw', icon: 4, slot: 1, evo: { cls: 'venom', name: '단도 총공격' }, cd: L5([2.4, 2.4, 2.2, 2.2, 2]), n: L5([2, 3, 4, 5, 7]), dmg: L5([0.7, 0.8, 0.9, 1, 1.1]),
-      desc: function (l, ev) { return '사거리 안의 적 ' + (this.n(l) + (ev ? 2 : 0)) + '명에게 한꺼번에 던집니다 (피해 ' + pc(this.dmg(l)) + ')' + (ev ? '. 적이 적으면 두 번' : ''); } },
+    scatter: { name: '단도 흩뿌리기', tree: 'throw', icon: 4, slot: 1, evo: { cls: 'venom', name: '단도 총공격' }, cd: L5([2.4, 2.4, 2.2, 2.2, 2]), n: L5([6, 8, 10, 12, 14]), m: L5([4, 5, 6, 7, 8]), ang: L5([50, 65, 80, 95, 110]), far: L5([0.4, 0.55, 0.7, 0.85, 1]), dmg: L5([0.7, 0.8, 0.9, 1, 1.1]),   // 300번(2026-11-20 사용자): 가까운 n명 → 가장 가까운 적 쪽 부채꼴(각도 ang°, 사거리 안)로 단검 m개가 고르게 퍼져 곧게 날아가며 적을 꿰뚫는다(한 번에 n명까지, 같은 적은 한 번). 다팅 피버(단검 없이 제자리에서 돌며 둘레를 즉시 타격)와 연출이 겹치지 않게 — 사용자. far = 사거리 끝에서의 피해 비율(가까울수록 온전히, 5단계는 거리와 무관). 쓰로워 진화 = 앞뒤 두 방향
+      desc: function (l, ev) { return '가장 가까운 적 쪽 부채꼴(' + this.ang(l) + '°)' + (ev ? '과 그 반대쪽' : '') + '로 단검 ' + this.m(l) + '개를 흩뿌려 꿰뚫습니다 — 한 번에 ' + this.n(l) + '명까지 (피해 ' + pc(this.dmg(l)) + (this.far(l) < 1 ? ', 먼 적은 ' + pc(this.dmg(l) * this.far(l)) + '까지 약해짐' : ', 거리와 무관') + ')'; } },
     fever: { awk: { pas: 'reach', name: '다팅 스톰', text: '대상 +4명, 닿는 거리 1.3배' }, man: 1, name: '다팅 피버', tree: 'throw', icon: 54, slot: 1, evo: { cls: 'venom', name: '다팅 피버' }, cd: L5([7, 6.5, 6, 5.5, 5]), n: L5([8, 10, 10, 12, 12]), w: L5([1, 1, 2, 2, 3]), dmg: L5([0.8, 0.9, 1, 1.1, 1.2]),
       desc: function (l, ev) { return '둘레의 적 ' + this.n(l) + '명을 단검으로 ' + (this.w(l) + (ev ? 1 : 0)) + '번 순식간에 칩니다 (피해 ' + pc(this.dmg(l) * (ev ? 1.3 : 1)) + ')'; } },
     poison: { name: '독 단도', tree: 'throw', icon: 79, slot: 1, v: L5([0.15, 0.25, 0.35, 0.45, 0.6]), dur: 4,
@@ -639,7 +641,7 @@
     this.sk = { dagger: 1, blink: 1 }; this.order = ['dagger']; this.tm = {}; this.traps = []; this.zones = []; this.gems = []; this.queue = [];
     this.stealthUntil = 0; this.hide = null; this.hideT = 0; this.lastDir = [1, 0]; this.lastDown = null; this.fire = {}; this.press = null; this.info = null; this.infoT = 0;
     this.ult = null;   // (281번의 "고급 스킬을 궁극기 칸에 올리기"는 뺐다 — 궁극기는 전직이 준다. this.ult 는 늘 null)
-    this.items = []; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
+    this.items = []; this.fans = []; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
     Object.keys(SK).forEach(function (k) { var s = SK[k]; [s.arm, s.boom, s.fx].forEach(function (a) { var d = a != null && D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });
     [3, 38].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var pre = /[?&]sk=([a-z,]+)/.exec(root.location.search); if (pre) pre[1].split(',').forEach(function (k) { if (SK[k]) { if (!self.sk[k] && SK[k].slot) self.order.push(k); self.sk[k] = q('sklv', 3); } });   // ?sk=fever,explo&sklv=5 : 시험용
@@ -857,8 +859,11 @@
     var rg = this._pv('regen'); if (rg && h.hp < h.maxHp) h.hp = Math.min(h.maxHp, h.hp + rg * dt);
     // 시차를 두고 나가는 것들 (다팅 피버의 둘째·셋째 파, 연폭 함정)
     var Q0 = this.queue, keep = []; this.queue = []; Q0.forEach(function (qu) { if (T < qu.at) keep.push(qu); else qu.fn(); }); this.queue = keep.concat(this.queue);   // 실행 중에 새로 넣은 것(다팅 피버의 타격들)을 잃지 않게 — 전에는 filter 가 돌려준 새 배열로 덮어써서 사라졌다
-    if (due('scatter')) { l = this.sk.scatter; ev = this._evo('scatter'); var n = SK.scatter.n(l) + (ev ? 2 : 0), tg = this._nearest(n, CFG.ATK.range, null);
-      if (tg.length) { tm.scatter = CD('scatter', l); var twice = ev && tg.length <= n / 2 ? 2 : 1; for (k = 0; k < twice; k++) tg.forEach(function (u, j) { self._dagger(u, SK.scatter.dmg(l), (k ? 5 : 0), (k ? -5 : 0)); }); } else tm.scatter = 0.3; }
+    if (due('scatter')) { l = this.sk.scatter; ev = this._evo('scatter'); var SC = SK.scatter, sn = this._nearest(1, CFG.ATK.range, null)[0];   // 단도 흩뿌리기: 가장 가까운 적 쪽 부채꼴 안의 적에게 (먼 적일수록 약하게 — 단계가 오르면 같아진다)
+      if (sn) { tm.scatter = CD('scatter', l); var sa = Math.atan2(sn.y - h.y, sn.x - h.x), half = SC.ang(l) * 0.008727, fr = SC.far(l), sd = SC.dmg(l), sides = ev ? [sa, sa + Math.PI] : [sa];
+        sides.forEach(function (a0) { var m = SC.m(l), vol = { hit: {}, left: SC.n(l) }, fi;
+          for (fi = 0; fi < m; fi++) { var ra = a0 - half + (fi + 0.5) * (2 * half / m), sh = self._dagger(null, sd, 0, 0, Math.cos(ra) * CFG.ATK.shot, Math.sin(ra) * CFG.ATK.shot); sh.vol = vol; sh.far = fr; sh.x0 = h.x; sh.y0 = h.y; sh.wk = Math.tan(half / m); sh.life = CFG.ATK.range / CFG.ATK.shot; }
+          self.fans.push({ a: a0, half: half, t0: T }); }); } else tm.scatter = 0.3; }
     if (due('fever')) { l = this.sk.fever; ev = this._evo('fever'); if (near || this._nearest(1, CFG.ATK.range * 1.3, null).length) { tm.fever = CD('fever', l);
         var cnt = SK.fever.n(l), frange = CFG.ATK.range * 1.4 * RC * (this._awk('fever') ? 1.3 : 1), waves = SK.fever.w(l) + (ev ? 1 : 0), mul = SK.fever.dmg(l) * (ev ? 1.3 : 1) * UP('fever'), fa = this._awk('fever'); if (fa) cnt += 4; this.feverT0 = T; this.feverUntil = T + (waves - 1) * 0.22 + 0.2;   // 그동안 도둑이 제자리에서 돌며 던진다 (update)
         for (k = 0; k < waves; k++) (function (wi) { self.queue.push({ at: T + wi * 0.22, fn: function () {   // 날아가는 단검은 보이지 않는다 (2026-11-19 사용자 요청 — 붉은보석처럼): 둘레의 적들이 거의 동시에 맞고, 맞는 자리의 섬광을 크게
@@ -941,6 +946,8 @@
   /* 전장 층(유닛 아래): 독 구름 · 덫 · 경험치 보석 */
   P._drawGround = function () {
     var D = this.D, ctx = D.ctx, T = D.time, i;
+    this.fans = this.fans.filter(function (f) { return T - f.t0 < 0.22; }); for (i = 0; i < this.fans.length; i++) { var fn = this.fans[i], fk = 1 - (T - fn.t0) / 0.22;   // 단도 흩뿌리기: 던진 쪽 부채꼴을 바닥에 아주 잠깐·옅게 (어디를 쳤는지만)
+      ctx.fillStyle = 'rgba(255,240,200,' + (0.10 * fk).toFixed(3) + ')'; ctx.beginPath(); ctx.moveTo(this.hero.x, this.hero.y); ctx.arc(this.hero.x, this.hero.y, CFG.ATK.range, fn.a - fn.half, fn.a + fn.half); ctx.closePath(); ctx.fill(); }
     var SW = this.siegeWarn; if (SW) { var gk = (T - SW.t0) / CFG.SIEGE.warn;   // 포위 예고: 적이 나타날 자리(도둑 둘레)에 붉은 점선 고리 — 가늘게, 전장을 덮지 않는다
       ctx.strokeStyle = 'rgba(255,80,50,' + (0.5 + 0.4 * gk).toFixed(3) + ')'; ctx.lineWidth = 2.5; ctx.setLineDash([12, 9]); ctx.lineDashOffset = -T * 50; ctx.beginPath(); ctx.ellipse(this.hero.x, this.hero.y, CFG.SIEGE.rx, CFG.SIEGE.ry, 0, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); }
     for (i = 0; i < this.foes.length; i++) { var fu = this.foes[i]; if (fu.state === 'dead') continue;
