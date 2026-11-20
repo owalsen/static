@@ -564,8 +564,8 @@
       desc: function (l) { return '가장 가까운 적에게 단검을 던집니다. 피해 ' + pc(this.dmg(l)) + ', 던지는 간격 ' + pc(this.sec(l)); } },
     double: { awk: { pas: 'haste', name: '연속 드로잉', text: '타격이 한 번 더' }, name: '더블 드로잉', tree: 'throw', icon: 5, slot: 1, evo: { cls: 'venom', name: '코인시던스 드로잉' }, n: L5([1, 1, 2, 2, 3]), dmg: L5([0.6, 0.75, 0.75, 0.9, 0.9]),
       desc: function (l, ev) { return '단검 하나가 ' + (this.n(l) + (ev ? 2 : 0)) + '번 더 타격합니다 (각 피해 ' + pc(this.dmg(l)) + ')' + (ev ? ', 치명타 확률 +5%' : ''); } },
-    scatter: { name: '단도 흩뿌리기', tree: 'throw', icon: 4, slot: 1, evo: { cls: 'venom', name: '단도 총공격' }, cd: L5([2.4, 2.4, 2.2, 2.2, 2]), n: L5([6, 8, 10, 12, 14]), m: L5([4, 5, 6, 7, 8]), ang: L5([50, 65, 80, 95, 110]), far: L5([0.4, 0.55, 0.7, 0.85, 1]), dmg: L5([0.7, 0.8, 0.9, 1, 1.1]),   // 300번(2026-11-20 사용자): 가까운 n명 → 가장 가까운 적 쪽 부채꼴(각도 ang°, 사거리 안)로 단검 m개가 고르게 퍼져 곧게 날아가며 적을 꿰뚫는다(한 번에 n명까지, 같은 적은 한 번). 다팅 피버(단검 없이 제자리에서 돌며 둘레를 즉시 타격)와 연출이 겹치지 않게 — 사용자. far = 사거리 끝에서의 피해 비율(가까울수록 온전히, 5단계는 거리와 무관). 쓰로워 진화 = 앞뒤 두 방향
-      desc: function (l, ev) { return '가장 가까운 적 쪽 부채꼴(' + this.ang(l) + '°)' + (ev ? '과 그 반대쪽' : '') + '로 단검 ' + this.m(l) + '개를 흩뿌려 꿰뚫습니다 — 한 번에 ' + this.n(l) + '명까지 (피해 ' + pc(this.dmg(l)) + (this.far(l) < 1 ? ', 먼 적은 ' + pc(this.dmg(l) * this.far(l)) + '까지 약해짐' : ', 거리와 무관') + ')'; } },
+    scatter: { name: '단도 흩뿌리기', tree: 'throw', icon: 4, slot: 1, evo: { cls: 'venom', name: '단도 총공격' }, cd: L5([2.4, 2.4, 2.2, 2.2, 2]), n: L5([6, 8, 10, 12, 14]), m: L5([4, 5, 6, 7, 8]), evoAng: 1.4, ang: L5([50, 65, 80, 95, 110]), far: L5([0.4, 0.55, 0.7, 0.85, 1]), dmg: L5([0.7, 0.8, 0.9, 1, 1.1]),   // 300번(2026-11-20 사용자): 가까운 n명 → 가장 가까운 적 쪽 부채꼴(각도 ang°, 사거리 안)로 단검 m개가 고르게 퍼져 곧게 날아가며 적을 꿰뚫는다(한 번에 n명까지, 같은 적은 한 번). 다팅 피버(단검 없이 제자리에서 돌며 둘레를 즉시 타격)와 연출이 겹치지 않게 — 사용자. far = 사거리 끝에서의 피해 비율(가까울수록 온전히, 5단계는 거리와 무관). 쓰로워 진화 = 각도 ×1.4·단검 +2·대상 +4 (한쪽 방향만)
+      desc: function (l, ev) { return '가장 가까운 적 쪽 부채꼴(' + Math.round(this.ang(l) * (ev ? this.evoAng : 1)) + '°)로 단검 ' + (this.m(l) + (ev ? 2 : 0)) + '개를 흩뿌려 꿰뚫습니다 — 한 번에 ' + (this.n(l) + (ev ? 4 : 0)) + '명까지 (피해 ' + pc(this.dmg(l)) + (this.far(l) < 1 ? ', 먼 적은 ' + pc(this.dmg(l) * this.far(l)) + '까지 약해짐' : ', 거리와 무관') + ')'; } },
     fever: { awk: { pas: 'reach', name: '다팅 스톰', text: '대상 +4명, 닿는 거리 1.3배' }, man: 1, name: '다팅 피버', tree: 'throw', icon: 54, slot: 1, evo: { cls: 'venom', name: '다팅 피버' }, cd: L5([7, 6.5, 6, 5.5, 5]), n: L5([8, 10, 10, 12, 12]), w: L5([1, 1, 2, 2, 3]), dmg: L5([0.8, 0.9, 1, 1.1, 1.2]),
       desc: function (l, ev) { return '둘레의 적 ' + this.n(l) + '명을 단검으로 ' + (this.w(l) + (ev ? 1 : 0)) + '번 순식간에 칩니다 (피해 ' + pc(this.dmg(l) * (ev ? 1.3 : 1)) + ')'; } },
     poison: { name: '독 단도', tree: 'throw', icon: 79, slot: 1, v: L5([0.15, 0.25, 0.35, 0.45, 0.6]), dur: 4,
@@ -619,7 +619,7 @@
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
   var CLS = {
     venom: { name: '쓰로워', icon: 61,   // 이름 (2026-11-19 사용자): 베놈 쓰로워 → 쓰로워 · 사일런트 트래퍼 → 트래퍼 · 섀도우 인필트레이터 → 어쌔신
- col: '#ffcf7a', lines: ['궁극기 「다팅 퓨리」 — 화면의 적 모두를 단검으로 연타', '단검에 맞은 적이 3초 동안 피를 흘립니다', '더블 드로잉 → 코인시던스 드로잉 · 단도 흩뿌리기 → 단도 총공격', '다팅 피버는 사라지고 그 단계만큼 카드를 더'] },
+ col: '#ffcf7a', lines: ['궁극기 「다팅 퓨리」 — 화면의 적 모두를 단검으로 연타', '단검에 맞은 적이 3초 동안 피를 흘립니다', '더블 드로잉 → 코인시던스 드로잉 · 단도 흩뿌리기 → 단도 총공격(더 넓은 부채꼴)', '다팅 피버는 사라지고 그 단계만큼 카드를 더'] },
     trapper: { name: '트래퍼', icon: 64, col: '#7fe36a', lines: ['궁극기 「독무」 — 큰 독 구름 + 폭발 함정 여섯', '주력: 독 묻힌 단도 · 폭발 단도 — 대기마다 던져 맞은 자리에서 터진다', '덫이 더 멀리서 반응하고 일제 폭발이 두 번', '발목 함정 → 절단 함정 · 폭발 함정 → 연폭 함정'] },
     shadow: { name: '어쌔신', icon: 80, col: '#c9a8ff', unit: 15, lines: ['궁극기 「처형」 — 가장 튼튼한 적 여섯을 벤다', '마법전사가 되어 근접 「그림자 검술」로 싸운다', '칼 스킬이 검술 6종으로 바뀐다 (단계 이어받음)', '받는 피해 −10% · 처치마다 체력 조금 회복'] }
   };
@@ -860,8 +860,8 @@
     // 시차를 두고 나가는 것들 (다팅 피버의 둘째·셋째 파, 연폭 함정)
     var Q0 = this.queue, keep = []; this.queue = []; Q0.forEach(function (qu) { if (T < qu.at) keep.push(qu); else qu.fn(); }); this.queue = keep.concat(this.queue);   // 실행 중에 새로 넣은 것(다팅 피버의 타격들)을 잃지 않게 — 전에는 filter 가 돌려준 새 배열로 덮어써서 사라졌다
     if (due('scatter')) { l = this.sk.scatter; ev = this._evo('scatter'); var SC = SK.scatter, sn = this._nearest(1, CFG.ATK.range, null)[0];   // 단도 흩뿌리기: 가장 가까운 적 쪽 부채꼴 안의 적에게 (먼 적일수록 약하게 — 단계가 오르면 같아진다)
-      if (sn) { tm.scatter = CD('scatter', l); var sa = Math.atan2(sn.y - h.y, sn.x - h.x), half = SC.ang(l) * 0.008727, fr = SC.far(l), sd = SC.dmg(l), sides = ev ? [sa, sa + Math.PI] : [sa];
-        sides.forEach(function (a0) { var m = SC.m(l), vol = { hit: {}, left: SC.n(l) }, fi;
+      if (sn) { tm.scatter = CD('scatter', l); var sa = Math.atan2(sn.y - h.y, sn.x - h.x), half = SC.ang(l) * 0.008727 * (ev ? SC.evoAng : 1), fr = SC.far(l), sd = SC.dmg(l), sides = [sa];   // 쓰로워 진화: 각도 × evoAng, 단검 +2 (처음엔 앞뒤 두 방향이었는데 사용자 "양쪽으로 쏴서 어색함, 한쪽 방향으로만" — 2026-11-20)
+        sides.forEach(function (a0) { var m = SC.m(l) + (ev ? 2 : 0), vol = { hit: {}, left: SC.n(l) + (ev ? 4 : 0) }, fi;
           for (fi = 0; fi < m; fi++) { var ra = a0 - half + (fi + 0.5) * (2 * half / m), sh = self._dagger(null, sd, 0, 0, Math.cos(ra) * CFG.ATK.shot, Math.sin(ra) * CFG.ATK.shot); sh.vol = vol; sh.far = fr; sh.x0 = h.x; sh.y0 = h.y; sh.wk = Math.tan(half / m); sh.life = CFG.ATK.range / CFG.ATK.shot; }
           self.fans.push({ a: a0, half: half, t0: T }); }); } else tm.scatter = 0.3; }
     if (due('fever')) { l = this.sk.fever; ev = this._evo('fever'); if (near || this._nearest(1, CFG.ATK.range * 1.3, null).length) { tm.fever = CD('fever', l);
@@ -946,8 +946,11 @@
   /* 전장 층(유닛 아래): 독 구름 · 덫 · 경험치 보석 */
   P._drawGround = function () {
     var D = this.D, ctx = D.ctx, T = D.time, i;
-    this.fans = this.fans.filter(function (f) { return T - f.t0 < 0.22; }); for (i = 0; i < this.fans.length; i++) { var fn = this.fans[i], fk = 1 - (T - fn.t0) / 0.22;   // 단도 흩뿌리기: 던진 쪽 부채꼴을 바닥에 아주 잠깐·옅게 (어디를 쳤는지만)
-      ctx.fillStyle = 'rgba(255,240,200,' + (0.10 * fk).toFixed(3) + ')'; ctx.beginPath(); ctx.moveTo(this.hero.x, this.hero.y); ctx.arc(this.hero.x, this.hero.y, CFG.ATK.range, fn.a - fn.half, fn.a + fn.half); ctx.closePath(); ctx.fill(); }
+    this.fans = this.fans.filter(function (f) { return T - f.t0 < 0.34; }); for (i = 0; i < this.fans.length; i++) { var fn = this.fans[i], ft = T - fn.t0, fR = CFG.ATK.range, fr2 = Math.min(fR, 14 + ft * CFG.ATK.shot), fk = 1 - ft / 0.34, hx2 = this.hero.x, hy2 = this.hero.y;   // 단도 흩뿌리기의 부채꼴: 단검과 함께 바깥으로 펼쳐졌다가 사라진다 (안쪽은 옅게, 앞 가장자리 호와 양옆 선은 또렷하게)
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; var fg = ctx.createRadialGradient(hx2, hy2, 0, hx2, hy2, fr2); fg.addColorStop(0, 'rgba(190,225,255,0)'); fg.addColorStop(0.55, 'rgba(190,225,255,' + (0.10 * fk).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(210,235,255,' + (0.30 * fk).toFixed(3) + ')');
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(hx2, hy2); ctx.arc(hx2, hy2, fr2, fn.a - fn.half, fn.a + fn.half); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(235,245,255,' + (0.75 * fk).toFixed(3) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx2, hy2, fr2, fn.a - fn.half, fn.a + fn.half); ctx.stroke();
+      ctx.strokeStyle = 'rgba(210,235,255,' + (0.35 * fk).toFixed(3) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hx2 + Math.cos(fn.a - fn.half) * fr2, hy2 + Math.sin(fn.a - fn.half) * fr2); ctx.lineTo(hx2, hy2); ctx.lineTo(hx2 + Math.cos(fn.a + fn.half) * fr2, hy2 + Math.sin(fn.a + fn.half) * fr2); ctx.stroke(); ctx.restore(); }
     var SW = this.siegeWarn; if (SW) { var gk = (T - SW.t0) / CFG.SIEGE.warn;   // 포위 예고: 적이 나타날 자리(도둑 둘레)에 붉은 점선 고리 — 가늘게, 전장을 덮지 않는다
       ctx.strokeStyle = 'rgba(255,80,50,' + (0.5 + 0.4 * gk).toFixed(3) + ')'; ctx.lineWidth = 2.5; ctx.setLineDash([12, 9]); ctx.lineDashOffset = -T * 50; ctx.beginPath(); ctx.ellipse(this.hero.x, this.hero.y, CFG.SIEGE.rx, CFG.SIEGE.ry, 0, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); }
     for (i = 0; i < this.foes.length; i++) { var fu = this.foes[i]; if (fu.state === 'dead') continue;
