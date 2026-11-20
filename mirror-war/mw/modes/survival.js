@@ -689,8 +689,9 @@
       desc: function (l) { return '벤 적을 ' + this.n(l) + '번 더 칩니다 (각 피해 ' + pc(this.dmg(l)) + ')'; } },
     whirl: { awk: { pas: 'reach', name: '폭풍 칼날', text: '범위 1.5배' }, name: '회오리 베기', tree: 'blade', icon: 59, slot: 1, cd: L5([7, 6.5, 6, 5.5, 5]), w: L5([2, 2, 3, 3, 4]), r: 105, dmg: L5([0.9, 1, 1.1, 1.25, 1.4]),
       desc: function (l) { return this.cd(l) + '초마다 제자리에서 돌며 둘레(반경 ' + this.r + ')의 적을 ' + this.w(l) + '번 벱니다 (피해 ' + pc(this.dmg(l)) + ')'; } },
-    dash: { awk: { pas: 'last', name: '연쇄 돌진', text: '곧이어 되돌아오며 한 번 더 돌진' }, name: '그림자 돌진', tree: 'blade', icon: 96, slot: 1, cd: L5([9, 8.5, 8, 7.5, 7]), dist: L5([150, 165, 180, 200, 220]), dmg: L5([2, 2.5, 3, 3.6, 4.2]), w: 34,
-      desc: function (l) { return this.cd(l) + '초마다 적이 가장 많은 쪽으로 ' + this.dist(l) + '만큼 돌진해 지나간 길의 적 모두에게 피해 ' + pc(this.dmg(l)) + ' (돌진하는 동안 무적)'; } },
+    /* 진공참 (333번 — 이름은 사용자가 정함: "진공참으로 바꾸자 이름". 2026-11-20 사용자: "적진으로 순간이동해서 공격하는 암살 기능 없애고 검기를 뿌리는 스킬로 — 적진 한가운데로 들어가면 의도치 않게 죽을 수도"): 그림자 돌진(적이 가장 많은 쪽으로 몸이 뛰어듦)을 대체. 무사는 제자리에서 휘두르고, 초승달 모양 검기가 적이 가장 많은 쪽으로 날아가(dist) 길(폭 w) 위의 적을 모두 벤다. 코드 키는 dash 그대로 */
+    dash: { awk: { pas: 'last', name: '쌍진공참', text: '곧이어 진공참을 한 번 더 날린다' }, name: '진공참', tree: 'blade', icon: 96, slot: 1, cd: L5([9, 8.5, 8, 7.5, 7]), dist: L5([220, 240, 260, 280, 300]), dmg: L5([1.6, 2, 2.4, 2.9, 3.4]), w: 40, speed: 640,
+      desc: function (l) { return this.cd(l) + '초마다 적이 가장 많은 쪽으로 검기를 날려 ' + this.dist(l) + ' 거리까지 길 위의 적 모두에게 피해 ' + pc(this.dmg(l)) + ' (제자리에서 쓴다)'; } },
     after: { name: '잔상', tree: 'blade', icon: 15, slot: 1, p: L5([0.4, 0.5, 0.6, 0.7, 0.8]),
       desc: function (l) { return '벤 자리에 분신이 남아 ' + CFG.BLADE.after + '초 뒤 같은 베기를 한 번 더 합니다 (피해 ' + pc(this.p(l)) + ') — 움직이며 싸우면 두 곳을 벱니다'; } },
     blood: { awk: { pas: 'regen', name: '흡혈 검', text: '처치 회복 2.5배' }, name: '피의 칼날', tree: 'blade', icon: 88, slot: 1, bleed: L5([0.15, 0.2, 0.25, 0.3, 0.4]), heal: L5([0.2, 0.3, 0.4, 0.5, 0.6]), kill: L5([0.02, 0.03, 0.04, 0.05, 0.07]),
@@ -755,7 +756,7 @@
     this.sk = { dagger: 1, blink: 1 }; this.order = ['dagger']; this.tm = {}; this.traps = []; this.zones = []; this.gems = []; this.queue = [];
     this.stealthUntil = 0; this.hide = null; this.hideT = 0; this.lastDir = [1, 0]; this.lastDown = null; this.fire = {}; this.press = null; this.info = null; this.infoT = 0; this.guide = !D._svGuideSeen && !/[?&](tut=0|ts=)/.test(root.location.search); this.guideT = 0; D._svGuideSeen = true;   // 시작 안내: 들어와서 처음 한 번 (다시 하기에는 안 뜬다, 봇·시험 주소는 건너뜀)
     this.ult = null;   // (281번의 "고급 스킬을 궁극기 칸에 올리기"는 뺐다 — 궁극기는 전직이 준다. this.ult 는 늘 null)
-    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.petals = []; this.zrun = null; this.rift = null; this.storm = null; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
+    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.petals = []; this.waves = []; this.zrun = null; this.rift = null; this.storm = null; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
     Object.keys(SK).forEach(function (k) { var s = SK[k]; [s.arm, s.boom, s.fx].forEach(function (a) { var d = a != null && D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });
     [3, 38].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var pre = /[?&]sk=([a-z,]+)/.exec(root.location.search); if (pre) pre[1].split(',').forEach(function (k) { if (SK[k]) { if (!self.sk[k] && SK[k].slot) self.order.push(k); self.sk[k] = q('sklv', 3); } });   // ?sk=fever,explo&sklv=5 : 시험용
@@ -1007,6 +1008,10 @@
         var hg = ctx.createRadialGradient(pe.x, pe.y - 14, 2, pe.x, pe.y - 14, 26); hg.addColorStop(0, 'rgba(170,220,255,.5)'); hg.addColorStop(1, 'rgba(120,180,255,0)'); ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(pe.x, pe.y - 14, 26, 0, 6.2832); ctx.fill(); ctx.restore();
         ctx.globalAlpha = 0.6; h.x = pe.x; h.y = pe.y; if (!pe.back) h.dir = pe.dir; else D._faceVec(h, pe.vx, pe.vy, true); D._drawUnit(h); }
       h.x = qx; h.y = qy; h.hp = qhp; h.dir = qd; h.state = qs; h.at = qa; ctx.globalAlpha = 1; }
+    for (i = 0; i < this.waves.length; i++) { var wv = this.waves[i], wk2 = Math.min(1, wv.go / 40) * Math.min(1, (wv.max - wv.go) / 50 + 0.15), wa2 = Math.atan2(wv.vy, wv.vx), wj2;   // 검기: 날아가는 쪽으로 볼록한 초승달 — 푸른 빛무리 + 흰 날, 뒤로 옅은 잔상 둘
+      ctx.save(); ctx.translate(wv.x, wv.y - 14); ctx.rotate(wa2); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (wj2 = 2; wj2 >= 0; wj2--) { var wo = -wj2 * 14, wal = wk2 * (wj2 ? 0.28 / wj2 : 1); ctx.strokeStyle = 'rgba(110,170,255,' + (0.55 * wal).toFixed(3) + ')'; ctx.lineWidth = 11; ctx.beginPath(); ctx.arc(wo - 26, 0, 44, -0.95, 0.95); ctx.stroke(); ctx.strokeStyle = 'rgba(240,248,255,' + (0.95 * wal).toFixed(3) + ')'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(wo - 26, 0, 45, -0.85, 0.85); ctx.stroke(); }
+      ctx.restore(); }
     for (i = 0; i < this.arcs.length; i++) { var a = this.arcs[i], k = 1 - (T - a.t0) / CFG.BLADE.arcLife, rr = a.r * (0.82 + 0.18 * (1 - k)), al = a.ghost ? 0.55 : 1;
       if (!a.full) { var vx = a.tx != null ? a.tx : a.x + Math.cos(a.a) * 30, vy = a.ty != null ? a.ty : a.y - 14 + Math.sin(a.a) * 18, vk = 1 - k, top = vy - 34, cut = top + 62 * Math.min(1, vk * 2.2);   /* 수직 베기: 겨눈 적 위에서 아래로 내려 긋는 칼자국 (범위 호가 아니다) */
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(150,90,255,' + (0.75 * k * al).toFixed(3) + ')'; ctx.lineWidth = 9 * k + 2; ctx.beginPath(); ctx.moveTo(vx - 5, top); ctx.lineTo(vx + 4, cut); ctx.stroke();
@@ -1068,7 +1073,11 @@
         for (k = 0; k < wn; k++) this.queue.push({ at: T + k * 0.13, fn: function () { var hh = self.hero; self._ring(hh.x, hh.y, wr, wm); D._play(hh.act.snd, 0.35); } }); } else tm.whirl = 0.3; }
     if (due('dash')) { l = this.sk.dash; var dd = SK.dash.dist(l), dm = SK.dash.dmg(l), dw = SK.dash.w, best = null, bc = 0, di, dc;
       for (di = 0; di < 16; di++) { var ca = Math.cos(di * 0.3927), sa = Math.sin(di * 0.3927); dc = 0; for (i = 0; i < F.length; i++) { var fu = F[i]; if (fu.state === 'dead') continue; var px = fu.x - h.x, py = fu.y - h.y, pt = px * ca + py * sa; if (pt >= 0 && pt <= dd && Math.abs(px * sa - py * ca) <= dw) dc++; } if (dc > bc) { bc = dc; best = [ca, sa]; } }
-      if (best && bc >= 2) { tm.dash = CD('dash', l); this._dash(best[0], best[1], dd, dm); if (this._awk('dash')) this.queue.push({ at: T + 0.3, fn: function () { self._dash(-best[0], -best[1], dd, dm); } }); } else tm.dash = 0.4; }
+      if (best && bc >= 2) { tm.dash = CD('dash', l); var wv2 = function () { var hh = self.hero; self.waves.push({ x: hh.x, y: hh.y, vx: best[0], vy: best[1], go: 0, max: dd * RC, hit: {}, mul: dm * UP('dash'), t0: self.D.time }); D._faceVec(hh, best[0], best[1], true); hh.state = 'attack'; hh.at = 0; self.aimUntil = self.D.time + 0.3; D._play(hh.act.snd, 0.5); }; wv2(); if (this._awk('dash')) this.queue.push({ at: T + 0.28, fn: wv2 }); } else tm.dash = 0.4; }
+    for (k = this.waves.length - 1; k >= 0; k--) { var wv3 = this.waves[k], WK = SK.dash, ws2 = WK.speed * dt, wx0 = wv3.x, wy0 = wv3.y, wb = this._base() * wv3.mul;   // 검기: 곧게 날아가며 길 위의 적을 한 번씩 벤다
+      wv3.x += wv3.vx * ws2; wv3.y += wv3.vy * ws2; wv3.go += ws2;
+      for (var wf = 0; wf < F.length; wf++) { var wu = F[wf]; if (wu.state === 'dead' || wv3.hit[wu.uid]) continue; var wt = Math.max(0, Math.min(1, ((wu.x - wx0) * wv3.vx + (wu.y - wy0) * wv3.vy) / ws2)); if (Math.hypot(wu.x - (wx0 + wv3.vx * ws2 * wt), wu.y - (wy0 + wv3.vy * ws2 * wt)) > WK.w) continue; wv3.hit[wu.uid] = 1; this._bladeHit(wu, wb); }
+      if (wv3.go >= wv3.max) this.waves.splice(k, 1); }
     // 덫 놓기
     ['mouse', 'booby', 'explo'].forEach(function (key) { if (!due(key)) return; var s = SK[key], lv = self.sk[key]; tm[key] = s.cd(lv) * HS;
       var mine = self.traps.filter(function (t) { return t.k === key; }); if (mine.length >= (key === 'mouse' && self._awk('mouse') ? 14 : s.max) + (self.cls === 'trapper' ? GROW.trapPlus : 0)) self.traps.splice(self.traps.indexOf(mine[0]), 1);
