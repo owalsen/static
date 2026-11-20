@@ -648,10 +648,10 @@
     /* Z 가르기 (317번 — 316번에서 궁극기로 만들었던 것을 사용자가 "궁극기가 아닌 일반 스킬로"): 어쌔신이 검을 들고 화면을 Z 자로 가로지르며 지나는 길(폭 w) 위의 적만 한 번씩 벤다. 달리는 동안 무적·조작 불가, 화면은 세워 둔다. 그림자 돌진(가까운 무리 쪽으로 한 줄 150~220)과 달리 화면 전체를 훑는다 */
     zrun: { name: 'Z 가르기', tree: 'blade', icon: 41, slot: 1, cd: L5([20, 19, 18, 17, 16]), dmg: L5([1.5, 1.9, 2.3, 2.7, 3.2]), speed: 1250, w: q('zw', 52), pts: [[-165, -300], [165, -300], [-165, 400], [165, 400]],
       desc: function (l) { return this.cd(l) + '초마다 검을 들고 화면을 Z자로 가로지르며 지나는 길 위의 적을 벱니다 (피해 ' + pc(this.dmg(l)) + '). 달리는 동안 무적입니다.'; } },
-    slash: { awk: { pas: 'power', name: '초승달 베기', text: '베기가 둘레 전체(원)로 넓어진다' }, name: '수평 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([76, 76, 76, 76, 76]), sec: L5([1, 0.92, 0.84, 0.77, 0.7]), crit: L5([0, 0.04, 0.08, 0.12, 0.16]),   /* 316번(2026-11-20 사용자 "기본 스킬을 수평 베기로 하고 올릴수록 빠르기·데미지·크리티컬 확률"): 그림자 베기(단계마다 반경이 커짐 — 회오리 베기와 겹쳤다) → 반경은 그대로 두고 간격·피해·치명타 확률(어쌔신의 모든 타격에 더해진다) */
-      desc: function (l) { return '가장 가까운 적 쪽을 수평으로 크게 벱니다 — 안의 적 모두에게 피해 ' + pc(this.dmg(l)) + ', 베는 간격 ' + pc(this.sec(l)) + ', 치명타 확률 +' + Math.round(this.crit(l) * 100) + '%'; } },
+    slash: { awk: { pas: 'power', name: '초승달 베기', text: '베기가 둘레 전체(원)로 넓어진다' }, name: '수직 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([76, 76, 76, 76, 76]), sec: L5([1, 0.92, 0.84, 0.77, 0.7]), crit: L5([0, 0.04, 0.08, 0.12, 0.16]),   /* 316번(2026-11-20 사용자 "기본 스킬을 수평 베기로 하고 올릴수록 빠르기·데미지·크리티컬 확률"): 그림자 베기(단계마다 반경이 커짐 — 회오리 베기와 겹쳤다) → 반경은 그대로 두고 간격·피해·치명타 확률(어쌔신의 모든 타격에 더해진다) */
+      desc: function (l) { return '가장 가까운 적 하나를 위에서 아래로 내려 벱니다 — 피해 ' + pc(this.dmg(l)) + ', 베는 간격 ' + pc(this.sec(l)) + ', 치명타 확률 +' + Math.round(this.crit(l) * 100) + '%'; } },
     combo: { name: '연속 베기', tree: 'blade', icon: 10, slot: 1, n: L5([1, 1, 2, 2, 3]), dmg: L5([0.5, 0.6, 0.6, 0.7, 0.75]),
-      desc: function (l) { return '베기에 맞은 적 중 가까운 ' + CFG.BLADE.comboMax + '명을 ' + this.n(l) + '번 더 칩니다 (각 피해 ' + pc(this.dmg(l)) + ')'; } },
+      desc: function (l) { return '벤 적을 ' + this.n(l) + '번 더 칩니다 (각 피해 ' + pc(this.dmg(l)) + ')'; } },
     whirl: { awk: { pas: 'reach', name: '폭풍 칼날', text: '범위 1.5배' }, name: '회오리 베기', tree: 'blade', icon: 59, slot: 1, cd: L5([7, 6.5, 6, 5.5, 5]), w: L5([2, 2, 3, 3, 4]), r: 105, dmg: L5([0.9, 1, 1.1, 1.25, 1.4]),
       desc: function (l) { return this.cd(l) + '초마다 제자리에서 돌며 둘레(반경 ' + this.r + ')의 적을 ' + this.w(l) + '번 벱니다 (피해 ' + pc(this.dmg(l)) + ')'; } },
     dash: { awk: { pas: 'last', name: '연쇄 돌진', text: '곧이어 되돌아오며 한 번 더 돌진' }, name: '그림자 돌진', tree: 'blade', icon: 96, slot: 1, cd: L5([9, 8.5, 8, 7.5, 7]), dist: L5([150, 165, 180, 200, 220]), dmg: L5([2, 2.5, 3, 3.6, 4.2]), w: 34,
@@ -688,7 +688,7 @@
    // 이름 (2026-11-19 사용자): 베놈 쓰로워 → 쓰로워 · 사일런트 트래퍼 → 트래퍼 · 섀도우 인필트레이터 → 어쌔신
  col: '#ffcf7a', lines: ['독 없이 단검만으로 — 가장 많이, 가장 넓게', '맞은 적은 피를 흘리고 다팅 피버가 강해집니다', '궁극기: 적이 몰린 쪽으로 단검 폭풍'] },
     /* 전직은 두 갈래로 확정 (319번, 2026-11-20 사용자: "전직을 두 갈래로 확정. 네이밍은 대도의 길, 무사의 길. 기존의 함정 전문가 전직은 없애자"). 트래퍼의 정의는 CLS_OFF 로 옮겨 두었다 — 폭탄 던지기·독 폭탄·암흑 폭탄·폭탄 다발·폭탄 개미 코드는 남아 있지만 고를 수 없다 */
-    shadow: { name: '무사의 길', icon: 80, col: '#c9a8ff', unit: 15, lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기 「천지파열무」: 대지를 갈라 화면의 모든 적을 칩니다'] }
+    shadow: { name: '무사의 길', icon: 80, col: '#c9a8ff', unit: 15, lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기 「천지파열무」: 대지를 갈라 화면의 모든 적을 칩니다', '한 명씩 베는 길 — 대도의 길보다 어렵습니다'] }
   };
   var CLS_OFF = {
     trapper: { name: '트래퍼', icon: 64, unit: 59, stat: 56,   /* 모습 = 확장판 환술사(59) 그대로 (2026-11-20 사용자 "이제부터 트래퍼의 아트는 확장판의 환술사의 아트를 그대로"). 능력치·단도 던지기는 대도(stat 56) 것 — 그림만 바뀐다. 전에는 대도 그림의 보라색만 녹색으로 돌렸다 */ drop: ['fever', 'scatter', 'double', 'surprise', 'assassin'],   /* 단도 흩뿌리기·더블 드로잉도 못 쓴다 (2026-11-20 사용자 "트래퍼는 단도 흩뿌리기 스킬 없어야 함" · "더블 드로잉도 없어야 해") */ col: '#7fe36a', lines: ['단검 대신 폭탄 — 한 발은 약하지만 둘레까지 터집니다', '독 폭탄·암흑 폭탄과 더 많은 함정(+3개씩)', '궁극기: 폭탄 개미 떼가 화면 곳곳으로 달려가 터집니다'] }
@@ -890,12 +890,14 @@
   };
   /* 베기 한 번: (x, y) 에서 ang 쪽 반원(full 이면 원). 연속 베기는 맞은 적마다 더 치고, 잔상은 그 자리에서 after 초 뒤 한 번 더 (ghost = 잔상이 벤 것) */
   P._slash = function (x, y, ang, full, mul, ghost, noAfter) {
-    var self = this, T = this.D.time, F = this.foes, l = this.sk.slash || 1, r = SK.slash.r(l), wide = full || this._awk('slash'), b = this._base() * mul, xl = this.sk.combo, hitL = [], i;
+    var self = this, T = this.D.time, F = this.foes, l = this.sk.slash || 1, r = SK.slash.r(l), wide = full || this._awk('slash'), b = this._base() * mul, xl = this.sk.combo, hitL = [], one = null, i;
     for (i = 0; i < F.length; i++) { var u = F[i]; if (u.state === 'dead') continue; var dx = u.x - x, dy = u.y - y, d = Math.hypot(dx, dy); if (d > r + 8) continue;
       if (!wide && d > 14) { var da = Math.abs(Math.atan2(dy, dx) - ang); if (da > Math.PI) da = 2 * Math.PI - da; if (da > CFG.BLADE.arc) continue; }
+      if (!wide) { if (!one || d < one[0]) one = [d, u]; continue; }   /* 수직 베기: 가장 가까운 한 명만 (321번) */
       this._bladeHit(u, b); if (xl) hitL.push([d, u]); }
+    if (one) { this._bladeHit(one[1], b); if (xl) hitL.push(one); }
     if (xl) { hitL.sort(function (p, q) { return p[0] - q[0]; }); hitL.slice(0, CFG.BLADE.comboMax).forEach(function (e) { var fu = e[1]; var cb = self._base() * SK.combo.dmg(xl); for (var k = 0; k < SK.combo.n(xl); k++) self.queue.push({ at: T + 0.06 * (k + 1), fn: function () { self._bladeHit(fu, cb); } }); }); }
-    this.arcs.push({ x: x, y: y, a: ang, r: r, full: wide, t0: T, ghost: !!ghost });
+    this.arcs.push({ x: x, y: y, a: ang, r: r, full: wide, t0: T, ghost: !!ghost, tx: one ? one[1].x : null, ty: one ? one[1].y - one[1].headY * 0.5 : null });
     if (!ghost && !noAfter && this.sk.after) { var al = this.sk.after, h = this.hero; this.ghosts.push({ x: x, y: y, dir: h.dir, t0: T, until: T + CFG.BLADE.after });
       this.queue.push({ at: T + CFG.BLADE.after, fn: function () { self._slash(x, y, ang, wide, mul * SK.after.p(al), true); } }); }
   };
@@ -934,6 +936,9 @@
       for (i = 0; i < this.ghosts.length; i++) { var g = this.ghosts[i]; ctx.globalAlpha = 0.42 * Math.max(0, (g.until - T) / (g.until - g.t0)); h.x = g.x; h.y = g.y; h.dir = g.dir; D._drawUnit(h); }
       h.x = hx; h.y = hy; h.hp = hp; h.dir = hd; ctx.globalAlpha = 1; }
     for (i = 0; i < this.arcs.length; i++) { var a = this.arcs[i], k = 1 - (T - a.t0) / CFG.BLADE.arcLife, rr = a.r * (0.82 + 0.18 * (1 - k)), al = a.ghost ? 0.55 : 1;
+      if (!a.full) { var vx = a.tx != null ? a.tx : a.x + Math.cos(a.a) * 30, vy = a.ty != null ? a.ty : a.y - 14 + Math.sin(a.a) * 18, vk = 1 - k, top = vy - 34, cut = top + 62 * Math.min(1, vk * 2.2);   /* 수직 베기: 겨눈 적 위에서 아래로 내려 긋는 칼자국 (범위 호가 아니다) */
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(150,90,255,' + (0.75 * k * al).toFixed(3) + ')'; ctx.lineWidth = 9 * k + 2; ctx.beginPath(); ctx.moveTo(vx - 5, top); ctx.lineTo(vx + 4, cut); ctx.stroke();
+        ctx.strokeStyle = 'rgba(245,235,255,' + (0.95 * k * al).toFixed(3) + ')'; ctx.lineWidth = 2.5 * k + 0.5; ctx.beginPath(); ctx.moveTo(vx - 5, top); ctx.lineTo(vx + 4, cut); ctx.stroke(); ctx.restore(); continue; }
       ctx.save(); ctx.translate(a.x, a.y - 12); ctx.scale(1, 0.62); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       var a0 = a.full ? 0 : a.a - CFG.BLADE.arc, a1 = a.full ? 6.2832 : a.a + CFG.BLADE.arc;
       ctx.strokeStyle = 'rgba(150,90,255,' + (0.7 * k * al).toFixed(3) + ')'; ctx.lineWidth = 14 * k + 2; ctx.beginPath(); ctx.arc(0, 0, rr, a0, a1); ctx.stroke();
