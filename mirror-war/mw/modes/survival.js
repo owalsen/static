@@ -13,7 +13,7 @@
     ZOOM: q('zoom', 1),          // 전장 확대 배수: 1 = 디펜스와 같은 크기. 시야를 넓히려면 0.8 쯤 (?zoom=0.8 로 견주어 본다 — 폰에서 확인 후 확정)
     HERO_Y: q('heroy', 0.42),    // 도둑이 서는 화면 세로 자리 (가운데보다 조금 위 — 끄는 엄지가 아래쪽을 가린다)
     SPEED: q('speed', 1.6),      // 도둑 걷는 속도 = 디펜스의 걷는 속도 × 이 값 (적보다 확실히 빨라야 보고 피한다)
-    TIME: 600,                   // 한 판 10분
+    TIME: 420, SHOWN: 7,         // 한 판 7분, 화면에 보이는 웨이브 7단계 (319번, 2026-11-20 사용자 "10웨이브가 길게 느껴져서 7까지로, 대신 어려움 굴곡은 똑같이"): 아래 WAVE.list 의 난이도 10칸은 그대로 두고 한 칸을 60초 → 42초로 — 같은 굴곡을 7분에 지난다. 화면의 '웨이브 n/7' 은 1분마다
     STICK: { r: 44, dead: 5 },   // 가상 조이스틱: 누른 곳이 중심, r 만큼 끌면 최고 속도, dead 안쪽은 멈춤
     SAFE: { top: 20, bottom: 24 },   // 디펜스의 SAFE 와 같다 (상태 표시줄·홈 막대 자리)
     SLOTS: 6,
@@ -27,7 +27,7 @@
     /* 웨이브 10단계 (4단계, 2026-11-19 사용자 안: 처음엔 쉬운 적, 10단계로 갈수록 모든 유닛). 1분에 한 단계.
        add = 그 단계에 새로 나오는 유닛(세 진영 모두 — 기본 공격이 있는 유닛만). 뽑힐 비중: 새로 나온 단계 3 · 한 단계 전 2 · 두 단계 전 1 · 그보다 옛것 0.4 — 10단계는 전부 같은 비중(모든 유닛이 다 나온다).
        rate = 초당 마릿수, cap = 살아 있는 적 상한, hp = 체력 배수. boss = 그 단계가 시작될 때 나오는 우두머리 [유닛, 체력 배수] */
-    WAVE: { sec: q('wavesec', 60), margin: 50, list: [
+    WAVE: { sec: q('wavesec', 42), margin: 50, list: [
       { add: [28, 31], rate: 1.1, cap: 60, hp: 1, dmg: 0.7 },                         // 1 해골전사 좀비 (2026-11-19 사용자 "초반이 너무 어려워": rate 1.4·cap 80 → 1.1·60, 적 피해 ×0.7 — 체력은 그대로라 첫 무리는 여전히 세 방)
       { add: [43, 46], rate: 1.5, cap: 95, hp: 1, dmg: 0.8, mini: [43, 14] },   // (1.8·110 → 1.5·95, 피해 ×0.8, 중간 우두머리 늑대 체력 25 → 14배)
                                         // 2 늑대 박쥐
@@ -53,6 +53,12 @@
        heal = 둘레 r 안 다친 적을 최대 체력의 pct 만큼 회복(우두머리는 1/4) / summon = unit 을 n 기 불러낸다(불러낸 적은 경험치 없음). from 단계부터 every 초마다 하나, 동시에 max 기까지. hp = 체력 배수. 발밑 고리(녹색·보라)로 구별 */
     SUP: { heal: { from: q('supfrom', 5), ids: [[0, 17], [7, 18]], every: q('supevery', 20), max: 3, keep: 190, r: 120, tick: 2.5, pct: 0.12, hp: 2.5, col: '127,227,106' },
            summon: { from: q('supfrom', 7), id: 58, every: q('supevery', 28), max: 2, keep: 230, tick: 6, n: 2, unit: 28, hp: 3, col: '190,120,255' } },
+    /* 레벨 스케일링 (318번, 2026-11-20 사용자: "몹들의 공격력과 체력이 플레이어가 강해지는 만큼 강해지는 시스템 — 디아블로4 의 레벨 스케일링처럼. 조절할 수 있게 계수도. 어떤 판은 레벨과 동일하게, 어떤 판은 레벨의 70% 로 약해서 시원하게"):
+       적 레벨 = 1 + (도둑 레벨 − 1) × k.   k = 판의 계수 (1 = 도둑과 같은 레벨, 0.7 = 70% — 시원한 판, 1.2 = 더 센 판, 0 = 끔: 예전처럼 웨이브 표의 체력 배수만).
+       적 체력 = 기본 × (1 + hp × (적 레벨 − 1)) × 웨이브 체력 배수^wave   (스폰할 때의 적 레벨로 정해진다. 웨이브 배수는 wave 제곱으로 눌러 "시간" 몫을 조금만 남긴다)
+       적 피해 = 기본 × (1 + atk × (적 레벨 − 1))                          (맞는 순간의 적 레벨)
+       hp·atk = 적 레벨 1당 늘어나는 비율 — 도둑은 레벨 1당 한 방 피해가 약 +5%, 최대 체력이 약 +5% 늘어난다 */
+    SCALE: { k: q('scale', -1), pool: [[0.7, '시원한 판'], [0.85, '보통 판'], [1, '팽팽한 판']],   /* k 가 주소(?scale=)에 없으면 판마다 pool 에서 하나를 고른다 — 첫 웨이브 알림과 결과 화면에 보인다 */ hp: q('scalehp', 0.032), atk: q('scaleatk', 0.003), wave: 0.25 },
     /* 후반 적 투사체·마법 (304번, 2026-11-20 사용자 "후반에 갈수록 적의 투사체가 더 강력해지고 마법이 강력하고 더 다양하게"):
        SHOT.k·v = 웨이브별 적 투사체 피해·속도 배수(6단계부터 오른다).
        MAGIC = from 단계(0부터)부터 화면 근처의 마법 유닛(ids) 하나가 every 초마다 마법을 쓴다(every = [시작 단계 값, 10단계 값]). kinds = [이 단계부터, 종류] — 단계가 오를수록 종류가 늘어난다.
@@ -64,9 +70,9 @@
       fan: { n: [3, 5], spread: 0.26, dmg: 1.1, life: 2.4 }, blast: { r: 48, warn: 1.0, dmg: 2.2 }, frost: { slow: 0.6, sec: 2.2, dmg: 0.9, v: 1.25, life: 2 },
       orb: { speed: 100, turn: 2.0, life: 4.5, dmg: 1.8 }, rain: { n: 5, r: 38, warn: 1.15, spread: 115, dmg: 1.7 } },
     /* 중간 우두머리 (2026-11-19 사용자 "중간보스 더 자주 등장해서 압박"): 2단계부터 단계마다 at 초에 mini: [유닛, 체력 배수] 하나. 우두머리처럼 멈춤·묶임·감속이 안 걸리고 피해 ×BOSS.dmg, 보상은 작다(경험치 gem, 회복 heal, 회복 아이템 확정 없음) */
-    MINI: { at: q('miniat', 30), scale: 1.25, gem: 4, heal: 0 },   // 처음엔 체력 10~16배·경험치 12·회복 10 → 봇이 쉽게 잡아 경험치 보너스가 됐다(셋 다 생존, 3분에 레벨 17) → 체력 20~28배, 경험치 4, 회복 없음
+    MINI: { ats: [q('miniat', 8), 29], hpk: q('minihp', 2), dmg: q('minidmg', 3.2),   /* 320번(2026-11-20 사용자 "중간 보스도 더 자주 나와야 하고 지금보다 2배는 더 강하고 단단해야"): 난이도 칸(42초)마다 한 번 → 두 번(ats 초), 체력 ×hpk, 피해 = 우두머리 배수 1.6 의 두 배 */ at: 21, scale: 1.25, gem: 4, heal: 0 },   // 처음엔 체력 10~16배·경험치 12·회복 10 → 봇이 쉽게 잡아 경험치 보너스가 됐다(셋 다 생존, 3분에 레벨 17) → 체력 20~28배, 경험치 4, 회복 없음
     /* 섀도우 인필트레이터의 근접 검술 (2026-11-19 사용자 "섀도우 스킬이 차별점이 없어 — 근접 위주로, 전직 뒤 스킬셋을 처음부터 다시", 모습은 마법전사): armor = 받는 피해 배수, killHeal = 베어 쓰러뜨릴 때 체력, healCap = 처치 회복의 초당 상한(최대 체력 비율) — 2026-11-19 사용자 "어쌔신이 너무 강해서 후반에는 체력도 안 닳고 스킬도 너무 자주 씀": armor 0.8 → 0.9, killHeal 0.5 → 0.15, 상한 새로, arc = 베기 반각(라디안, 1.2 ≈ 70° — 처음 1.75 는 봇이 5분에 레벨 29, 너무 셌다), comboMax = 연속 베기가 더 치는 적 수(가까운 순), after = 잔상이 다시 베기까지(초), arcLife = 칼자국 보이는 시간 */
-    BLADE: { armor: 0.9, killHeal: 0.15, healCap: 0.03, arc: 1.2, comboMax: 3, after: 0.6, arcLife: 0.24 },
+    BLADE: { atk: q('batk', 0.7), spd: q('bspd', 1.25),   /* 어쌔신 너프 (315번, 2026-11-20 사용자 "어쌔신 웨이브 4에서부터 너무 세짐. 공속을 낮추고, 공격력도 낮춰 줘"): atk = 어쌔신의 모든 피해 배수(검술·궁극기·기습), spd = 기본 베기 간격 배수(1.25 = 25% 느리게) */ armor: 0.92, killHeal: 0.1, healCap: 0.02,   /* 320번: 무사의 길 봇이 계수 1 에서 4/4 생존(받은 피해가 최대 체력의 5~8배 — 회복이 과했다) → 0.95·0.06·1.2% 로는 0/4 가 되어 중간값: 받는 피해 −8%, 처치 회복 0.1, 초당 회복 한도 2% */ arc: 1.2, comboMax: 3, after: 0.6, arcLife: 0.24 },
     BOSS: { scale: 1.5, dmg: 1.6, speed: 1.15, gem: 30, heal: 30 },   // 우두머리: 그림 배율, 피해·속도 배수, 떨어뜨리는 경험치, 쓰러뜨리면 도둑 체력 회복
     TS: q('ts', 1)               // 시간 배속 (시험·측정용: ?ts=4)
   };
@@ -114,7 +120,7 @@
     this.speed = this.hero.speedPx * CFG.SPEED;              // 초당 px
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
-    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
+    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
     this._growReset();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
@@ -156,11 +162,15 @@
     for (i = 0; i <= w; i++) WL[i].add.forEach(function (id) { if (self._has(id)) out.push([id, w === WL.length - 1 ? 1 : Math.max(0.4, 3 - (w - i))]); });
     return out;
   };
+  P._shown = function () { return Math.min(CFG.SHOWN, Math.floor(this.t / (CFG.WAVE.list.length * CFG.WAVE.sec / CFG.SHOWN)) + 1); };   // 화면에 보이는 웨이브 번호 (1~7)
+  P._foeLv = function () { return 1 + (this.lv - 1) * this.scaleK; };   // 적 레벨 (레벨 스케일링)
+  P._hpK = function (w) { var S = CFG.SCALE, W = CFG.WAVE.list[w == null ? this.wave : w]; return this.scaleK > 0 ? (1 + S.hp * (this._foeLv() - 1)) * Math.pow(W.hp, S.wave) : W.hp; };   // 적 체력 배수
+  P._atkK = function () { var S = CFG.SCALE; return this.scaleK > 0 ? 1 + S.atk * (this._foeLv() - 1) : 1; };   // 적 피해 배수
   P._spawn = function (bossId, bossHp, pos, plain) {   // pos = 나타날 자리(없으면 화면 둘레), plain = 유닛을 지정하되 우두머리는 아님(포위·치유형·소환형·불러낸 적)
     var D = this.D, W = CFG.WAVE.list[this.wave], id = bossId;
     if (id == null) { var pool = this._pool(), tw = 0, i; if (!pool.length) return null; for (i = 0; i < pool.length; i++) tw += pool[i][1]; var r = D.rng.next() * tw; for (i = 0; i < pool.length - 1 && r >= pool[i][1]; i++) r -= pool[i][1]; id = pool[i][0]; }
     var p = pos || this._edgePoint(), u = this._unit(id, 1, p[0], p[1]), t = u.t;
-    u.life = Math.round(u.maxHp * CFG.FOE.hp * W.hp * (bossHp || 1)); u.life0 = u.life;   // 적의 체력은 life 로 센다 — u.hp 는 가득 둔다(_drawUnit 이 닳은 유닛마다 체력 바를 그려 수백 기면 화면을 덮는다). 우두머리만 체력 바를 보인다
+    u.life = Math.round(u.maxHp * CFG.FOE.hp * this._hpK() * (bossHp || 1) * (bossId != null && !plain && this.scaleK > 0 ? W.hp / Math.pow(W.hp, CFG.SCALE.wave) : 1)); u.life0 = u.life;   /* 우두머리의 체력 배수는 웨이브 배수와 곱해 맞춰 둔 값이라 웨이브 몫은 그대로 둔다 */   // 적의 체력은 life 로 센다 — u.hp 는 가득 둔다(_drawUnit 이 닳은 유닛마다 체력 바를 그려 수백 기면 화면을 덮는다). 우두머리만 체력 바를 보인다
     if (bossId != null && !plain) { u.boss = true; u.maxHp = u.life; u.hp = u.life; u.speedPx *= CFG.BOSS.speed; }
     u.boom = t.acts.filter(function (a) { return a && a.suicide && a.dmg; })[0] || null;   // 자폭 유닛(좀비)
     if (!u.act && !u.boom) u.act = t.acts.filter(function (a) { return a && a.dmg; })[0] || null;
@@ -214,7 +224,7 @@
   P._hitHero = function (dmg) {
     var D = this.D, h = this.hero; if (this.over || D.time < this.invUntil || dmg <= 0) return;
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : 1))); this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; this.invUntil = D.time + CFG.HURT.inv;   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
+    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : 1))); this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; this.invUntil = D.time + CFG.HURT.inv;   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
@@ -222,6 +232,7 @@
     this.t += dt; if (this.t >= CFG.TIME) { this.t = CFG.TIME; this.over = 'win'; this.overT = 0; this.stick = null; return; }
     if (this.cls && h.t.id !== (CLS[this.cls].unit || GROW.clsUnit) && this._has(CLS[this.cls].unit || GROW.clsUnit)) this._promote(this.cls);   // 전직했는데 아직 그 모습(대도·마법전사) 그림을 못 받았던 경우 (시험용 ?cls= 로 시작할 때)
     // 도둑: 걷기
+    if (this.zrun) { this._zStep(dt); v = [0, 0]; }   /* 처형으로 달리는 동안은 조작이 안 먹는다 */
     var moving = !!(v[0] || v[1]);
     var hs = this.speed * (T < this.stealthUntil && this._evo('shadow') ? 1.24 : 1) * (T < this.chillUntil ? CFG.MAGIC.frost.slow : 1);   // 냉기탄에 맞으면 잠깐 느려진다
     if (moving) { this.lastDir = v; h.x += v[0] * hs * dt; h.y += v[1] * hs * dt; if (h.state !== 'attack') h.state = 'move'; h.walkT += dt * Math.max(0.5, Math.hypot(v[0], v[1])) * CFG.SPEED; if (!(T < this.aimUntil)) D._faceVec(h, v[0], v[1]); }   // 단검을 던진 직후에는 던진 쪽을 본 채로 걷는다 (aimUntil)
@@ -233,10 +244,10 @@
     // 웨이브: 1분마다 다음 단계. 단계가 바뀌면 알림 한 줄 + 우두머리 + 다음 단계 유닛 그림을 미리 받는다
     var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec));
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
-      this.banner = { s: '웨이브 ' + (wv + 1) + (WV.boss ? ' — ' + D.types[WV.boss[0]].name + ' 등장' : ''), t0: T, col: WV.boss ? '#ff8a7a' : '#ffe9b0' };
+      var sh = this._shown(), newSh = sh !== this.shownWave; this.shownWave = sh; if (newSh || WV.boss) this.banner = { s: (newSh ? '웨이브 ' + sh + (sh === 1 && this.scaleK > 0 ? ' · 적 레벨 ' + Math.round(this.scaleK * 100) + '%' + (this.scaleName ? ' (' + this.scaleName + ')' : '') : '') : '') + (WV.boss ? (newSh ? ' — ' : '') + D.types[WV.boss[0]].name + ' 등장' : ''), t0: T, col: WV.boss ? '#ff8a7a' : '#ffe9b0' };   /* 알림은 보이는 웨이브가 바뀔 때와 우두머리가 나올 때만 (안쪽 난이도 칸은 10개) */
       if (WV.boss) { this._need([WV.boss[0]]); this.bossWait = WV.boss; } if (WV.mini) this._need([WV.mini[0]]); }
     if (this.bossWait && this._has(this.bossWait[0])) { this._spawn(this.bossWait[0], this.bossWait[1]); this.bossWait = null; }
-    var MW = WL[wv].mini; if (MW && this.miniDone !== wv && this.t - wv * CFG.WAVE.sec >= CFG.MINI.at && this._has(MW[0])) { this.miniDone = wv; var mu = this._spawn(MW[0], MW[1]); if (mu) { mu.mini = true; this.banner = { s: '중간 우두머리 — ' + mu.t.name, t0: T, col: '#ffb27a' }; } }   // 중간 우두머리: 단계마다 at 초에 하나
+    var MW = WL[wv].mini, mn = this.miniWave === wv ? this.miniN : 0; if (MW && mn < CFG.MINI.ats.length && this.t - wv * CFG.WAVE.sec >= CFG.MINI.ats[mn] && this._has(MW[0])) { this.miniWave = wv; this.miniN = mn + 1; var mu = this._spawn(MW[0], MW[1] * CFG.MINI.hpk); if (mu) { mu.mini = true; this.banner = { s: '중간 우두머리 — ' + mu.t.name, t0: T, col: '#ffb27a' }; } }   // 중간 우두머리: 단계마다 at 초에 하나
     this.spawnAcc += dt * WL[wv].rate;
     while (this.spawnAcc >= 1) { this.spawnAcc -= 1; if (F.length < WL[wv].cap) this._spawn(); }
     // 돌진: 예고(길과 화살표) → warn 초 뒤 떼가 나타나 달려 지나간다
@@ -246,7 +257,7 @@
         if (this._has(rid)) { this.rushWarn = { a: Math.floor(rng.next() * 8) * 0.7854 + (rng.next() - 0.5) * 0.3, x: h.x, y: h.y, t0: T, at: T + RU.warn, id: rid, n: Math.round(RU.n[0] + (RU.n[1] - RU.n[0]) * rk) }; this.banner = { s: '돌진 — ' + D.types[rid].name + ' 떼', t0: T, col: '#ff8a7a' }; } }
       var RW = this.rushWarn; if (RW && T >= RW.at) { this.rushWarn = null; var ca = Math.cos(RW.a), sa2 = Math.sin(RW.a), per = Math.max(4, Math.round(RU.band / 30));
         for (i = 0; i < RW.n; i++) { var col = i % per, row = Math.floor(i / per), off = (col - (per - 1) / 2) * (RU.band / per) + (row % 2 ? 9 : -9), back = RU.dist + row * 34 + rng.next() * 10;
-          u = this._unit(RW.id, 1, RW.x - ca * back - sa2 * off, RW.y - sa2 * back + ca * off); u.life = Math.round(u.maxHp * CFG.FOE.hp * WL[wv].hp); u.life0 = u.life; u.boom = null;
+          u = this._unit(RW.id, 1, RW.x - ca * back - sa2 * off, RW.y - sa2 * back + ca * off); u.life = Math.round(u.maxHp * CFG.FOE.hp * this._hpK(wv)); u.life0 = u.life; u.boom = null;
           u.rush = { vx: ca * RU.speed, vy: sa2 * RU.speed, until: T + (2 * RU.dist + 300 + row * 34) / RU.speed }; u.state = 'move'; u.cd = 0; D._faceVec(u, ca, sa2, true); F.push(u); } } }
     // 포위: 예고(도둑 둘레 붉은 고리) → warn 초 뒤 원으로 나타나 좁혀 온다
     var SG = CFG.SIEGE; if (wv >= SG.from) { var gk = (wv - SG.from) / Math.max(1, WL.length - 1 - SG.from);
@@ -293,7 +304,7 @@
         var A = u.t.anim.atk, n = A ? A.n : 6, hitAt = A && A.hit != null ? A.hit : Math.floor(n * 0.6); u.at += dt * R.tps;
         if (!u.hitDone && u.at >= hitAt) { u.hitDone = true;
           if (u.ranged) { var def = D.data.fx.arms[u.act.arm]; var sv = CFG.FOE.shot * (CFG.SHOT.v[this.wave] || 1); this.shots.push({ x: u.x, y: u.y - u.headY * 0.6, vx: dx / d * sv, vy: (dy + h.headY * 0.5 - u.headY * 0.6) / d * sv, dmg: this._foeDmg(u) * (CFG.SHOT.k[this.wave] || 1), arm: u.act.arm, def: def, foe: true, t0: T, life: (u.reach + 60) / sv }); }
-          else if (d <= u.reach * 1.5) this._hitHero(this._foeDmg(u) * (u.boss ? CFG.BOSS.dmg : 1)); }   // 휘두르는 사이에 벗어나면 빗나간다
+          else if (d <= u.reach * 1.5) this._hitHero(this._foeDmg(u) * (u.mini ? CFG.MINI.dmg : u.boss ? CFG.BOSS.dmg : 1)); }   // 휘두르는 사이에 벗어나면 빗나간다
         if (u.at >= n) { u.state = 'idle'; u.cd = R.cooldown(u, rng); }
         continue; }
       if (u.cd > 0) u.cd -= dt;
@@ -341,7 +352,7 @@
     this.slashes = this.slashes.filter(function (e) { return T - e.t0 < 0.3; }); this.arcs = this.arcs.filter(function (e) { return T - e.t0 < CFG.BLADE.arcLife; }); this.ghosts = this.ghosts.filter(function (e) { return T < e.until; }); this.puffs = this.puffs.filter(function (e) { return T - e.t0 < 0.45; }); if (this.puffs.length > 40) this.puffs.splice(0, this.puffs.length - 40);
     this.bursts = this.bursts.filter(function (e) { return T - e.t0 < e.life; }); if (this.bursts.length > 120) this.bursts.splice(0, this.bursts.length - 120);
     // 카메라: 도둑을 부드럽게 따라간다 (끊기지 않을 만큼만 — 늦으면 멀미가 난다)
-    var k = Math.min(1, dt * 12); this.cam.x += (h.x - this.cam.x) * k; this.cam.y += (h.y - this.cam.y) * k;
+    var k = Math.min(1, dt * 12); if (!this.zrun) { this.cam.x += (h.x - this.cam.x) * k; this.cam.y += (h.y - this.cam.y) * k; }   /* 처형으로 화면을 가로지르는 동안은 화면을 세워 둔다 (제자리로 돌아온다) */
   };
 
   /* ───────── 그리기 ───────── */
@@ -443,7 +454,7 @@
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(win ? '10분을 버텼습니다' : '쓰러졌습니다', W / 2, py + 34);
-    var rows = [['생존 시간', mmss(Math.floor(this.t))], ['웨이브', (this.wave + 1) + ' / ' + CFG.WAVE.list.length], ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
+    var rows = [['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN + (this.scaleK > 0 ? '  ·  적 레벨 ' + Math.round(this.scaleK * 100) + '%' : '')], ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
       ['준 피해', Math.round(ST.dealt).toLocaleString()], ['최고 한 방', ST.maxHit.toLocaleString()], ['치명타 / 더블', ST.crit + ' / ' + ST.dbl], ['받은 피해', Math.round(ST.taken).toLocaleString()]];
     ctx.font = '13px sans-serif';
     for (i = 0; i < rows.length; i++) { var ry = py + 68 + i * 24; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(rows[i][0], px + 24, ry); ctx.textAlign = 'right'; ctx.fillStyle = i < 4 ? '#ffe9b0' : '#dfe6f5'; ctx.fillText(rows[i][1], px + pw - 24, ry);
@@ -504,7 +515,7 @@
     ctx.textBaseline = 'middle'; ctx.font = 'bold 15px sans-serif';
     var ty = X.y + 26, txt = function (s, x, al, col) { ctx.textAlign = al; ctx.fillStyle = '#000'; ctx.fillText(s, x + 1, ty + 1); ctx.fillStyle = col; ctx.fillText(s, x, ty); };
     txt(mmss(CFG.TIME - this.t), 10, 'left', '#ffe9b0'); txt('처치 ' + this.kills, W / 2, 'center', '#dfe6f5');
-    ctx.font = 'bold 11px sans-serif'; txt('웨이브 ' + (this.wave + 1) + '/' + CFG.WAVE.list.length, 66, 'left', '#c9b48a');
+    ctx.font = 'bold 11px sans-serif'; txt('웨이브 ' + this._shown() + '/' + CFG.SHOWN + (this.scaleK > 0 ? '  적 Lv ' + Math.round(this._foeLv()) : ''), 66, 'left', '#c9b48a');
     // 알림 한 줄 (웨이브·우두머리): 위쪽 띠 바로 아래에 작고 짧게
     var BN = this.banner, bt = BN ? D.time - BN.t0 : 9; if (BN && bt < 2.2) { ctx.globalAlpha = Math.min(1, bt / 0.2, (2.2 - bt) / 0.5); ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(BN.s, W / 2, X.y + 54); ctx.fillStyle = BN.col; ctx.fillText(BN.s, W / 2, X.y + 54); ctx.globalAlpha = 1; }
     // 화면 밖 우두머리: 가장자리에 붉은 화살표
@@ -634,8 +645,11 @@
     assassin: { name: '암살', tree: 'shadow', icon: 41, slot: 1, evo: { cls: 'shadow', name: '암살' }, p: L5([0.03, 0.05, 0.07, 0.09, 0.12]),
       desc: function (l, ev) { return '단검에 맞은 적이 ' + pc(this.p(l) * (ev ? 1.5 : 1)) + ' 확률로 즉사합니다 (우두머리는 5배 피해)'; } },
     /* 그림자 검술 (tree: blade) — 섀도우 인필트레이터로 전직하면 칼 스킬이 전부 이것으로 바뀐다(_toBlade: 단계는 이어받는다). 전직 전에는 카드에 안 나온다 */
-    slash: { awk: { pas: 'power', name: '초승달 베기', text: '베기가 둘레 전체(원)로 넓어진다' }, name: '그림자 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([62, 68, 74, 80, 88]), sec: L5([1, 0.94, 0.88, 0.82, 0.76]),
-      desc: function (l) { return '가장 가까운 적 쪽 반원(반경 ' + this.r(l) + ')을 베어 안의 적 모두에게 피해 ' + pc(this.dmg(l)) + ', 베는 간격 ' + pc(this.sec(l)); } },
+    /* Z 가르기 (317번 — 316번에서 궁극기로 만들었던 것을 사용자가 "궁극기가 아닌 일반 스킬로"): 어쌔신이 검을 들고 화면을 Z 자로 가로지르며 지나는 길(폭 w) 위의 적만 한 번씩 벤다. 달리는 동안 무적·조작 불가, 화면은 세워 둔다. 그림자 돌진(가까운 무리 쪽으로 한 줄 150~220)과 달리 화면 전체를 훑는다 */
+    zrun: { name: 'Z 가르기', tree: 'blade', icon: 41, slot: 1, cd: L5([20, 19, 18, 17, 16]), dmg: L5([1.5, 1.9, 2.3, 2.7, 3.2]), speed: 1250, w: q('zw', 52), pts: [[-165, -300], [165, -300], [-165, 400], [165, 400]],
+      desc: function (l) { return this.cd(l) + '초마다 검을 들고 화면을 Z자로 가로지르며 지나는 길 위의 적을 벱니다 (피해 ' + pc(this.dmg(l)) + '). 달리는 동안 무적입니다.'; } },
+    slash: { awk: { pas: 'power', name: '초승달 베기', text: '베기가 둘레 전체(원)로 넓어진다' }, name: '수평 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([76, 76, 76, 76, 76]), sec: L5([1, 0.92, 0.84, 0.77, 0.7]), crit: L5([0, 0.04, 0.08, 0.12, 0.16]),   /* 316번(2026-11-20 사용자 "기본 스킬을 수평 베기로 하고 올릴수록 빠르기·데미지·크리티컬 확률"): 그림자 베기(단계마다 반경이 커짐 — 회오리 베기와 겹쳤다) → 반경은 그대로 두고 간격·피해·치명타 확률(어쌔신의 모든 타격에 더해진다) */
+      desc: function (l) { return '가장 가까운 적 쪽을 수평으로 크게 벱니다 — 안의 적 모두에게 피해 ' + pc(this.dmg(l)) + ', 베는 간격 ' + pc(this.sec(l)) + ', 치명타 확률 +' + Math.round(this.crit(l) * 100) + '%'; } },
     combo: { name: '연속 베기', tree: 'blade', icon: 10, slot: 1, n: L5([1, 1, 2, 2, 3]), dmg: L5([0.5, 0.6, 0.6, 0.7, 0.75]),
       desc: function (l) { return '베기에 맞은 적 중 가까운 ' + CFG.BLADE.comboMax + '명을 ' + this.n(l) + '번 더 칩니다 (각 피해 ' + pc(this.dmg(l)) + ')'; } },
     whirl: { awk: { pas: 'reach', name: '폭풍 칼날', text: '범위 1.5배' }, name: '회오리 베기', tree: 'blade', icon: 59, slot: 1, cd: L5([7, 6.5, 6, 5.5, 5]), w: L5([2, 2, 3, 3, 4]), r: 105, dmg: L5([0.9, 1, 1.1, 1.25, 1.4]),
@@ -670,11 +684,14 @@
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
   var CLS = {
     /* lines = 전직 카드의 설명 — 짧고 쉬운 말로 세 줄(무엇을 하는 갈래인지 · 특징 · 궁극기). 2026-11-20 사용자 "사람이 읽기 쉬운 형태로 길지 않게". 자세한 수치는 스킬 칸을 꾹 눌러 본다 */
-    venom: { name: '쓰로워', icon: 61, drop: ['poison', 'gas'],   // 쓰로워는 물리 공격만 — 독 단도·유독가스를 못 쓴다 (2026-11-20 사용자 "쓰로워의 독 단도 제거, 물리 공격만으로 승부"). 출혈은 물리라 그대로
+    venom: { name: '대도의 길', icon: 61, drop: ['poison', 'gas'],   // 쓰로워는 물리 공격만 — 독 단도·유독가스를 못 쓴다 (2026-11-20 사용자 "쓰로워의 독 단도 제거, 물리 공격만으로 승부"). 출혈은 물리라 그대로
    // 이름 (2026-11-19 사용자): 베놈 쓰로워 → 쓰로워 · 사일런트 트래퍼 → 트래퍼 · 섀도우 인필트레이터 → 어쌔신
  col: '#ffcf7a', lines: ['독 없이 단검만으로 — 가장 많이, 가장 넓게', '맞은 적은 피를 흘리고 다팅 피버가 강해집니다', '궁극기: 적이 몰린 쪽으로 단검 폭풍'] },
-    trapper: { name: '트래퍼', icon: 64, unit: 59, stat: 56,   /* 모습 = 확장판 환술사(59) 그대로 (2026-11-20 사용자 "이제부터 트래퍼의 아트는 확장판의 환술사의 아트를 그대로"). 능력치·단도 던지기는 대도(stat 56) 것 — 그림만 바뀐다. 전에는 대도 그림의 보라색만 녹색으로 돌렸다 */ drop: ['fever', 'scatter', 'double', 'surprise', 'assassin'],   /* 단도 흩뿌리기·더블 드로잉도 못 쓴다 (2026-11-20 사용자 "트래퍼는 단도 흩뿌리기 스킬 없어야 함" · "더블 드로잉도 없어야 해") */ col: '#7fe36a', lines: ['단검 대신 폭탄 — 한 발은 약하지만 둘레까지 터집니다', '독 폭탄·암흑 폭탄과 더 많은 함정(+3개씩)', '궁극기: 폭탄 개미 떼가 화면 곳곳으로 달려가 터집니다'] },
-    shadow: { name: '어쌔신', icon: 80, col: '#c9a8ff', unit: 15, lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기: 가장 튼튼한 적 여섯을 처형'] }
+    /* 전직은 두 갈래로 확정 (319번, 2026-11-20 사용자: "전직을 두 갈래로 확정. 네이밍은 대도의 길, 무사의 길. 기존의 함정 전문가 전직은 없애자"). 트래퍼의 정의는 CLS_OFF 로 옮겨 두었다 — 폭탄 던지기·독 폭탄·암흑 폭탄·폭탄 다발·폭탄 개미 코드는 남아 있지만 고를 수 없다 */
+    shadow: { name: '무사의 길', icon: 80, col: '#c9a8ff', unit: 15, lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기 「천지파열무」: 대지를 갈라 화면의 모든 적을 칩니다'] }
+  };
+  var CLS_OFF = {
+    trapper: { name: '트래퍼', icon: 64, unit: 59, stat: 56,   /* 모습 = 확장판 환술사(59) 그대로 (2026-11-20 사용자 "이제부터 트래퍼의 아트는 확장판의 환술사의 아트를 그대로"). 능력치·단도 던지기는 대도(stat 56) 것 — 그림만 바뀐다. 전에는 대도 그림의 보라색만 녹색으로 돌렸다 */ drop: ['fever', 'scatter', 'double', 'surprise', 'assassin'],   /* 단도 흩뿌리기·더블 드로잉도 못 쓴다 (2026-11-20 사용자 "트래퍼는 단도 흩뿌리기 스킬 없어야 함" · "더블 드로잉도 없어야 해") */ col: '#7fe36a', lines: ['단검 대신 폭탄 — 한 발은 약하지만 둘레까지 터집니다', '독 폭탄·암흑 폭탄과 더 많은 함정(+3개씩)', '궁극기: 폭탄 개미 떼가 화면 곳곳으로 달려가 터집니다'] }
   };
   /* 궁극기 (2026-11-19 사용자 안: "각 전직마다 대표되는 궁극기를 하나씩"): 전직하면 궁극기 칸(축지법 칸 왼쪽)에 그 전직의 궁극기가 들어온다. 직접 누르는 스킬은 축지법과 이것 둘뿐 — 나머지는 전부 자동.
      이름은 붉은보석 도둑의 전직별 상위 스킬에서. 대기 ULT.cd 초(전문 도구 패시브가 줄인다), 준비되면 칸이 금빛으로 맥박친다 */
@@ -684,9 +701,10 @@
     trapper: { name: '폭탄 개미', icon: 64, unit: 68, n: q('antn', 16), scale: 0.6, speed: 190, near: 460, fuse: 2.3, gap: 0.07, r: 86, mul: q('antmul', 2.8), stun: 1.1,   /* 314번(2026-11-20 사용자 "흑마술파의 개미를 크기를 줄여서 내보내는 쪽으로, 궁극기로, 여러 마리 내보내서 거의 맵 전체에 타격"): 독무(큰 독 구름 + 폭발 함정 여섯)를 대체.
          작은 개미 n 마리가 도둑 둘레에서 나와 화면의 적들에게 흩어져 달려가(서로 가장 멀리 떨어진 적들을 고른다 — 화면 전체에 퍼지게) 붙어 다니다가 fuse 초 뒤 차례로(gap) 터진다. 반경 r, 피해 mul, 맞은 적은 stun 초 굳는다(우두머리 제외). 적은 개미를 공격하지 않는다 */
       desc: function () { return '작은 폭탄 개미 ' + this.n + '마리가 화면의 적들에게 흩어져 달려가 ' + this.fuse + '초 뒤 터집니다 (반경 ' + this.r + ', 피해 ' + Math.round(this.mul * 100) + '%, ' + this.stun + '초 굳음).'; } },
-    shadow: { name: '처형', icon: 41, n: 6, r: 320, gap: 0.12, mul: 12, kill: 0.3,
-      desc: function () { return '가장 튼튼한 적 여섯을 순식간에 차례로 벱니다 (피해 1200%). 체력 30% 이하인 적은 즉사합니다(우두머리 제외). 베는 동안 무적입니다.'; } } };
-  var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: 0.012, magnet: 0.008, bomb: 0.005, max: 10, life: 40, heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, trapPlus: 3, bomb: { mul: q('bombmul', 0.6), r: 32, rLv: 3, speed: 0.5, sec: 1.1 },   /* 트래퍼의 기본 공격 = 폭탄 던지기 (309번, 2026-11-20 사용자 "기본 단도 공격보단 약하게, 대신 소범위 공격"): 단도 피해 × mul 을 맞은 자리 반경 r + rLv × 단계 안의 적 모두에게. 날아가는 속도 × speed(보이게), 던지는 간격 × sec */ critMax: 0.6, xpk: q('xpk', 0.6), need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
+    shadow: { name: '천지파열무', icon: 41, mul: q('pamul', 3.2), near: 560, burn: 0.25, life: 2.4, plant: 0.24, grow: 0.42,   /* plant = 칼을 바닥에 꽂는 시간 — 그 뒤에 땅이 갈라진다 (사용자 "칼을 바닥에 꽂으면 땅이 갈라지고 불꽃이 튀어나오는 느낌") */   /* 317번(2026-11-20 사용자: "진짜 궁극기는 '천지파열무' — 모티브는 창세기전3 의 살라딘·데미안이 쓰는 기술, 전체 맵 대상, 이펙트 최대한 비슷하게" + 참고 화면): 검으로 땅을 내리치면 발밑에서 사방(네 귀퉁이 + 좌우)으로 **용암 빛 균열**이 화면 끝까지 갈라져 나가고, 화면의 모든 적 발밑에서 불기둥이 솟는다.
+         화면(near) 안의 적 모두에게 피해 mul, 3초 동안 불탐(초당 burn). 그림은 전부 캔버스로 그린다(균열 = 들쭉날쭉한 꺾은선 + 가지, 주황 빛무리·붉은 속·검은 틈, 가장자리 불꽃) — 원작 그림은 쓰지 않는다 */
+      desc: function () { return '검으로 땅을 내리쳐 사방으로 대지를 가릅니다 — 화면의 모든 적에게 피해 ' + Math.round(this.mul * 100) + '%, 3초 동안 불탑니다. 시전하는 동안 무적입니다.'; } } };
+  var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: 0.012, magnet: 0.008, bomb: 0.005, max: 10, life: 40, heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, trapPlus: 3, bomb: { mul: q('bombmul', 0.6), r: 32, rLv: 3, speed: 0.5, sec: 1.1 },   /* 트래퍼의 기본 공격 = 폭탄 던지기 (309번, 2026-11-20 사용자 "기본 단도 공격보단 약하게, 대신 소범위 공격"): 단도 피해 × mul 을 맞은 자리 반경 r + rLv × 단계 안의 적 모두에게. 날아가는 속도 × speed(보이게), 던지는 간격 × sec */ critMax: 0.6, xpk: q('xpk', 0.42),   /* 0.6 × 0.7 — 한 판이 7분이 되어 같은 굴곡에서 같은 레벨이 나오게 */ need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
   SurvivalGame.SK = SK; SurvivalGame.CLS = CLS; SurvivalGame.GROW = GROW; SurvivalGame.ULT = ULT;
 
   P._growReset = function () {
@@ -695,7 +713,7 @@
     this.sk = { dagger: 1, blink: 1 }; this.order = ['dagger']; this.tm = {}; this.traps = []; this.zones = []; this.gems = []; this.queue = [];
     this.stealthUntil = 0; this.hide = null; this.hideT = 0; this.lastDir = [1, 0]; this.lastDown = null; this.fire = {}; this.press = null; this.info = null; this.infoT = 0; this.guide = !D._svGuideSeen && !/[?&](tut=0|ts=)/.test(root.location.search); this.guideT = 0; D._svGuideSeen = true;   // 시작 안내: 들어와서 처음 한 번 (다시 하기에는 안 뜬다, 봇·시험 주소는 건너뜀)
     this.ult = null;   // (281번의 "고급 스킬을 궁극기 칸에 올리기"는 뺐다 — 궁극기는 전직이 준다. this.ult 는 늘 null)
-    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.storm = null; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
+    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.zrun = null; this.rift = null; this.storm = null; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
     Object.keys(SK).forEach(function (k) { var s = SK[k]; [s.arm, s.boom, s.fx].forEach(function (a) { var d = a != null && D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });
     [3, 38].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var pre = /[?&]sk=([a-z,]+)/.exec(root.location.search); if (pre) pre[1].split(',').forEach(function (k) { if (SK[k]) { if (!self.sk[k] && SK[k].slot) self.order.push(k); self.sk[k] = q('sklv', 3); } });   // ?sk=fever,explo&sklv=5 : 시험용
@@ -719,7 +737,7 @@
   P._name = function (k) { return this._evo(k) ? SK[k].evo.name : SK[k].name; };
   P._pv = function (k) { var l = this.sk[k]; return l ? SK[k].v(l) : 0; };   // 패시브 값 (없으면 0)
   P._awk = function (k) { var a = SK[k].awk; return !!(a && this.sk[k] >= 5 && this.sk[a.pas]); };
-  P._base = function () { return this.D.rules.attackValue(this.hero) * (1 + this._pv('power')); };
+  P._base = function () { return this.D.rules.attackValue(this.hero) * (1 + this._pv('power')) * (this.cls === 'shadow' ? CFG.BLADE.atk : 1); };
   P._text = function (x, y, s, col) { this.texts.push({ x: x, y: y, s: s, t0: this.D.time, col: col }); };
   /* 경험치 */
   P._loot = function (u) { var IT = GROW.item, r = this.D.rng.next(), k = u.boss && !u.mini ? 'meat' : r < IT.meat ? 'meat' : r < IT.meat + IT.magnet ? 'magnet' : r < IT.meat + IT.magnet + IT.bomb ? 'bomb' : null; if (!k || (this.items.length >= IT.max && !(u.boss && !u.mini))) return; this.items.push({ k: k, x: u.x + 14, y: u.y, t0: this.D.time }); if (u.boss && !u.mini) this.items.push({ k: 'chest', x: u.x - 14, y: u.y, t0: this.D.time }); };   // 큰 우두머리: 회복 아이템 + 보물상자
@@ -772,7 +790,7 @@
   /* 시작 안내 (2026-11-20 사용자: "서바이벌 모드 시작 시 게임 안내(소개, 전직 레벨, 10분 버티기) 추가"): 게임을 멈춘 채 한 장, 아무 데나 누르면 시작 */
   P._drawGuide = function () {
     var D = this.D, ctx = D.ctx, W = D.W, H = D.H, pw = Math.min(W - 28, 330), px = Math.round((W - pw) / 2), mins = Math.round(CFG.WAVE.list.length * CFG.WAVE.sec / 60), k = Math.min(1, this.guideT / 0.25),
-      L = [['목표', '사방에서 몰려오는 적을 ' + mins + '분 동안 버티세요.'], ['조작', '화면을 끌어 움직입니다. 공격은 자동입니다.'], ['성장', '적을 잡아 경험치를 모으면 스킬 카드를 고릅니다.'], ['전직', '레벨 ' + GROW.classLv + '에 쓰로워·트래퍼·어쌔신 중 하나로.'], ['버튼', '오른쪽 아래 축지법, 전직 뒤에는 궁극기.']], rows = [], i;
+      L = [['목표', '사방에서 몰려오는 적을 ' + mins + '분 동안 버티세요.'], ['조작', '화면을 끌어 움직입니다. 공격은 자동입니다.'], ['성장', '적을 잡아 경험치를 모으면 스킬 카드를 고릅니다.'], ['전직', '레벨 ' + GROW.classLv + '에 대도의 길·무사의 길 중 하나로.'], ['버튼', '오른쪽 아래 축지법, 전직 뒤에는 궁극기.']], rows = [], i;
     ctx.font = '13px sans-serif'; L.forEach(function (e) { D._wrap(e[1], pw - 86).forEach(function (ln, n) { rows.push([n ? '' : e[0], ln]); }); });
     var ph = 74 + rows.length * 21 + 40, py = Math.round((H - ph) / 2);
     ctx.globalAlpha = k; ctx.fillStyle = 'rgba(4,6,10,.62)'; ctx.fillRect(0, 0, W, H); D._plate(px, py, pw, ph, 7, false);
@@ -866,7 +884,7 @@
   P._bladeAtk = function () {
     var D = this.D, h = this.hero, T = D.time, l = this.sk.slash || 1; if (this.atkCd > 0) return;
     var near = this._nearest(1, SK.slash.r(l) + 14, null)[0]; if (!near) return;
-    this.atkCd = Math.max(CFG.ATK.min, CFG.ATK.sec - CFG.ATK.lv * (this.lv - 1)) * SK.slash.sec(l) * (1 - this._pv('haste'));
+    this.atkCd = Math.max(CFG.ATK.min, CFG.ATK.sec - CFG.ATK.lv * (this.lv - 1)) * SK.slash.sec(l) * (1 - this._pv('haste')) * CFG.BLADE.spd;
     var tx = near.x - h.x, ty = near.y - h.y; D._faceVec(h, tx, ty, true); this.aimUntil = T + h.t.anim.atk.n / (D.rules.tps * CFG.ATK.anim) + 0.05; h.state = 'attack'; h.at = 0;
     this._slash(h.x, h.y, Math.atan2(ty, tx), false, SK.slash.dmg(l)); D._play(h.act.snd, 0.3);
   };
@@ -947,6 +965,7 @@
               for (a = 0; a < hits; a++) (function (u, k) { self.queue.push({ at: self.D.time + k * 0.014, fn: function () { if (u.state !== 'dead') self._hitFoe(u, self._base() * mul * self._onDagger(u), self.hero.act.arm, 1.7); } }); })(tg[a % tg.length], a);
               self.ringT = self.D.time; self.ringN = cnt; self.ringA = wi * 0.5 / cnt * 6.2832; D._play(self.hero.act.snd, 0.4); } }); })(k); } else tm.fever = 0.3; }
     // 트래퍼 주력: 독 묻힌 단도 · 폭발 단도 — 대기마다 가까운 적에게 그 단검을 던진다 (2026-11-19 사용자 "패시브가 아닌 쿨타임 존재" — 전에는 모든 단검이 맞을 때마다 터졌다)
+    if (due('zrun')) { l = this.sk.zrun; if (!this.zrun && !this.hide && this._nearest(1, 260, null).length) { tm.zrun = CD('zrun', l); this.zrun = { pts: SK.zrun.pts.map(function (p) { return [h.x + p[0], h.y + p[1]]; }).concat([[h.x, h.y]]), i: 0, hit: {}, acc: 0, sx: h.x, sy: h.y, mul: SK.zrun.dmg(l) * UP('zrun') }; this.invUntil = Math.max(this.invUntil, T + 4); this.stick = null; } else tm.zrun = 0.4; }
     if (due('bunch')) { l = this.sk.bunch; var BN = SK.bunch, cand = this._nearest(40, BN.range, null), bt = null, bc = -1;   // 폭탄 다발: 가까운 40기 중 둘레 60 안에 적이 가장 많은 놈을 겨눈다
       cand.forEach(function (u) { var c = 0; for (var ci = 0; ci < cand.length; ci++) if (Math.hypot(cand[ci].x - u.x, cand[ci].y - u.y) <= 60) c++; if (c > bc) { bc = c; bt = u; } });
       if (bt) { tm.bunch = CD('bunch', l); var bn = BN.n(l); for (k = 0; k < bn; k++) { var ba2 = k / bn * 6.2832 + D.rng.next() * 0.8, bd2 = k ? BN.spread * (0.45 + 0.55 * D.rng.next()) * RC : 0; this.lobs.push({ x0: h.x, y0: h.y - h.headY * 0.6, x1: bt.x + Math.cos(ba2) * bd2, y1: bt.y + Math.sin(ba2) * bd2 * 0.7, t0: T + k * 0.05, dur: BN.fly, r: BN.r(l), mul: BN.dmg(l) * UP('bunch') }); }
@@ -989,7 +1008,7 @@
     if (due('shadow') && !this._nearest(1, 260, null).length) tm.shadow = 0.5;   // 둘레에 누를 적이 없으면 미룬다 (숨으면 적을 눌러야 풀린다)
     else if (tm.shadow <= 0 && this.sk.shadow) { l = this.sk.shadow; tm.shadow = CD('shadow', l); this.hideK = (this.hideK || 0) + 1; this.hideX = h.x; this.hideY = h.y; this.stealthUntil = T + SK.shadow.dur(l) * LS; this.hide = { t0: T }; this._text(h.x, h.y - h.headY - 22, this._name('shadow'), '#c9a8ff'); D._play(5011, 0.5); }
     // 치명타 확률: 기본 + 그림자 숨기(숨은 동안) + 코인시던스 드로잉
-    this.crit = Math.min(GROW.critMax, CFG.CRIT.p + (T < this.stealthUntil ? SK.shadow.crit(this.sk.shadow || 1) : 0) + (this.sk.double && this._evo('double') ? 0.05 : 0));
+    this.crit = Math.min(GROW.critMax, CFG.CRIT.p + (T < this.stealthUntil ? SK.shadow.crit(this.sk.shadow || 1) : 0) + (this.sk.double && this._evo('double') ? 0.05 : 0) + (this.cls === 'shadow' ? SK.slash.crit(this.sk.slash || 1) : 0));
     // 경험치 보석: 범위 안이면 끌려온다
     var pr = GROW.pickup * ((l = this._lvOf('pick')) ? SK.pick.v(l) : 1);
     this.gems = this.gems.filter(function (g) { var dx = h.x - g.x, dy = h.y - 12 - g.y, d = Math.hypot(dx, dy) || 1; if (g.pull || d <= pr) { g.pull = true; var st = GROW.gemSpeed * dt; if (d <= st + 8) { self._gain(g.v); return false; } g.x += dx / d * st; g.y += dy / d * st; } return true; });
@@ -1003,6 +1022,15 @@
     if (this.pend > 0 && !this.cards) { this.cards = this._roll(); this.cardT = 0; this.stick = null; this.keys = {}; }
   };
   /* 궁극기 발동 (궁극기 칸을 누르거나 E 키) */
+  P._zStep = function (dt) {   // Z 가르기(어쌔신 검술): Z 자 길을 따라 달리며 길 위의 적을 한 번씩 벤다
+    var D = this.D, T = D.time, h = this.hero, F = this.foes, U = SK.zrun, Z = this.zrun, left = U.speed * dt, base = this._base() * Z.mul, i, dx = 1, dy = 0;
+    while (left > 0 && Z.i < Z.pts.length) { var p = Z.pts[Z.i]; dx = p[0] - h.x; dy = p[1] - h.y; var d = Math.hypot(dx, dy); if (d < 0.5) { Z.i++; this.slashes.push({ x0: Z.sx, y0: Z.sy - h.headY * 0.5, x1: h.x, y1: h.y - h.headY * 0.5, t0: T }); Z.sx = h.x; Z.sy = h.y; continue; }
+      var st = Math.min(d, left, 18); h.x += dx / d * st; h.y += dy / d * st; left -= st; Z.acc += st; if (Z.acc >= 70) { Z.acc = 0; this.slashes.push({ x0: Z.sx, y0: Z.sy - h.headY * 0.5, x1: h.x, y1: h.y - h.headY * 0.5, t0: T }); Z.sx = h.x; Z.sy = h.y; }
+      for (i = 0; i < F.length; i++) { var u = F[i]; if (u.state === 'dead' || Z.hit[u.uid] || Math.hypot(u.x - h.x, u.y - h.y) > U.w) continue; Z.hit[u.uid] = 1;
+        this._hitFoe(u, base, h.act.arm, 1.5); if (T - (this.zSndT || -9) > 0.07) { this.zSndT = T; D._play(h.act.snd, 0.45); } } }
+    D._faceVec(h, dx, dy, true); var ZA = h.t.anim.atk; h.state = 'attack'; h.at = ZA && ZA.hit != null ? ZA.hit : 4; this.aimUntil = T + 0.1;
+    if (Z.i >= Z.pts.length) { this.zrun = null; this.invUntil = T + 0.5; h.state = 'idle'; }
+  };
   P._ultFire = function () {
     var self = this, D = this.D, T = D.time, h = this.hero, F = this.foes, U = ULT[this.cls], k; if (!U || this.tm.ult > 0 || this.over || this.cards || this.info) return;
     this.tm.ult = ULT.cd * (1 - this._pv('haste')); this._text(h.x, h.y - h.headY - 24, U.name, CLS[this.cls].col); this.flashT = T - 0.18; D._play(5064, 0.7);
@@ -1019,12 +1047,14 @@
       for (k = 0; k < U.n; k++) { var aa = k / U.n * 6.2832, au = this._unit(U.unit, 0, h.x + Math.cos(aa) * 14, h.y + Math.sin(aa) * 10); au.state = 'move'; D._faceVec(au, Math.cos(aa), Math.sin(aa), true);
         this.ants.push({ u: au, tgt: picks[k] || null, a: aa, t0: T, at: T + U.fuse + k * U.gap }); }
       D._play(5092, 0.5); }
-    else { var tg = F.filter(function (u) { return u.state !== 'dead' && Math.hypot(u.x - h.x, u.y - h.y) <= U.r; }).sort(function (a, b) { return b.life - a.life; }).slice(0, U.n), px = h.x, py = h.y - h.headY * 0.5;   // 처형: 가장 튼튼한 적들을 차례로 벤다 (도둑은 제자리 — 보라색 칼자국만 적들 사이를 오간다)
-      this.invUntil = Math.max(this.invUntil, T + tg.length * U.gap + 0.4); this.feverT0 = T; this.feverUntil = T + tg.length * U.gap;
-      tg.forEach(function (u, j) { var fx = px, fy = py; px = u.x; py = u.y - u.headY * 0.5; var tx = px, ty = py;
-        self.queue.push({ at: T + j * U.gap, fn: function () { self.slashes.push({ x0: fx, y0: fy, x1: tx, y1: ty, t0: self.D.time }); if (u.state === 'dead') return;
-          var kill = !u.boss && u.life <= u.life0 * U.kill; if (kill) self._text(u.x, u.y - u.headY - 6, '처형', '#c9a8ff'); self._fx(u.x, u.y - u.headY * 0.5, SK.surprise.fx);
-          self._hitFoe(u, kill ? 1e6 : self._base() * U.mul, self.hero.act.arm, 1.8); D._play(self.hero.act.snd, 0.5); } }); }); }
+    else {   // 천지파열무: 균열을 만들고(그리기용), 화면의 모든 적을 균열이 닿는 차례로 친다
+      var lines = [], mk = function (x, y, a, len, depth) { var pts = [[x, y]], d = 0, ca, br = [], a0 = a;   /* 들쭉날쭉하되 큰 방향(a0)은 지킨다 */ while (d < len) { var stp = 16 + D.rng.next() * 16; a += (D.rng.next() - 0.5) * 0.95; a += (a0 - a) * 0.35; d += stp; x += Math.cos(a) * stp; y += Math.sin(a) * stp * 0.8; pts.push([x, y]); if (depth < 1 && d > 60 && D.rng.next() < 0.1) br.push([x, y, a + (D.rng.next() < 0.5 ? 1 : -1) * (0.5 + D.rng.next() * 0.5), len * (0.18 + D.rng.next() * 0.2), d / len]); }
+          lines.push({ p: pts, w: depth ? 0.6 : 1, at: 0, depth: depth }); br.forEach(function (b) { var n0 = lines.length; mk(b[0], b[1], b[2], b[3], depth + 1); for (var q2 = n0; q2 < lines.length; q2++) lines[q2].at = Math.max(lines[q2].at, b[4]); }); };
+      [-1.08, 1.08, 3.1416 - 1.08, 3.1416 + 1.08].forEach(function (a) { mk(h.x, h.y, a + (D.rng.next() - 0.5) * 0.16, 640, 0); }); [0, 3.1416].forEach(function (a) { mk(h.x, h.y, a + (D.rng.next() - 0.5) * 0.3, 300, 0); });
+      this.rift = { x: h.x, y: h.y, t0: T, lines: lines }; this.invUntil = Math.max(this.invUntil, T + 1.2); this.flashT = T; var HA = h.t.anim.atk; h.state = 'attack'; h.at = 0; this.aimUntil = T + 0.5; D._play(5064, 0.9);
+      var nfx = 0; F.forEach(function (u) { if (u.state === 'dead') return; var d = Math.hypot(u.x - h.x, u.y - h.y); if (d > U.near) return; var showFx = nfx++ < 46;
+        self.queue.push({ at: T + U.plant + 0.05 + Math.min(0.55, d / 1300), fn: function () { if (u.state === 'dead') return; if (showFx) { self._fx(u.x, u.y - 10, 62); self.bursts.push({ x: u.x, y: u.y - 8, t0: self.D.time, a: self.D.rng.next() * 6.28, k: 'e', life: 0.45, r: 30 }); }
+          u.bleedUntil = Math.max(u.bleedUntil || 0, self.D.time + 3); u.bleed = Math.max(u.bleed || 0, self._base() * U.burn); self._hitFoe(u, self._base() * U.mul, -1); } }); }); }
   };
   /* 덫이 터진다 */
   P._spring = function (t, u) {
@@ -1038,6 +1068,21 @@
   /* 전장 층(유닛 아래): 독 구름 · 덫 · 경험치 보석 */
   P._drawGround = function () {
     var D = this.D, ctx = D.ctx, T = D.time, i;
+    var RF = this.rift; if (RF) { var UR = ULT.shadow, ra = T - RF.t0; if (ra > UR.life) this.rift = null; else { var gk2 = Math.max(0, Math.min(1, (ra - UR.plant) / UR.grow)), fade = ra > UR.life - 0.7 ? (UR.life - ra) / 0.7 : 1, fl = 0.8 + 0.2 * Math.sin(T * 34), li, pi2;   // 천지파열무: 바닥이 어두워지고 용암 빛 균열이 안쪽에서 바깥으로 갈라져 나간다
+        ctx.fillStyle = 'rgba(6,4,10,' + (0.42 * fade * Math.min(1, ra / 0.15)).toFixed(3) + ')'; ctx.fillRect(RF.x - 700, RF.y - 800, 1400, 1700); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        var pass = [['lighter', 'rgba(255,70,10,' + (0.22 * fade * fl).toFixed(3) + ')', 26], ['source-over', 'rgba(255,96,16,' + (0.95 * fade).toFixed(3) + ')', 11], ['source-over', 'rgba(255,170,60,' + (0.9 * fade).toFixed(3) + ')', 8], ['source-over', 'rgba(10,3,2,' + (0.97 * fade).toFixed(3) + ')', 5.5]];   /* 붉은 빛무리 → 주황 테두리 → 밝은 속 테두리 → 검은 틈 (틈 양옆으로 용암 빛이 남는다) */
+        for (var ps = 0; ps < pass.length; ps++) { ctx.globalCompositeOperation = pass[ps][0]; ctx.strokeStyle = pass[ps][1];
+          for (li = 0; li < RF.lines.length; li++) { var ln = RF.lines[li], lk2 = (gk2 - ln.at) / Math.max(0.05, 1 - ln.at); if (lk2 <= 0) continue; var np = Math.max(2, Math.ceil(ln.p.length * Math.min(1, lk2))); ctx.lineWidth = pass[ps][2] * ln.w; ctx.beginPath(); ctx.moveTo(ln.p[0][0], ln.p[0][1]); for (pi2 = 1; pi2 < np; pi2++) ctx.lineTo(ln.p[pi2][0], ln.p[pi2][1]); ctx.stroke(); } }
+        ctx.globalCompositeOperation = 'lighter';   // 균열 가장자리에서 솟는 작은 불꽃
+        for (li = 0; li < RF.lines.length; li++) { var ln2 = RF.lines[li], lk3 = (gk2 - ln2.at) / Math.max(0.05, 1 - ln2.at); if (lk3 <= 0) continue; var np2 = Math.ceil(ln2.p.length * Math.min(1, lk3));
+          for (pi2 = 1; pi2 < np2; pi2++) { var since = ra - UR.plant - UR.grow * (ln2.at + pi2 / ln2.p.length * (1 - ln2.at)), boost = since >= 0 && since < 0.5 ? 1 - since / 0.5 : 0;    /* 균열이 막 지나간 자리에서는 불꽃이 크게 튀어나왔다가 잦아든다 */
+            var fp = ln2.p[pi2], fh = (9 + 11 * Math.abs(Math.sin(T * 13 + pi2 * 1.7 + li)) + 36 * boost) * ln2.w * fade; ctx.fillStyle = 'rgba(255,' + (70 + (pi2 * 37 % 110)) + ',20,' + (0.75 * fade).toFixed(3) + ')'; var fw = 5 + 3 * boost; ctx.beginPath(); ctx.moveTo(fp[0] - fw, fp[1]); ctx.lineTo(fp[0] + Math.sin(T * 9 + pi2) * 2, fp[1] - fh); ctx.lineTo(fp[0] + fw, fp[1]); ctx.closePath(); ctx.fill(); if (boost > 0.5) { ctx.fillStyle = 'rgba(255,240,170,' + (0.8 * fade).toFixed(3) + ')'; ctx.fillRect(fp[0] + Math.sin(pi2 * 5.1) * 8 - 1, fp[1] - fh - 6 - (1 - boost) * 30, 2, 2); } } }
+        ctx.globalCompositeOperation = 'source-over';
+        var pk = Math.min(1, ra / UR.plant), sy0 = RF.y + 7, tip = sy0, top = sy0 - 34 - (1 - pk) * 46;   // 바닥에 꽂힌 칼: 위에서 내리꽂혀 균열이 사라질 때까지 서 있다 (도둑 발 앞)
+        if (pk >= 1 && ra - UR.plant < 0.35) { var rk2 = (ra - UR.plant) / 0.35; ctx.strokeStyle = 'rgba(255,230,170,' + (0.9 * (1 - rk2)).toFixed(3) + ')'; ctx.lineWidth = 3 * (1 - rk2) + 1; ctx.beginPath(); ctx.ellipse(RF.x, sy0, 12 + 80 * rk2, (12 + 80 * rk2) * 0.5, 0, 0, 6.2832); ctx.stroke(); }
+        ctx.globalAlpha = fade; ctx.lineCap = 'butt'; ctx.strokeStyle = 'rgba(255,150,40,.55)'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(RF.x, top + 10); ctx.lineTo(RF.x, tip - (1 - pk) * 46); ctx.stroke();
+        ctx.strokeStyle = '#e9eef7'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(RF.x, top + 9); ctx.lineTo(RF.x, tip - (1 - pk) * 46); ctx.stroke(); ctx.strokeStyle = '#8f98ad'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(RF.x + 1, top + 9); ctx.lineTo(RF.x + 1, tip - (1 - pk) * 46); ctx.stroke();
+        ctx.fillStyle = '#c9a24a'; ctx.fillRect(RF.x - 6, top + 6, 12, 3); ctx.fillStyle = '#5a3a1e'; ctx.fillRect(RF.x - 1.5, top - 3, 3, 9); ctx.fillStyle = '#c9a24a'; ctx.fillRect(RF.x - 2.5, top - 6, 5, 3); ctx.globalAlpha = 1; } }
     for (i = 0; i < this.marks.length; i++) { var mq = this.marks[i], qk = Math.max(0, Math.min(1, (T - mq.t0) / (mq.at - mq.t0)));   // 적 마법 예고: 붉은 원이 안에서부터 차오른다 — 다 차면 폭발
       ctx.save(); ctx.translate(mq.x, mq.y); ctx.scale(1, 0.62); ctx.fillStyle = 'rgba(255,60,40,' + (0.10 + 0.14 * qk).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(0, 0, mq.r * qk, 0, 6.2832); ctx.fill(); ctx.strokeStyle = 'rgba(255,90,60,' + (0.55 + 0.4 * qk).toFixed(3) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, mq.r, 0, 6.2832); ctx.stroke(); ctx.restore(); }
     var SM = this.storm; if (SM && T < SM.until + 0.15) { var UV = ULT.venom, mk = Math.min(1, (T - SM.t0) / 0.1) * Math.min(1, (SM.until + 0.15 - T) / 0.15), mj;   // 다팅 퓨리의 줄: 옅은 푸른 띠 위로 흰 단검 줄기가 바깥으로 흐른다
