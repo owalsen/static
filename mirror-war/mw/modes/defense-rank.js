@@ -72,7 +72,7 @@
           more.appendChild(el('div', '', sv2 ? '레벨 ' + r.lost + ' · 처치 ' + r.kills + (r.cards && r.cards.length ? ' · ' + r.cards.slice(0, 3).join(' · ') : '') : '남은 기지 ' + r.base + ' · 잃은 아군 ' + r.lost + ' · 처치 ' + r.kills));
           if (r.units && r.units.length) more.appendChild(el('div', '', (sv2 ? '스킬: ' : '소환: ') + r.units.slice(0, sv2 ? 16 : 8).map(function (u) { return u[0] + ' ' + u[1]; }).join(', ')));
           if (!sv2 && r.cards && r.cards.length) more.appendChild(el('div', '', '카드: ' + r.cards.slice(0, 10).join(', ')));
-          row.appendChild(more); row.onclick = function () { more.style.display = more.style.display === 'none' ? 'block' : 'none'; };
+          if (r.ver) more.appendChild(el('div', 'color:#6f7890;', (/\./.test(r.ver) ? '버전 v' : '버전 ') + r.ver)); row.appendChild(more); row.onclick = function () { more.style.display = more.style.display === 'none' ? 'block' : 'none'; };
           list.appendChild(row);
         });
         foot.textContent = d.me ? '내 기록 ' + mmss(d.me.time) + ' — ' + d.me.rank + '위 / ' + d.total + '명' : d.total ? '기록 ' + d.total + '명 · 줄을 누르면 ' + (view.fac === 'surv' ? '스킬이' : '편성이') + ' 보입니다' : '';
@@ -96,7 +96,7 @@
       var go = function () {
         var nick = inp.value.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 12); if (!nick) { msg.style.color = '#ff9a8a'; msg.textContent = '닉네임을 입력하세요'; inp.focus(); return; }
         lsSet(LS.nick, nick); send.disabled = true; msg.style.color = '#9aa3b8'; msg.textContent = '올리는 중…';
-        call('POST', '/score', { did: did(), nick: nick, fac: res.fac, stage: res.stage, time: res.time, base: res.base, lost: res.lost, kills: res.kills, units: res.units, cards: res.cards, ver: DG.RANK.ver }).then(function (d) {
+        call('POST', '/score', { did: did(), nick: nick, fac: res.fac, stage: res.stage, time: res.time, base: res.base, lost: res.lost, kills: res.kills, units: res.units, cards: res.cards, ver: DG.GAME_VER || DG.RANK.ver })   /* 버전 = 그 판의 게임 버전(화면 왼쪽 위 숫자)이 저절로 들어간다 (2026-11-23 사용자) — 전에는 손으로 올리던 README 번호 */.then(function (d) {
           if (!d || !d.ok) throw new Error('fail');
           g._rankSent = sentKey; msg.style.color = '#8fe89a';
           msg.textContent = d.best ? d.rank + '위 / ' + d.total + '명 — 내 최고 기록입니다' : '전에 올린 기록(' + mmss(d.time) + ')이 더 ' + (res.fac === 'surv' ? '깁니다' : '빠릅니다') + ' — ' + d.rank + '위 / ' + d.total + '명';
