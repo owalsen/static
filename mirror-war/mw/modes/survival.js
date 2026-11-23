@@ -280,7 +280,7 @@
   P._hitHero = function (dmg) {
     var D = this.D, h = this.hero; if (this.over || D.time < this.invUntil || dmg <= 0) return;
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minHit)); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
+    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minHit)); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
@@ -852,7 +852,7 @@
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
   var CLS = {
     /* lines = 전직 카드의 설명 — 짧고 쉬운 말로 세 줄(무엇을 하는 갈래인지 · 특징 · 궁극기). 2026-11-20 사용자 "사람이 읽기 쉬운 형태로 길지 않게". 자세한 수치는 스킬 칸을 꾹 눌러 본다 */
-    venom: { name: '대도의 길', icon: 61, drop: ['poison', 'gas'],   // 쓰로워는 물리 공격만 — 독 단도·유독가스를 못 쓴다 (2026-11-20 사용자 "쓰로워의 독 단도 제거, 물리 공격만으로 승부"). 출혈은 물리라 그대로
+    venom: { name: '대도의 길', icon: 61, hp: 20, hpLv: 5, armor: 1.12,   /* 365번(2026-11-23 사용자 "대도의 생명력과 방어력을 무사보다 약하게"): 전직 때 체력 +50 → +hp, 레벨마다 체력 +6 → +hpLv, 받는 피해 × armor (무사는 +50 · +6 · ×0.92) */ drop: ['poison', 'gas'],   // 쓰로워는 물리 공격만 — 독 단도·유독가스를 못 쓴다 (2026-11-20 사용자 "쓰로워의 독 단도 제거, 물리 공격만으로 승부"). 출혈은 물리라 그대로
    // 이름 (2026-11-19 사용자): 베놈 쓰로워 → 쓰로워 · 사일런트 트래퍼 → 트래퍼 · 섀도우 인필트레이터 → 어쌔신
  col: '#ffcf7a', lines: ['독 없이 단검만으로 — 가장 많이, 가장 넓게', '맞은 적은 피를 흘리고 다팅 피버가 강해집니다', '궁극기: 무차별 난사 — 화면의 모든 적에게 단검을 퍼붓습니다'] },
     /* 전직은 두 갈래로 확정 (319번, 2026-11-20 사용자: "전직을 두 갈래로 확정. 네이밍은 대도의 길, 무사의 길. 기존의 함정 전문가 전직은 없애자"). 트래퍼의 정의는 CLS_OFF 로 옮겨 두었다 — 폭탄 던지기·독 폭탄·암흑 폭탄·폭탄 다발·폭탄 개미 코드는 남아 있지만 고를 수 없다 */
@@ -917,7 +917,7 @@
     if (cls === 'shadow') { this._toBlade(); if (!this.sk.shadow) { this.sk.shadow = 1; this.tm.shadow = 5; } if (!this.sk.sidestep) this.sk.sidestep = 1;   /* 비켜 피하기 1단계는 무사로 전직하면 그냥 받는다 (2026-11-23 사용자) — 패시브 칸이 찼어도 */ }   // 그림자 숨기는 어쌔신만 — 전직하면 생긴다 (2026-11-20 사용자)
     if (cls === 'trapper') { if (!this.sk.toxdag) this.sk.toxdag = 1; if (!this.sk.darkdag) this.sk.darkdag = 1; } if (!T2 || h.t === T2) return;
     if (this.tm.ult == null) this.tm.ult = 4;
-    var sp0 = this.speed, mh = h.maxHp + GROW.clsHp, hp = h.hp + GROW.clsHp; var BT = CLS[cls].stat != null ? D.types[CLS[cls].stat] : null, bact, batk, bsp; if (BT) { h.setType(BT); D._applyType(h); bact = h.act; batk = h.t.atk; bsp = h.speedPx; }   // stat: 능력치·기본 공격은 이 유닛 것, 그림·동작만 unit 것
+    var sp0 = this.speed, mh = h.maxHp + (CLS[cls].hp != null ? CLS[cls].hp : GROW.clsHp), hp = h.hp + (CLS[cls].hp != null ? CLS[cls].hp : GROW.clsHp); var BT = CLS[cls].stat != null ? D.types[CLS[cls].stat] : null, bact, batk, bsp; if (BT) { h.setType(BT); D._applyType(h); bact = h.act; batk = h.t.atk; bsp = h.speedPx; }   // stat: 능력치·기본 공격은 이 유닛 것, 그림·동작만 unit 것
     h.setType(T2); D._applyType(h); if (BT) { h.act = Object.assign({}, bact); h.atkOv = batk; h.speedPx = bsp; h.imgKey = null; } h.maxHp = mh; h.hp = Math.min(mh, hp); this.speed = h.speedPx * CFG.SPEED;
     // (트래퍼의 녹색 대도 그림 `recolor` 는 쓰지 않는다 — 환술사 그림을 그대로 쓴다)
     if (cls === 'shadow') { this.speed = Math.max(this.speed, sp0); h.act = Object.assign({}, h.act, { k1: 8, arm: -5 }); }   // 마법전사: 걸음은 느리므로 전직 전 속도를 지키고, 공격값의 레벨 계수(원작 16)는 다른 갈래와 같은 8 로(아니면 후반에 두 배로 세진다). arm −5 = 베기 타격 표시용 (−1 은 폭발·출혈과 겹친다)
@@ -938,7 +938,7 @@
     this._loot(u); if (this.gems.length > 400) this.gems.shift(); this.gems.push({ x: u.x, y: u.y, v: u.boss ? (u.mini ? CFG.MINI.gem : CFG.BOSS.gem) : Math.max(1, Math.round(u.t.hp / 60)) }); };
   P._gain = function (v) {
     this.exp += v;
-    while (this.exp >= this.expNeed) { this.exp -= this.expNeed; this.lv++; this.expNeed = GROW.need(this.lv); this.pend++; var h = this.hero; h.level = this.lv; h.maxHp += GROW.hpLv; h.hp = Math.min(h.maxHp, h.hp + GROW.hpLv); }
+    while (this.exp >= this.expNeed) { this.exp -= this.expNeed; this.lv++; this.expNeed = GROW.need(this.lv); this.pend++; var h = this.hero, hl = this.cls && CLS[this.cls] && CLS[this.cls].hpLv ? CLS[this.cls].hpLv : GROW.hpLv; h.level = this.lv; h.maxHp += hl; h.hp = Math.min(h.maxHp, h.hp + hl); }
   };
   /* 레벨업 카드 3장 (전직 레벨이면 전직 3갈래) */
   P._roll = function () {
