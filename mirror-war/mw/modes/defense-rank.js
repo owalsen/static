@@ -34,7 +34,7 @@
 
   /* 순위 창을 연다. won = 이긴 화면에서 열었다(이번 기록을 올릴 수 있다).
      sv = 서바이벌에서 열었다 (README 350): { stage: 0 대도의 길 | 1 무사의 길, res: 올릴 기록 또는 null } — 서바이벌 판은 오래 버틴 순이고 줄에는 레벨·처치·스킬이 나온다 */
-  var SURV = { name: '서바이벌', stages: [{ name: '대도의 길' }, { name: '무사의 길' }] };
+  var SURV = { name: '서바이벌', stages: [{ name: '대도의 길' }, { name: '무사의 길' }, { name: '성전사' }] };
   P._rankShow = function (won, sv) {
     var g = this; if (g.rankOpen) return;
     var F = {}; if (DG.RANK.surv) F.surv = SURV; Object.keys(DG.FACTIONS).forEach(function (k) { F[k] = DG.FACTIONS[k]; });
