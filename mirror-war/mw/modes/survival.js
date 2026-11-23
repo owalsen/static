@@ -756,14 +756,15 @@
   var L5 = function (a) { return function (l) { return a[Math.max(1, Math.min(5, l)) - 1]; }; };
   var pc = function (v) { return Math.round(v * 100) + '%'; };
   /* 캔버스 스킬 그림(art)의 공용 조각: artBg = 어두운 청록 바탕(save·clip 까지 — 그린 쪽에서 restore), artDag = 단검 한 자루((px, py) = 코등이, ang = 칼끝 방향, L = 길이 기준, s = 그림 크기, dark = 뒤쪽 단검) */
-  var artBg = function (ctx, x, y, w, h) { var s = Math.min(w, h), cx = x + w / 2, cy = y + h / 2; ctx.save(); ctx.fillStyle = '#0b1416'; ctx.fillRect(x, y, w, h); var bg = ctx.createRadialGradient(cx, cy, 1, cx, cy, s * 0.7); bg.addColorStop(0, 'rgba(70,170,180,.45)'); bg.addColorStop(1, 'rgba(10,30,35,0)'); ctx.fillStyle = bg; ctx.fillRect(x, y, w, h); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); };
+  var artBg = function (ctx, x, y, w, h) { var s = Math.min(w, h), cx = x + w / 2, cy = y + h / 2; ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); };   /* 375번(2026-11-23 사용자 "일반 액티브 스킬의 스킬 이미지 색깔이 노란색 베이스로 맞춰져 있는데 아닌 것들 기존 느낌처럼"): 청록 바탕·은빛 단검 → 바탕 없이(칸의 나무 바탕이 비친다) 원작 아이콘과 같은 노란색 */
+  var artBgTeal = function (ctx, x, y, w, h) { var s = Math.min(w, h), cx = x + w / 2, cy = y + h / 2; ctx.save(); ctx.fillStyle = '#0b1416'; ctx.fillRect(x, y, w, h); var bg = ctx.createRadialGradient(cx, cy, 1, cx, cy, s * 0.7); bg.addColorStop(0, 'rgba(70,170,180,.45)'); bg.addColorStop(1, 'rgba(10,30,35,0)'); ctx.fillStyle = bg; ctx.fillRect(x, y, w, h); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); };   /* 청록 바탕 — 궁극기(무차별 난사) 그림만 쓴다 */
   var artDag = function (ctx, px, py, ang, L, s, dark) {
     ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
-    var bl = ctx.createLinearGradient(0, -L * 0.07, 0, L * 0.07); bl.addColorStop(0, dark ? '#7f969b' : '#f4fbff'); bl.addColorStop(0.5, dark ? '#b9c9cc' : '#ffffff'); bl.addColorStop(0.55, dark ? '#55686c' : '#9fb4ba'); bl.addColorStop(1, dark ? '#3a4a4e' : '#6f868c');
-    ctx.fillStyle = bl; ctx.strokeStyle = '#05090a'; ctx.lineWidth = Math.max(1, s * 0.03); ctx.beginPath(); ctx.moveTo(0, -L * 0.065); ctx.lineTo(L * 0.42, -L * 0.05); ctx.lineTo(L * 0.6, 0); ctx.lineTo(L * 0.42, L * 0.05); ctx.lineTo(0, L * 0.065); ctx.closePath(); ctx.fill(); ctx.stroke();   // 날
-    ctx.fillStyle = dark ? '#2f5f63' : '#3fa6ad'; ctx.fillRect(-L * 0.035, -L * 0.13, L * 0.07, L * 0.26); ctx.strokeRect(-L * 0.035, -L * 0.13, L * 0.07, L * 0.26);   // 코등이
-    ctx.fillStyle = dark ? '#3a2a1c' : '#5c3f24'; ctx.fillRect(-L * 0.26, -L * 0.035, L * 0.225, L * 0.07); ctx.strokeRect(-L * 0.26, -L * 0.035, L * 0.225, L * 0.07);   // 손잡이
-    ctx.fillStyle = dark ? '#2f5f63' : '#3fa6ad'; ctx.beginPath(); ctx.arc(-L * 0.29, 0, L * 0.05, 0, 6.2832); ctx.fill(); ctx.stroke(); ctx.restore(); };
+    var bl = ctx.createLinearGradient(0, -L * 0.07, 0, L * 0.07); bl.addColorStop(0, dark ? '#c9a812' : '#fff27a'); bl.addColorStop(0.5, dark ? '#d8b81a' : '#ffe92e'); bl.addColorStop(0.55, dark ? '#8a7208' : '#d8b400'); bl.addColorStop(1, dark ? '#6e5a04' : '#b89600');
+    ctx.fillStyle = bl; ctx.strokeStyle = '#2e2400'; ctx.lineWidth = Math.max(1, s * 0.03); ctx.beginPath(); ctx.moveTo(0, -L * 0.065); ctx.lineTo(L * 0.42, -L * 0.05); ctx.lineTo(L * 0.6, 0); ctx.lineTo(L * 0.42, L * 0.05); ctx.lineTo(0, L * 0.065); ctx.closePath(); ctx.fill(); ctx.stroke();   // 날
+    ctx.fillStyle = dark ? '#a88c08' : '#ffe21e'; ctx.fillRect(-L * 0.035, -L * 0.13, L * 0.07, L * 0.26); ctx.strokeRect(-L * 0.035, -L * 0.13, L * 0.07, L * 0.26);   // 코등이
+    ctx.fillStyle = dark ? '#8a7208' : '#d8b400'; ctx.fillRect(-L * 0.26, -L * 0.035, L * 0.225, L * 0.07); ctx.strokeRect(-L * 0.26, -L * 0.035, L * 0.225, L * 0.07);   // 손잡이
+    ctx.fillStyle = dark ? '#a88c08' : '#ffe21e'; ctx.beginPath(); ctx.arc(-L * 0.29, 0, L * 0.05, 0, 6.2832); ctx.fill(); ctx.stroke(); ctx.restore(); };
   var SK = {
     dagger: { awk: { pas: 'power', name: '관통 단검', text: '맞은 적 옆의 적 하나도 60% 피해' }, name: '단도 던지기', tree: 'throw', icon: 63, slot: 1, evo: { cls: 'trapper', name: '폭탄 던지기' }, dmg: L5([1, 1.2, 1.4, 1.65, 1.9]), sec: L5([1, 0.93, 0.86, 0.8, 0.72]),
       desc: function (l, ev) { return ev ? '가장 가까운 적에게 폭탄을 던집니다. 맞은 자리 반경 ' + (GROW.bomb.r + GROW.bomb.rLv * l) + ' 안의 적 모두에게 피해 ' + pc(this.dmg(l) * GROW.bomb.mul) + ', 던지는 간격 ' + pc(this.sec(l) * GROW.bomb.sec) : '가장 가까운 적에게 단검을 던집니다. 피해 ' + pc(this.dmg(l)) + ', 던지는 간격 ' + pc(this.sec(l)); } },
@@ -814,11 +815,11 @@
     zrun: { name: '환영검', tree: 'blade', icon: 41, slot: 1,
       art: function (ctx, x, y, w, h) {   /* 버튼 그림: 가운데에서 사방으로 뻗어 나가는 가는 칼날 여덟 (2026-11-23 사용자 "여러 칼날이 사방으로 나가는 모양") — 대각선 넷은 조금 짧고 흐리게 */
         var s = Math.min(w, h), cx = x + w / 2, cy = y + h / 2, i; artBg(ctx, x, y, w, h);
-        var gl = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.2); gl.addColorStop(0, 'rgba(235,245,255,.95)'); gl.addColorStop(1, 'rgba(150,200,255,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, s * 0.2, 0, 6.2832); ctx.fill();
+        var gl = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.2); gl.addColorStop(0, 'rgba(255,250,190,.95)'); gl.addColorStop(1, 'rgba(255,220,40,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, s * 0.2, 0, 6.2832); ctx.fill();
         for (i = 0; i < 8; i++) { var dg = i % 2, r0 = s * 0.15, r1 = s * (dg ? 0.4 : 0.49), bw = s * (dg ? 0.045 : 0.06); ctx.save(); ctx.translate(cx, cy); ctx.rotate(i * 0.7854 - 1.5708); ctx.globalAlpha = dg ? 0.8 : 1;
-          ctx.beginPath(); ctx.moveTo(r0, -bw); ctx.lineTo(r1 - bw * 2.2, -bw); ctx.lineTo(r1, 0); ctx.lineTo(r1 - bw * 2.2, bw); ctx.lineTo(r0, bw); ctx.closePath(); ctx.fillStyle = '#dcecff'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#27405c'; ctx.stroke();
-          ctx.fillStyle = '#7fa6d8'; ctx.fillRect(r0, 0, r1 - r0 - bw * 2.2, bw);   /* 날의 한쪽 면은 어둡게 */
-          ctx.fillStyle = '#e8c860'; ctx.fillRect(r0 - s * 0.03, -bw * 2, s * 0.03, bw * 4); ctx.restore(); }   /* 금빛 코등이 */
+          ctx.beginPath(); ctx.moveTo(r0, -bw); ctx.lineTo(r1 - bw * 2.2, -bw); ctx.lineTo(r1, 0); ctx.lineTo(r1 - bw * 2.2, bw); ctx.lineTo(r0, bw); ctx.closePath(); ctx.fillStyle = '#ffe92e'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#2e2400'; ctx.stroke();
+          ctx.fillStyle = '#c9a400'; ctx.fillRect(r0, 0, r1 - r0 - bw * 2.2, bw);   /* 날의 한쪽 면은 어둡게 */
+          ctx.fillStyle = '#fff6a0'; ctx.fillRect(r0 - s * 0.03, -bw * 2, s * 0.03, bw * 4); ctx.restore(); }   /* 밝은 코등이 */
         ctx.restore(); }, cd: L5([12, 11.5, 11, 10.5, 10]), n: L5([4, 5, 6, 8, 10]), hits: L5([3, 4, 5, 6, 7]), dmg: L5([0.9, 1, 1.1, 1.25, 1.4]), stop: 0.06, push: 5,   /* 354번(2026-11-23 사용자 "스킬 오를수록 갯수 증가와 데미지 증가, 찌르는 횟수 증가" · "찌를 때 임팩트 좀 더 있게"): 검 수는 4·5단계에서 7·8 → 8·10 (찌르는 횟수·피해는 전부터 단계마다 올랐다). 찌르는 순간 — 검이 stop 초 동안 적에게 박혀 멈추고, 적이 push 만큼 밀리고, 꿰뚫는 빛줄기와 큰 섬광 */ spdK: q('zspd', 1.3), stabK: q('zstab', 3.4), out: 46, over: 22, wait: q('zwait', 0.16), seek: 440, slim: 0.55, life: 14,   /* 340번(사용자 "지금보다 좀 더 빠르게 찌르고, 찌른 뒤에 딜레이를 지금 속도로, 그리고 무조건 근접해 있는 적부터 찌르지 말고 맵의 모든 영역에 랜덤하게 퍼지도록"): 적에게 날아가 꿰뚫는 동안은 걸음 × stabK, 꿰뚫은 뒤 더 나아가는 것과 갈라져 나오는 것은 전처럼 × spdK + 멈춤 wait. 대상 = 무사에게서 seek 안(화면 전체)의 적 가운데 **무작위** — 다른 검이 겨눈 적·이미 찌른 적·방금 찌른 적은 뒤로 미룬다 */   /* 339번(사용자 "검 궤적을 보여 줄 필요는 없고, 쪼개진 검들의 이동이 너무 빨라서 플레이어가 걷는 속도보다 약간 더 빠르게만, 그리고 다른 스킬 시전 시에는 나오면 안 됨"): 검의 속도 = 무사 걸음 × spdK(전에는 초당 820), 지나온 선은 그리지 않는다, 천지파열무·회오리 베기·진공참을 쓰는 중이거나 숨어 있을 때는 발동을 미룬다. life = 검이 남아 있는 최대 시간 */
       desc: function (l) { return this.cd(l) + '초마다 검 ' + this.n(l) + '자루가 사방으로 갈라져 나와, 저마다 적을 ' + this.hits(l) + '번씩 Z자로 꿰뚫습니다 (한 번에 피해 ' + pc(this.dmg(l)) + ')'; } },
     slash: { awk: { pas: 'power', name: '초승달 베기', text: '베기가 둘레 전체(원)로 넓어진다' }, name: '수직 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([76, 76, 76, 76, 76]), sec: L5([1, 0.92, 0.84, 0.77, 0.7]), crit: L5([0, 0.04, 0.08, 0.12, 0.16]),   /* 316번(2026-11-20 사용자 "기본 스킬을 수평 베기로 하고 올릴수록 빠르기·데미지·크리티컬 확률"): 그림자 베기(단계마다 반경이 커짐 — 회오리 베기와 겹쳤다) → 반경은 그대로 두고 간격·피해·치명타 확률(어쌔신의 모든 타격에 더해진다) */
@@ -878,7 +879,7 @@
          sec 초(도둑 레벨 10마다 +secLv, 최대 secMax) 동안 gap 마다 per 자루(초당 20). 화면(near) 안의 적을 섞은 목록에서 차례로 꺼내 던지고, 다 꺼내면 다시 섞는다(우두머리는 두 번 넣는다). 한 자루 피해 mul, 이 단검만 치명타 확률 +crit(상한 critCap — 평소 상한 GROW.critMax 를 넘는다).
          도둑 둘레 ring 에 환영 n 개(60°마다) — 대상 쪽에 가장 가까운 환영이 그쪽을 보고 던진다. 단검은 speed 로 날아가 닿을 때 맞는다. 도둑은 자유롭게 움직이고 자동 공격도 계속된다 */
       art: function (ctx, x, y, w, h) {   /* 버튼 그림: 터지는 타격 섬광 셋 — 가시 돋친 빛무리 안의 흰 별 (343번, 사용자가 보인 참고 그림 "이것처럼, 색은 기존 스킬색과 비슷한 톤으로" — 구도만 참고, 바탕은 단검 그림들과 같은 청록, 캔버스로 이 게임에서 그린 것. 그 전의 조준선 그림은 뺐다) */
-        var s = Math.min(w, h); artBg(ctx, x, y, w, h);
+        var s = Math.min(w, h); artBgTeal(ctx, x, y, w, h);
         var star = function (px, py, r, n, rot, inner, col) { ctx.fillStyle = col; ctx.beginPath(); for (var i = 0; i < n * 2; i++) { var a = rot + i * 3.1416 / n, rr = i % 2 ? r * inner : r * (i % 4 ? 1 : 0.8); ctx[i ? 'lineTo' : 'moveTo'](px + Math.cos(a) * rr, py + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); };
         [[0.56, 0.34, 0.3, 0.2], [0.27, 0.7, 0.22, 0.9], [0.74, 0.72, 0.24, 0.5]].forEach(function (b) { var px = x + w * b[0], py = y + h * b[1], r = s * b[2];
           var g = ctx.createRadialGradient(px, py, 0, px, py, r * 1.5); g.addColorStop(0, 'rgba(120,230,240,.75)'); g.addColorStop(1, 'rgba(40,150,170,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r * 1.5, 0, 6.2832); ctx.fill();
