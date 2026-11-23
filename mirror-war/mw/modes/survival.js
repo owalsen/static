@@ -76,6 +76,8 @@
     /* 마법 포격 (README 353, 2026-11-23 사용자 "최후의 3분에선 마법도 맵에 시전되는 위치를 먼저 알려주고 그 후에 광역기 마법 다수가 떨어지는(마치 포격처럼) 단계도 추가. 플레이어에게 알려는 주되 최대한 피하기 어렵게"):
        최후의 3분이 시작되고 first 초 뒤부터 every 초마다 한 차례. 한 차례 = vol 번의 일제 낙하(gap 초 간격), 한 번에 n 자리 — 붉은 원이 warn 초 동안 차오른 뒤 터진다(반경 r, 그 안이면 맞는다. 피해는 최후의 3분의 최소 피해 = 최대 체력의 20%).
        자리: lead = 지금 걷는 방향으로 (warn 초 동안 걸을 거리 × 이 값)만큼 앞 — 서 있는 자리·반쯤 간 자리·끝까지 간 자리를 막아 곧게 걸어서는 못 피한다. 나머지는 둘레 ring[0]~ring[1] 에 고르게 흩어 빠져나갈 틈을 좁힌다 */
+    /* 구급 물약 (README 356, 2026-11-23 사용자 "피가 20% 이하로 떨어지면 플레이어의 이동 방향에 미리 포션을 한 개씩 떨궈서 쉽게 죽지 않게"): 체력이 최대의 hp 이하이고 바닥에 구급 물약이 없고 앞의 것을 놓은 지 cd 초가 지났으면, 걷는 방향(서 있으면 마지막으로 걷던 방향)으로 ahead 만큼 앞에 회복 아이템 하나 */
+    RESCUE: { hp: q('rescuehp', 0.2), cd: q('rescuecd', 8), ahead: 62 },
     STORM: { first: q('stormat', 14), every: q('stormevery', 38), vol: q('stormvol', 4), gap: 1.15, n: q('stormn', 8), r: 44, warn: q('stormwarn', 0.95), dmg: 1, lead: [0, 0.55, 1.05], ring: [66, 150], nUp: 1, potion: q('stormpot', 2), potR: [46, 84] },   /* nUp = 차례가 거듭될 때마다 한 번에 떨어지는 자리 +1 (8 → 12). potion = 한 차례가 다 지나가면 주인공 둘레 potR 거리에 회복 아이템(고기)을 이만큼 뿌린다 (2026-11-23 사용자 "한 번 지나면 포션을 두어 개 뿌려서 회복할 수 있게") */
     MAGIC: { from: q('magicfrom', 5), every: [q('magicevery', 7), 3.2], near: 340, ids: [11, 33, 49, 12, 25, 16, 50, 26, 9, 13, 27, 51, 19, 21, 59, 61, 62, 20, 63, 64, 67, 58],
       kinds: [[5, 'fan'], [6, 'blast'], [7, 'frost'], [8, 'orb'], [9, 'rain']],
@@ -133,7 +135,7 @@
     this.speed = this.hero.speedPx * CFG.SPEED;              // 초당 px
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
-    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.storm = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
+    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
     this._growReset();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
@@ -215,6 +217,11 @@
     for (i = 0; i < n; i++) { var a = a0 + (i - (n - 1) / 2) * B.spread; this.shots.push({ x: c.x, y: sy, vx: Math.cos(a) * B.speed, vy: Math.sin(a) * B.speed, dmg: dmg, arm: B.kind === 'wind' ? -1 : 62, foe: true, t0: T, life: B.life, mg: 'fan', fb: B.kind || 'fire' }); }
     c.castUntil = T + 0.45; c.at = 0; if (T - (this.fbSndT || -9) > 0.25) { this.fbSndT = T; D._play(c.act && c.act.snd, 0.25); }
   };
+  P._rescue = function (T, v) {   /* 구급 물약 (CFG.RESCUE) */
+    var R = CFG.RESCUE, h = this.hero, vl = Math.hypot(v[0], v[1]); if (vl) this.lastV = [v[0] / vl, v[1] / vl];
+    if (R.cd <= 0 || h.state === 'dead' || h.hp <= 0 || h.hp > h.maxHp * R.hp || T < (this.rescueT || 0) || this.items.some(function (it) { return it.rescue; })) return;
+    var d = this.lastV || [0, 1]; this.rescueT = T + R.cd; this.items.push({ k: 'meat', x: h.x + d[0] * R.ahead, y: h.y + d[1] * R.ahead * 0.8, t0: T, rescue: 1 });
+  };
   P._storm = function (T, v) {   /* 마법 포격 (CFG.STORM) */
     var S = CFG.STORM, D = this.D, h = this.hero, rng = D.rng, q0 = this.t - CFG.RAGE.at, st = this.storm || (this.storm = { i: 0, left: 0, next: 0, dropAt: 0 }), i;
     if (!st.left && q0 >= S.first + st.i * S.every && this.t < CFG.TIME - 4) { st.i++; st.left = S.vol; st.next = T + 1.3; this.banner = { s: '마법 포격 — 붉은 원을 피하십시오', t0: T, col: '#ff6a5a' }; D._play(5064, 0.6); }
@@ -278,7 +285,7 @@
     // 웨이브: 1분마다 다음 단계. 단계가 바뀌면 알림 한 줄 + 우두머리 + 다음 단계 유닛 그림을 미리 받는다
     var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec)), RG = this._rage() ? CFG.RAGE.spd : 1;
     if (this._rage() && !this.rageOn) { this.rageOn = true; F.forEach(function (x) { if (x.state === 'dead') return; x.life = Math.round(x.life * CFG.RAGE.hp); x.life0 = Math.round(x.life0 * CFG.RAGE.hp); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.rageT = T; this.flashT = T; D._play(5064, 0.9); }
-    if (this.rageOn) this._storm(T, v);
+    this._rescue(T, v); if (this.rageOn) this._storm(T, v);
     if (!this.rageOn && !this.rageSoon && this.t >= CFG.RAGE.at - 10) { this.rageSoon = true; this.banner = { s: '경고 — 10초 뒤 최후의 3분', t0: T, col: '#ff6a5a' }; }
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
       var sh = this._shown(), newSh = sh !== this.shownWave; this.shownWave = sh; if (newSh || WV.boss) this.banner = { s: (newSh ? '웨이브 ' + sh + (sh === 1 && this.scaleK > 0 ? ' · 적 레벨 ' + Math.round(this.scaleK * 100) + '%' + (this.scaleName ? ' (' + this.scaleName + ')' : '') : '') : '') + (WV.boss ? (newSh ? ' — ' : '') + D.types[WV.boss[0]].name + ' 등장' : ''), t0: T, col: WV.boss ? '#ff8a7a' : '#ffe9b0' };   /* 알림은 보이는 웨이브가 바뀔 때와 우두머리가 나올 때만 (안쪽 난이도 칸은 10개) */
