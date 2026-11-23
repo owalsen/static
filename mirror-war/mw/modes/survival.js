@@ -906,7 +906,7 @@
   /* 둘째 궁극기 칸 (README 366, 2026-11-23 사용자 "무사 궁극기 투룡 생성. 공격 방향으로 큰 빨간 용 머리가 나가면서 일직선상의 대지 전부에 폭발 + 화염 피해" → 칸을 하나 더, 쿨타임은 따로. "피해 범위는 가로 크기 화면 기준 1/3 이상은 때려야"):
      투룡 = 가까운 적 쪽(없으면 걷던 쪽)으로 붉은 용(거울전쟁의 드래곤 그림, scale 배)이 speed 로 range 만큼 날아간다. 지나간 길(폭 = half × 2 = 150, 화면 가로 390 의 38%)의 적에게 피해 = 공격력 × mul(400%) + 불탐(초당 burn, 3초).
      용이 지나간 자리는 step 마다 폭 가득 폭발하고 fireSec 초 동안 불길이 남아, 그 위의 적이 fireTick 마다 공격력 × fireMul 을 받는다. 쓰는 순간 0.6초 무적, 움직임은 막지 않는다 */
-  var ULT2 = { shadow: { name: '투룡', icon: 41, unit: 47, cd: q('dragoncd', 36), charge: q('dragoncharge', 0.8), slash: 0.22, pose: [1, 3],   /* 사용자 "무사의 모션은 가로베기 모션. 처음엔 느리게 기를 모은 후 칼을 슬래시하면 용이 나간다": charge 초 동안 칼을 치켜든 자세(pose[0])로 붉은 기운을 모으고(제자리·무적), 가로로 베는 순간(pose[1] 부터, 붉은 칼자국 slash 초) 용이 나간다 */ speed: 400, range: 640, half: q('dragonhalf', 75), mul: q('dragonmul', 4), floorUnit: 54, floor: q('dragonfloor', 0),   /* 사용자 "데미지는 공격력의 400% 정도" — 흑기사 체력 바닥값은 쓰지 않는다 (0) */ burn: 0.1, fireSec: 2.6, fireTick: 0.4, fireMul: 0.1,   /* 불길·불탐은 약하게 — 처음 0.5·0.3 은 합치면 공격력의 1200% 가 됐다 (사용자 "데미지는 공격력의 400% 정도") */ step: 34, scale: 1.5, seek: 420,
+  var ULT2 = { shadow: { name: '투룡', icon: 41, unit: 47, cd: q('dragoncd', 36), charge: q('dragoncharge', 0.8), slash: 0.22, pose: [1, 3], headScale: 1.55,   /* 369번(2026-11-23 사용자 "용 머리만 화려하게 던지도록 스킬 이펙트 변경. 용은 지금보다 좀 더 느리게 — 너무 빨라서 안 보임"): 몸 전체 대신 용 머리만 (원작 드래곤 그림은 머리가 20픽셀 남짓이라 키우면 붉은 덩어리가 된다 — 머리는 캔버스로 그린다: 뿔·등 가시·벌린 입·이빨·눈, headScale 배), 날아가는 쪽으로 돌려 그린다. 뒤로 불꽃 갈기·불빛 꼬리. 속도 400 → 250 */   /* 사용자 "무사의 모션은 가로베기 모션. 처음엔 느리게 기를 모은 후 칼을 슬래시하면 용이 나간다": charge 초 동안 칼을 치켜든 자세(pose[0])로 붉은 기운을 모으고(제자리·무적), 가로로 베는 순간(pose[1] 부터, 붉은 칼자국 slash 초) 용이 나간다 */ speed: q('dragonspd', 250), range: 640, half: q('dragonhalf', 75), mul: q('dragonmul', 4), floorUnit: 54, floor: q('dragonfloor', 0),   /* 사용자 "데미지는 공격력의 400% 정도" — 흑기사 체력 바닥값은 쓰지 않는다 (0) */ burn: 0.1, fireSec: 2.6, fireTick: 0.4, fireMul: 0.1,   /* 불길·불탐은 약하게 — 처음 0.5·0.3 은 합치면 공격력의 1200% 가 됐다 (사용자 "데미지는 공격력의 400% 정도") */ step: 34, scale: 1.5, seek: 420,
     art: function (ctx, x, y, w, h) {   /* 버튼 그림 (367번, 사용자가 준 붉은 용 아이콘의 구도대로): 거울전쟁 드래곤의 옆모습(서 있기 3번째 방향)에서 머리·날개 쪽을 잘라 불빛 바탕 위에 — 그림을 아직 못 받았으면 불길만 */
       var cx = x + w / 2, cy = y + h / 2, D0 = this._D, t = D0 && D0.types[this.unit], im = D0 && D0.assets.img['u' + this.unit], f = t && t.frames[t.anim.idle[2]];
       ctx.save(); ctx.fillStyle = '#1a0606'; ctx.fillRect(x, y, w, h); var bg = ctx.createRadialGradient(cx + w * 0.1, cy + h * 0.15, 1, cx, cy, w * 0.8); bg.addColorStop(0, 'rgba(255,150,40,.75)'); bg.addColorStop(0.5, 'rgba(200,40,15,.5)'); bg.addColorStop(1, 'rgba(40,6,4,0)'); ctx.fillStyle = bg; ctx.fillRect(x, y, w, h); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
@@ -1202,9 +1202,15 @@
       ctx.restore(); }
     var DSd = this.dragSlash; if (DSd) { var sk3 = 1 - (T - DSd.t0) / ULT2.shadow.slash; if (sk3 <= 0) this.dragSlash = null; else { ctx.save(); ctx.translate(DSd.x, DSd.y - 14); ctx.rotate(DSd.a); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';   /* 가로 베기의 붉은 칼자국: 베는 쪽으로 볼록한 초승달이 앞으로 밀려 나간다 */
         var so = (1 - sk3) * 22; ctx.strokeStyle = 'rgba(255,80,30,' + (0.6 * sk3).toFixed(3) + ')'; ctx.lineWidth = 13; ctx.beginPath(); ctx.arc(so - 22, 0, 48, -1.15, 1.15); ctx.stroke(); ctx.strokeStyle = 'rgba(255,235,190,' + (0.95 * sk3).toFixed(3) + ')'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(so - 22, 0, 49, -1.05, 1.05); ctx.stroke(); ctx.restore(); } }
-    var DGd = this.dragon; if (DGd) { var du2 = DGd.u, df2 = du2.t.frames[du2.frameIndex(D.rules.tps)], dim = D.assets.get('u' + du2.t.id), dk2 = Math.min(1, DGd.go / 60, (ULT2.shadow.range - DGd.go) / 90 + 0.1), dsc = ULT2.shadow.scale;   /* 붉은 용 (거울전쟁 드래곤 그림) + 뒤따르는 불빛 */
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; var dgl = ctx.createRadialGradient(DGd.x, DGd.y - 40, 6, DGd.x, DGd.y - 40, 100); dgl.addColorStop(0, 'rgba(255,120,40,' + (0.45 * dk2).toFixed(3) + ')'); dgl.addColorStop(1, 'rgba(255,60,10,0)'); ctx.fillStyle = dgl; ctx.beginPath(); ctx.arc(DGd.x, DGd.y - 40, 100, 0, 6.3); ctx.fill(); ctx.restore();
-      if (df2 && dim && dim.naturalWidth) { ctx.save(); ctx.translate(DGd.x, DGd.y + 30); ctx.scale(du2.mir ? -dsc : dsc, dsc); ctx.globalAlpha = Math.max(0, dk2); ctx.drawImage(dim, df2[0], df2[1], df2[2], df2[3], -df2[4], -df2[5], df2[2], df2[3]); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * Math.max(0, dk2); ctx.drawImage(dim, df2[0], df2[1], df2[2], df2[3], -df2[4], -df2[5], df2[2], df2[3]); ctx.restore(); } }
+    var DGd = this.dragon; if (DGd) { var UD3 = ULT2.shadow, da = Math.atan2(DGd.dy, DGd.dx), dk2 = Math.min(1, DGd.go / 50, (UD3.range - DGd.go) / 90 + 0.1), hy = DGd.y - 22, pul = 1 + 0.05 * Math.sin(T * 22), fa3 = D.data.fx.arms[26], ff3 = fa3 && (fa3.hit.length ? fa3.hit : fa3.fly.length ? fa3.fly : fa3.seq);
+      /* 용 머리 (캔버스로 그린다 — _dragonHead) — 날아가는 쪽으로 돌려 크게. 뒤로 불빛 꼬리와 불꽃 갈기(원작 불꽃 이펙트), 둘레에 불빛 */
+      ctx.save(); ctx.translate(DGd.x, hy); ctx.rotate(da); ctx.globalCompositeOperation = 'lighter';
+      for (i = 0; i < 3; i++) { var tl = [150, 105, 62][i], tw = [34, 22, 11][i], tg = ctx.createLinearGradient(-tl, 0, 20, 0); tg.addColorStop(0, 'rgba(255,60,10,0)'); tg.addColorStop(0.6, 'rgba(' + ['255,70,20', '255,140,40', '255,230,150'][i] + ',' + ([0.32, 0.42, 0.55][i] * dk2).toFixed(3) + ')'); tg.addColorStop(1, 'rgba(255,200,120,0)');   /* 꼬리: 붉은 겉 → 주황 → 흰 속 */
+        ctx.fillStyle = tg; ctx.beginPath(); ctx.moveTo(20, 0); ctx.quadraticCurveTo(-tl * 0.3, -tw * (1 + 0.25 * Math.sin(T * 17 + i)), -tl, 6 * Math.sin(T * 9 + i * 2)); ctx.quadraticCurveTo(-tl * 0.3, tw * (1 + 0.25 * Math.sin(T * 15 + i * 3)), 20, 0); ctx.fill(); }
+      if (ff3 && ff3.length) for (i = 0; i < 5; i++) { ctx.save(); ctx.translate(-22 - i * 24, Math.sin(T * 13 + i * 1.7) * (5 + i * 2)); ctx.rotate(-da); ctx.scale(0.62 - i * 0.07, 0.62 - i * 0.07); ctx.globalAlpha = (0.85 - i * 0.13) * dk2; D._fxFrame(ff3[Math.floor(T * 16 + i * 3) % ff3.length], 0, 10, true); ctx.restore(); }   /* 불꽃 갈기 (원작 불꽃 이펙트, 세워서) */
+      var hg3 = ctx.createRadialGradient(8, 0, 4, 8, 0, 70); hg3.addColorStop(0, 'rgba(255,170,70,' + (0.55 * dk2).toFixed(3) + ')'); hg3.addColorStop(1, 'rgba(255,50,10,0)'); ctx.fillStyle = hg3; ctx.beginPath(); ctx.arc(8, 0, 70, 0, 6.3); ctx.fill();
+      ctx.restore();
+      ctx.save(); ctx.translate(DGd.x, hy); ctx.rotate(da); ctx.scale(UD3.headScale * pul, UD3.headScale * pul * (Math.cos(da) < 0 ? -1 : 1)); ctx.globalAlpha = Math.max(0, dk2); this._dragonHead(ctx, T); ctx.restore(); }   /* 왼쪽으로 날 때는 위아래를 뒤집어 거꾸로 서지 않게 */
     for (i = this.stabs.length - 1; i >= 0; i--) { var sb = this.stabs[i], sq = 1 - (D.time - sb.t0) / 0.18; if (sq <= 0) { this.stabs.splice(i, 1); continue; }   /* 환영검이 꿰뚫는 순간: 적을 지나 뒤로 길게 빠지는 빛줄기 (푸른 빛 + 흰 속) */
       var sx0 = sb.x - sb.vx * (sb.len || 22), sy0 = sb.y - sb.vy * (sb.len || 22), sfw = sb.rgb ? 6 : 30 + 26 * (1 - sq), sx1 = sb.x + sb.vx * sfw, sy1 = sb.y + sb.vy * sfw; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       var sgd = ctx.createLinearGradient(sx0, sy0, sx1, sy1); var srg = sb.rgb || '150,205,255'; sgd.addColorStop(0, 'rgba(' + srg + ',0)'); sgd.addColorStop(sb.rgb ? 0.7 : 0.45, 'rgba(' + srg + ',' + ((sb.rgb ? 0.6 : 0.85) * sq).toFixed(3) + ')'); sgd.addColorStop(1, 'rgba(' + srg + ',0)'); ctx.strokeStyle = sgd; ctx.lineWidth = (sb.rgb ? 4 : 8) * sq + 1; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1); ctx.stroke();
@@ -1351,18 +1357,45 @@
     var al = Math.hypot(ax || 0, ay || 0), a = al > 4 ? [ax / al, ay / al] : this._dragonAim(); this.tm.ult2 = U.cd * (1 - this._pv('haste')); this._text(h.x, h.y - h.headY - 24, U.name, '#ff9a6a'); D._play(5092, 0.5);
     this.dragCast = { t0: T, at: T + U.charge, dx: a[0], dy: a[1] }; D._faceVec(h, a[0], a[1], true); h.state = 'attack'; h.at = U.pose[0]; this.aimUntil = T + U.charge + 0.5; this.invUntil = Math.max(this.invUntil, T + U.charge + 0.6); this.stick = null;
   };
+  /* 용 머리 (옆모습, +x 를 본다, 길이 80쯤): 목 → 머리통 → 주둥이 · 벌린 아래턱 · 입속 불빛 · 이빨 · 뒤로 젖힌 뿔 둘 · 등 가시 · 빛나는 눈. 전부 곡선으로 */
+  P._dragonHead = function (ctx, T) {
+    var jaw = 0.5 + 0.5 * Math.sin(T * 14), jy = 12 + 5 * jaw, i, g;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    /* 뿔 (뒤) */
+    ctx.fillStyle = '#b89a6a'; ctx.strokeStyle = '#3a1408'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-14, -15); ctx.quadraticCurveTo(-34, -34, -58, -30); ctx.quadraticCurveTo(-36, -24, -20, -9); ctx.closePath(); ctx.fill(); ctx.stroke();
+    /* 목 */
+    g = ctx.createLinearGradient(-60, 0, -10, 0); g.addColorStop(0, 'rgba(150,20,10,0)'); g.addColorStop(1, '#a81a10'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-12, -16); ctx.quadraticCurveTo(-40, -14, -62, -4); ctx.quadraticCurveTo(-40, 14, -10, 16); ctx.closePath(); ctx.fill();
+    /* 아래턱 */
+    g = ctx.createLinearGradient(0, 4, 0, jy + 8); g.addColorStop(0, '#8a140c'); g.addColorStop(1, '#5a0c08'); ctx.fillStyle = g; ctx.strokeStyle = '#2a0806'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-14, 6); ctx.quadraticCurveTo(8, 6 + jaw * 3, 32, jy); ctx.quadraticCurveTo(36, jy + 4, 30, jy + 5); ctx.quadraticCurveTo(6, jy + 9, -18, 17); ctx.closePath(); ctx.fill(); ctx.stroke();
+    /* 입속 불빛 */
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; g = ctx.createRadialGradient(10, 5 + jaw * 3, 1, 10, 5 + jaw * 3, 22); g.addColorStop(0, 'rgba(255,240,170,.95)'); g.addColorStop(0.5, 'rgba(255,140,30,.7)'); g.addColorStop(1, 'rgba(255,60,10,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-10, 4); ctx.quadraticCurveTo(14, -2, 34, 1); ctx.quadraticCurveTo(22, 8 + jaw * 4, 30, jy); ctx.quadraticCurveTo(8, 8 + jaw * 3, -10, 8); ctx.closePath(); ctx.fill(); ctx.restore();
+    /* 머리통·주둥이 */
+    g = ctx.createLinearGradient(0, -24, 0, 6); g.addColorStop(0, '#ff5a30'); g.addColorStop(0.45, '#d8261a'); g.addColorStop(1, '#8a120c'); ctx.fillStyle = g; ctx.strokeStyle = '#2a0806'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-18, 6); ctx.quadraticCurveTo(-26, -8, -14, -18); ctx.quadraticCurveTo(-2, -26, 8, -18); ctx.quadraticCurveTo(22, -14, 34, -13); ctx.quadraticCurveTo(42, -12, 42, -6); ctx.quadraticCurveTo(42, -1, 36, 1); ctx.quadraticCurveTo(14, -1, -8, 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    /* 이빨 */
+    ctx.fillStyle = '#fff4d0'; for (i = 0; i < 5; i++) { var tx = 34 - i * 7, ty = 0.6 - i * 0.2; ctx.beginPath(); ctx.moveTo(tx - 2, ty); ctx.quadraticCurveTo(tx, ty + 6.5, tx + 0.6, ty + 6.5); ctx.quadraticCurveTo(tx + 1.6, ty + 3, tx + 2, ty); ctx.closePath(); ctx.fill(); }
+    for (i = 0; i < 4; i++) { var bx = 29 - i * 7, by = jy - 0.5 - i * 1.4 * (0.6 + jaw * 0.4); ctx.beginPath(); ctx.moveTo(bx - 1.8, by); ctx.quadraticCurveTo(bx, by - 5.5, bx + 0.5, by - 5.5); ctx.quadraticCurveTo(bx + 1.4, by - 2.5, bx + 1.8, by); ctx.closePath(); ctx.fill(); }
+    /* 콧구멍·주둥이 윗선의 밝은 결 */
+    ctx.fillStyle = '#3a0a06'; ctx.beginPath(); ctx.ellipse(36, -8.5, 2.2, 1.2, -0.3, 0, 6.3); ctx.fill(); ctx.strokeStyle = 'rgba(255,170,120,.7)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-8, -19); ctx.quadraticCurveTo(10, -19, 30, -14); ctx.stroke();
+    /* 등 가시 */
+    ctx.fillStyle = '#6a0e08'; ctx.strokeStyle = '#2a0806'; ctx.lineWidth = 1; for (i = 0; i < 4; i++) { var sx3 = -22 - i * 10, sy3 = -15 + i * 2.6; ctx.beginPath(); ctx.moveTo(sx3 + 5, sy3 + 2); ctx.quadraticCurveTo(sx3 - 1, sy3 - 8 + i, sx3 - 9, sy3 - 9 + i * 1.5); ctx.quadraticCurveTo(sx3 - 3, sy3 - 1, sx3 - 5, sy3 + 3); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    /* 뿔 (앞) */
+    ctx.fillStyle = '#e8cf9a'; ctx.strokeStyle = '#3a1408'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-6, -19); ctx.quadraticCurveTo(-26, -42, -54, -40); ctx.quadraticCurveTo(-30, -31, -14, -13); ctx.closePath(); ctx.fill(); ctx.stroke();
+    /* 눈: 노랗게 빛나는 째진 눈 */
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; g = ctx.createRadialGradient(6, -11, 0, 6, -11, 9); g.addColorStop(0, 'rgba(255,240,140,.9)'); g.addColorStop(1, 'rgba(255,160,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(6, -11, 9, 0, 6.3); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#fff6a8'; ctx.beginPath(); ctx.moveTo(0, -10); ctx.quadraticCurveTo(6, -15, 13, -12.5); ctx.quadraticCurveTo(6, -9, 0, -10); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#2a0806'; ctx.beginPath(); ctx.ellipse(7, -11.8, 0.9, 2, 0.2, 0, 6.3); ctx.fill();
+  };
   P._dragonAim = function () { var h = this.hero, U = ULT2.shadow, nr = this._nearest(1, U.seek, null)[0], dx, dy; if (nr) { dx = nr.x - h.x; dy = nr.y - h.y; } else if (this.lastV) { dx = this.lastV[0]; dy = this.lastV[1]; } else { dx = 0; dy = 1; } var dl = Math.hypot(dx, dy) || 1; return [dx / dl, dy / dl]; };
   P._dragonLaunch = function (dx, dy) {   /* 베는 순간: 용이 나간다 (방향은 조준한 그대로) */
     var D = this.D, T = D.time, h = this.hero, U = ULT2.shadow;
-    var du = new MWE.Unit(D.types[U.unit], D.types[U.unit].fac, h.x, h.y); du.state = 'move'; du.walkT = 0; D._faceVec(du, dx, dy, true);
-    this.dragon = { u: du, x0: h.x, y0: h.y, x: h.x, y: h.y, dx: dx, dy: dy, go: 0, step: 0, hit: {}, t0: T }; this.dragLine = { x0: h.x, y0: h.y, dx: dx, dy: dy, len: 0, until: T + U.range / U.speed + U.fireSec, next: T + U.fireTick };
+    this.dragon = { x0: h.x, y0: h.y, x: h.x, y: h.y, dx: dx, dy: dy, go: 0, step: 0, hit: {}, t0: T }; this.dragLine = { x0: h.x, y0: h.y, dx: dx, dy: dy, len: 0, until: T + U.range / U.speed + U.fireSec, next: T + U.fireTick };
     D._faceVec(h, dx, dy, true); h.state = 'attack'; h.at = U.pose[1]; this.aimUntil = T + 0.5; this.dragSlash = { t0: T, a: Math.atan2(dy, dx), x: h.x, y: h.y }; this.flashT = T - 0.18; D._play(5064, 0.7);
   };
   P._dragonStep = function (dt) {
     var U = ULT2.shadow, D = this.D, T = D.time, F = this.foes, DC = this.dragCast, i, f, rx, ry, al, pp, w; if (this.aim2 && (T > this.aim2 || this.over)) this.aim2 = 0;   /* 조준은 8초 뒤 저절로 풀린다 */
     if (DC) { var hh = this.hero; if (hh.state === 'dead' || this.over) this.dragCast = null; else if (T >= DC.at) { this.dragCast = null; this._dragonLaunch(DC.dx, DC.dy); } else { hh.state = 'attack'; hh.at = U.pose[0]; } }   /* 기 모으는 동안: 칼을 치켜든 자세로 멈춰 있다 */
     var DG = this.dragon, DL = this.dragLine;
-    if (DG) { var st = U.speed * dt; DG.go += st; DG.x += DG.dx * st; DG.y += DG.dy * st; DG.u.x = DG.x; DG.u.y = DG.y; DG.u.walkT += dt; if (DL) DL.len = DG.go;
+    if (DG) { var st = U.speed * dt; DG.go += st; DG.x += DG.dx * st; DG.y += DG.dy * st; if (DL) DL.len = DG.go;
       var kf = D.types[U.floorUnit], dmg = Math.max(this._base() * U.mul, kf ? kf.hp * CFG.FOE.hp * this._hpK() * U.floor : 0);
       for (i = 0; i < F.length; i++) { f = F[i]; if (f.state === 'dead' || DG.hit[f.uid]) continue; rx = f.x - DG.x0; ry = f.y - DG.y0; al = rx * DG.dx + ry * DG.dy; pp = Math.abs(rx * DG.dy - ry * DG.dx); if (al < -16 || al > DG.go + 20 || pp > U.half) continue;
         DG.hit[f.uid] = 1; f.bleedUntil = Math.max(f.bleedUntil || 0, T + 3); f.bleed = Math.max(f.bleed || 0, this._base() * U.burn); this._hitFoe(f, dmg, -1); }
