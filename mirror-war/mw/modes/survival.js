@@ -844,12 +844,12 @@
     Object.keys(SK).forEach(function (k) { var s = SK[k]; [s.arm, s.boom, s.fx].forEach(function (a) { var d = a != null && D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });
     [3, 38].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var pre = /[?&]sk=([a-z,]+)/.exec(root.location.search); if (pre) pre[1].split(',').forEach(function (k) { if (SK[k]) { if (!self.sk[k] && SK[k].slot) self.order.push(k); self.sk[k] = q('sklv', 3); } });   // ?sk=fever,explo&sklv=5 : 시험용
-    var pc0 = /[?&]cls=([a-z]+)/.exec(root.location.search); if (pc0 && CLS[pc0[1]]) { if (this._has(CLS[pc0[1]].unit || GROW.clsUnit)) this._promote(pc0[1]); else { this.cls = pc0[1]; if (this.cls === 'shadow') this._toBlade(); } }
+    var pc0 = /[?&]cls=([a-z]+)/.exec(root.location.search); if (pc0 && CLS[pc0[1]]) { if (this._has(CLS[pc0[1]].unit || GROW.clsUnit)) this._promote(pc0[1]); else { this.cls = pc0[1]; if (this.cls === 'shadow') { this._toBlade(); if (!this.sk.sidestep) this.sk.sidestep = 1; } } }
   };
   /* 전직: 갈래를 정하고 도둑 → 대도로 모습이 바뀐다 (2026-11-19 사용자 요청). 공격력·방어력·걷는 속도·기본 공격(단도 던지기)은 원작 대도의 것, 최대 체력은 GROW.clsHp 만큼만 더한다(원작 차이 +130 을 다 주면 너무 단단하다) */
   P._promote = function (cls) {
     var D = this.D, h = this.hero, T2 = D.types[CLS[cls].unit || GROW.clsUnit]; this.cls = cls; if (CLS[cls].drop) { var selfP = this, back = 0; CLS[cls].drop.forEach(function (k) { if (!selfP.sk[k]) return; back += selfP.sk[k]; delete selfP.sk[k]; selfP.order = selfP.order.filter(function (o) { return o !== k; }); }); if (back) { this.pend += back; this._text(h.x, h.y - h.headY - 40, '안 쓰는 스킬 → 카드 +' + back, '#9cc0ff'); } if (cls === 'venom') this.zones = []; }   // CLS[].drop = 그 갈래가 못 쓰는 스킬 — 전직하면 사라지고 그 단계만큼 카드로 돌려받는다, 카드에도 안 나온다. 트래퍼: 다팅 피버·암살 스킬(기습·암살) 대신 함정을 3개씩 더 둔다 (2026-11-20 사용자 "트래퍼에게 암살 스킬 빼 줘, 대신 기본 함정이 3개씩 추가")   // 2026-11-19 사용자 "전직 후에 다팅 피버는 제거" (어쌔신은 검술로 바뀐다)
-    if (cls === 'shadow') { this._toBlade(); if (!this.sk.shadow) { this.sk.shadow = 1; this.tm.shadow = 5; } }   // 그림자 숨기는 어쌔신만 — 전직하면 생긴다 (2026-11-20 사용자)
+    if (cls === 'shadow') { this._toBlade(); if (!this.sk.shadow) { this.sk.shadow = 1; this.tm.shadow = 5; } if (!this.sk.sidestep) this.sk.sidestep = 1;   /* 비켜 피하기 1단계는 무사로 전직하면 그냥 받는다 (2026-11-23 사용자) — 패시브 칸이 찼어도 */ }   // 그림자 숨기는 어쌔신만 — 전직하면 생긴다 (2026-11-20 사용자)
     if (cls === 'trapper') { if (!this.sk.toxdag) this.sk.toxdag = 1; if (!this.sk.darkdag) this.sk.darkdag = 1; } if (!T2 || h.t === T2) return;
     if (this.tm.ult == null) this.tm.ult = 4;
     var sp0 = this.speed, mh = h.maxHp + GROW.clsHp, hp = h.hp + GROW.clsHp; var BT = CLS[cls].stat != null ? D.types[CLS[cls].stat] : null, bact, batk, bsp; if (BT) { h.setType(BT); D._applyType(h); bact = h.act; batk = h.t.atk; bsp = h.speedPx; }   // stat: 능력치·기본 공격은 이 유닛 것, 그림·동작만 unit 것
