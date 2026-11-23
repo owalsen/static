@@ -1328,7 +1328,7 @@
   /* ───────────────────────── 5. update ───────────────────────── */
   /* 게임 버전 — 화면 왼쪽 위 구석에 작고 흐리게 (처음엔 오른쪽 아래였는데 사용자 "버튼이랑 겹침, 좌측 상단에" — 2026-11-20) (2026-11-20 사용자: "게임 우측하단에 작게 버전을, 게임플레이 방해 안 되게. 현재는 0.2.0"). 모든 화면(로딩·모드 선택·디펜스·서바이벌)에 같은 자리.
      배포할 때 올린다. 순위용 VER(defense-rank.js, README 번호)과는 별개 */
-  var GAME_VER = '1.0.22';
+  var GAME_VER = '1.0.23';
   var BGM_VOL = (function () { var m = /[?&]bgmvol=([0-9.]+)/.exec(root.location.search); return m ? Math.min(1, +m[1]) : 0.22; })();   /* 배경음 크기: 효과음(전체 0.6 × 소리마다 0.3~0.9 = 0.18~0.54)보다 살짝 낮게. 전에는 0.5 */
   P._drawVer = function () { var ctx = this.ctx; ctx.save(); ctx.setTransform(this.rs, 0, 0, this.rs, 0, 0); ctx.globalAlpha = 0.4; ctx.font = '8px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#000'; ctx.fillText('v' + GAME_VER, 3.5, 2.5); ctx.fillStyle = '#fff'; ctx.fillText('v' + GAME_VER, 3, 2); ctx.restore(); };
   P._frame = function (ts) {
@@ -2722,6 +2722,8 @@
     var wr = wb && wb.until > T && u.state !== 'dead' ? MWE.weaponRing(this.data.fx.arms[wb.arm], u.t, T) : null;   // 원본판 웨폰(크기 3종 × 앞뒤 반고리, render/assets.js): 뒤쪽 반은 유닛보다 먼저, 앞쪽 반은 유닛 위에
     if (wr) this._fxFrame(wr[0], x, y, true); else if (wb && wb.until > T) this._loopFx(wb.arm, x, y);
     ctx.save(); ctx.translate(x, y + drop); if (u.mir) ctx.scale(-1, 1);
+    if (u.glowUntil > T && u.state !== 'dead' && u.ghostA == null) { var gk = Math.min(1, (T - u.glowT0) / 0.1) * Math.min(1, (u.glowUntil - T) / 0.25), gm = 0.5 + 0.5 * Math.sin((T - u.glowT0) * 10);   /* 빛나는 테두리 (서바이벌 비켜 피하기의 무적 표시): 붉은색과 노란색 사이를 오가다가 끝날 때 스르르 풀린다 */
+      ctx.shadowColor = 'rgba(255,' + Math.round(60 + 160 * gm) + ',' + Math.round(20 + 30 * gm) + ',' + (0.9 * gk).toFixed(2) + ')'; ctx.shadowBlur = 5 * (this.rs || 1); var gi = this.assets.get(u.imgKey || f[6] || ('u' + u.t.id)); ctx.drawImage(gi, f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); ctx.drawImage(gi, f[0], f[1], f[2], f[3], -f[4], -f[5], f[2], f[3]); ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; }
     if (this.look && u.state !== 'dead' && u.ghostA == null) { ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = CONFIG.LOOK.outline * this.rs; }   // 어두운 번짐 테두리
     if (u.stunUntil > T && !(u.curseUntil > T)) ctx.drawImage(this._stoneSprite(this.assets.get(u.imgKey || f[6] || ('u' + u.t.id)), f), 0, 0, f[2], f[3], -f[4], -f[5], f[2], f[3]);   // 석화: 돌처럼 회색 (원본은 회색 팔레트 20번, 분석 8-36)
     else { var tc = u.state === 'dead' ? null : u.tint || (this.theme && this.theme.tint ? this.theme.tint[u.side] : null);   // 유닛 자신의 색조(서바이벌 트래퍼의 녹색) 또는 난이도 테마의 유닛 색조
