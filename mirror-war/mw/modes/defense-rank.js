@@ -10,7 +10,7 @@
   var P = DG.prototype, doc = root.document;
   var API = 'https://mw-rank.zardbird.workers.dev';           // 배포한 Workers 주소 (analysis/cloud/rank)
   var VER = '350';                                           // 게임 버전 = README 번호 (참고용 — 밸런스를 바꾼 배포 때 올린다)
-  DG.RANK = { api: API, ver: VER, surv: false };   /* surv = 서바이벌 판을 서버가 받는가 — 워커(cloud/rank/worker.js, README 350)를 새로 올린 뒤에 true 로. false 인 동안에는 서바이벌 탭과 끝 화면 버튼이 나오지 않는다 */
+  DG.RANK = { api: API, ver: VER, surv: true };   /* surv = 서바이벌 판을 서버가 받는가 — 워커(cloud/rank/worker.js, README 350)를 2026-11-23 에 올려서 켰다. false 면 서바이벌 탭과 끝 화면 버튼이 나오지 않는다 */
   var LS = { nick: 'mwdef.nick', did: 'mwdef.did' };
   function lsGet(k) { try { return root.localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (e) {} }
