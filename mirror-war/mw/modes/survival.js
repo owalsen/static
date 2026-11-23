@@ -77,6 +77,13 @@
        최후의 3분이 시작되고 first 초 뒤부터 every 초마다 한 차례. 한 차례 = vol 번의 일제 낙하(gap 초 간격), 한 번에 n 자리 — 붉은 원이 warn 초 동안 차오른 뒤 터진다(반경 r, 그 안이면 맞는다. 피해는 최후의 3분의 최소 피해 = 최대 체력의 20%).
        자리: lead = 지금 걷는 방향으로 (warn 초 동안 걸을 거리 × 이 값)만큼 앞 — 서 있는 자리·반쯤 간 자리·끝까지 간 자리를 막아 곧게 걸어서는 못 피한다. 나머지는 둘레 ring[0]~ring[1] 에 고르게 흩어 빠져나갈 틈을 좁힌다 */
     /* 구급 물약 (README 356, 2026-11-23 사용자 "피가 20% 이하로 떨어지면 플레이어의 이동 방향에 미리 포션을 한 개씩 떨궈서 쉽게 죽지 않게"): 체력이 최대의 hp 이하이고 바닥에 구급 물약이 없고 앞의 것을 놓은 지 cd 초가 지났으면, 걷는 방향(서 있으면 마지막으로 걷던 방향)으로 ahead 만큼 앞에 회복 아이템 하나 */
+    /* 성소 (README 357, 2026-11-23 사용자 "성소(구조물)를 만들어서 후반 싸움에 도움 얻어 갈 수 있게 — 디아블로2의 체력 채우기나 마법 강화나 물리 공격 강화 등등" → 설계안 → "권장안대로"):
+       from 초(4웨이브)부터 every 초마다(최후의 3분에는 everyRage) 주인공에게서 dist 떨어진 곳에 하나. 한 번에 하나, life 초 안에 안 쓰면 사라진다. 닿으면(touch) 바로 발동.
+       life = 체력 전부 / war = 주는 피해 × dmg / magic = 스킬 쿨타임이 cd 배로 빨리 돈다 / guard = 받는 피해 × take (최후의 3분의 최소 피해에도 먹힌다) — 뒤 셋은 sec 초. 같은 종류는 시간만 새로, 다른 종류끼리는 함께.
+       그림 = 디펜스 건물 시트의 푸른 둥근 지붕 건물(pic)을 scale 배로 + 종류 색 빛. 화면 밖이면 가장자리에 종류 색 화살표 */
+    SHRINE: { from: q('shrinefrom', 210), every: q('shrineevery', 55), everyRage: 40, dist: [260, 340], life: 40, touch: 30, sec: q('shrinesec', 20), pic: 18, scale: 0.34,
+      kinds: { life: { name: '생명의 성소', note: '체력 전부 회복', col: '#7be07a', rgb: '110,230,120' }, war: { name: '전투의 성소', note: '피해 +40%', col: '#ff8a6a', rgb: '255,120,80', dmg: 1.4 },
+        magic: { name: '마력의 성소', note: '쿨타임 2배 빠름', col: '#7fbcff', rgb: '110,170,255', cd: 2 }, guard: { name: '수호의 성소', note: '받는 피해 절반', col: '#ffd35a', rgb: '255,205,80', take: 0.5 } } },
     RESCUE: { hp: q('rescuehp', 0.2), cd: q('rescuecd', 8), ahead: 62 },
     STORM: { first: q('stormat', 14), every: q('stormevery', 38), vol: q('stormvol', 4), gap: 1.15, n: q('stormn', 8), r: 44, warn: q('stormwarn', 0.95), dmg: 1, lead: [0, 0.55, 1.05], ring: [66, 150], nUp: 1, potion: q('stormpot', 2), potR: [46, 84] },   /* nUp = 차례가 거듭될 때마다 한 번에 떨어지는 자리 +1 (8 → 12). potion = 한 차례가 다 지나가면 주인공 둘레 potR 거리에 회복 아이템(고기)을 이만큼 뿌린다 (2026-11-23 사용자 "한 번 지나면 포션을 두어 개 뿌려서 회복할 수 있게") */
     MAGIC: { from: q('magicfrom', 5), every: [q('magicevery', 7), 3.2], near: 340, ids: [11, 33, 49, 12, 25, 16, 50, 26, 9, 13, 27, 51, 19, 21, 59, 61, 62, 20, 63, 64, 67, 58],
@@ -135,7 +142,7 @@
     this.speed = this.hero.speedPx * CFG.SPEED;              // 초당 px
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
-    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
+    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.shrine = null; this.shrineNext = CFG.SHRINE.from; this.shrineLast = null; this.buff = { war: 0, magic: 0, guard: 0 }; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
     this._growReset();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
@@ -198,6 +205,7 @@
   P._hitFoe = function (u, dmg, arm, big, cb) {   // cb = 이 한 방에만 더하는 치명타 확률 (크레이지 샷 — 상한 ULT.venom.critCap)
     if (u.state === 'dead') return; var D = this.D; u.hitT = D.time;
     if (u.vulnUntil > D.time) dmg *= 1 + (u.vuln || 0);      // 독 단도·유독가스: 받는 피해 증가
+    if (dmg < 1e5 && this.buff && D.time < this.buff.war) dmg *= CFG.SHRINE.kinds.war.dmg;   /* 전투의 성소 */
     if (this.cls === 'shadow') { var lr = u.life / (u.maxHp * CFG.FOE.hp); if (lr <= 0.2) dmg *= 1.6; else if (lr <= 0.5) dmg *= 1.3; }   // 섀도우 인필트레이터: 마무리 일격
     var kind = 'n', cp = cb ? Math.min(ULT.venom.critCap, this.crit + cb) : this.crit; if (dmg < 1e5 && D.rng.next() < cp) { if (D.rng.next() < CFG.CRIT.p2) { kind = 'd'; dmg *= CFG.CRIT.mul2; } else { kind = 'c'; dmg *= CFG.CRIT.mul; } }
     if (dmg < 1e5) { if (this.nums.length > 90) this.nums.shift(); for (var qi = 0; qi < this.nums.length; qi++) if (this.nums[qi].u === u) { this.nums[qi].lift += 12; this.nums[qi].old = true; }   // 새 숫자가 뜨면 그 적의 앞선 숫자는 위로 밀려 올라가며 작아진다 (붉은보석처럼 쌓인다)
@@ -216,6 +224,17 @@
     var D = this.D, T = D.time, h = this.hero, B = this.barr ? this.barr.c : CFG.BARRAGE, sy = c.y - c.headY * 0.6, a0 = Math.atan2(h.y - h.headY * 0.5 - sy, h.x - c.x), dmg = this._foeDmg(c) * B.dmg, i;
     for (i = 0; i < n; i++) { var a = a0 + (i - (n - 1) / 2) * B.spread; this.shots.push({ x: c.x, y: sy, vx: Math.cos(a) * B.speed, vy: Math.sin(a) * B.speed, dmg: dmg, arm: B.kind === 'wind' ? -1 : 62, foe: true, t0: T, life: B.life, mg: 'fan', fb: B.kind || 'fire' }); }
     c.castUntil = T + 0.45; c.at = 0; if (T - (this.fbSndT || -9) > 0.25) { this.fbSndT = T; D._play(c.act && c.act.snd, 0.25); }
+  };
+  P._shrine = function (T) {   /* 성소 (CFG.SHRINE) */
+    var S = CFG.SHRINE, D = this.D, h = this.hero, rng = D.rng, sh = this.shrine, self = this;
+    if (!sh) { if (this.t < this.shrineNext || this.t > CFG.TIME - 8) return; var ks = Object.keys(S.kinds).filter(function (k) { return k !== self.shrineLast; }), k = ks[Math.floor(rng.next() * ks.length)], a = rng.next() * 6.2832, d = S.dist[0] + rng.next() * (S.dist[1] - S.dist[0]);
+      this.shrine = { k: k, x: h.x + Math.cos(a) * d, y: h.y + Math.sin(a) * d * 0.8, t0: T }; this.shrineLast = k; this.banner = { s: S.kinds[k].name + ' — 화살표 쪽', t0: T, col: S.kinds[k].col }; return; }
+    var K = S.kinds[sh.k], done = false;
+    if (Math.hypot(h.x - sh.x, (h.y - sh.y) / 0.62) <= S.touch && h.state !== 'dead') { done = true;
+      if (sh.k === 'life') h.hp = h.maxHp; else this.buff[sh.k] = T + S.sec;
+      this._text(h.x, h.y - h.headY - 22, K.name + ' — ' + K.note, K.col); this.shrineFx = { x: sh.x, y: sh.y, t0: T, rgb: K.rgb }; D._play(5064, 0.5); }
+    else if (T - sh.t0 > S.life) done = true;
+    if (done) { this.shrine = null; this.shrineNext = this.t + (this._rage() ? S.everyRage : S.every); }
   };
   P._rescue = function (T, v) {   /* 구급 물약 (CFG.RESCUE) */
     var R = CFG.RESCUE, h = this.hero, vl = Math.hypot(v[0], v[1]); if (vl) this.lastV = [v[0] / vl, v[1] / vl];
@@ -261,7 +280,7 @@
   P._hitHero = function (dmg) {
     var D = this.D, h = this.hero; if (this.over || D.time < this.invUntil || dmg <= 0) return;
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minHit)); this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
+    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minHit)); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
@@ -285,7 +304,7 @@
     // 웨이브: 1분마다 다음 단계. 단계가 바뀌면 알림 한 줄 + 우두머리 + 다음 단계 유닛 그림을 미리 받는다
     var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec)), RG = this._rage() ? CFG.RAGE.spd : 1;
     if (this._rage() && !this.rageOn) { this.rageOn = true; F.forEach(function (x) { if (x.state === 'dead') return; x.life = Math.round(x.life * CFG.RAGE.hp); x.life0 = Math.round(x.life0 * CFG.RAGE.hp); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.rageT = T; this.flashT = T; D._play(5064, 0.9); }
-    this._rescue(T, v); if (this.rageOn) this._storm(T, v);
+    this._rescue(T, v); this._shrine(T); if (this.rageOn) this._storm(T, v);
     if (!this.rageOn && !this.rageSoon && this.t >= CFG.RAGE.at - 10) { this.rageSoon = true; this.banner = { s: '경고 — 10초 뒤 최후의 3분', t0: T, col: '#ff6a5a' }; }
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
       var sh = this._shown(), newSh = sh !== this.shownWave; this.shownWave = sh; if (newSh || WV.boss) this.banner = { s: (newSh ? '웨이브 ' + sh + (sh === 1 && this.scaleK > 0 ? ' · 적 레벨 ' + Math.round(this.scaleK * 100) + '%' + (this.scaleName ? ' (' + this.scaleName + ')' : '') : '') : '') + (WV.boss ? (newSh ? ' — ' : '') + D.types[WV.boss[0]].name + ' 등장' : ''), t0: T, col: WV.boss ? '#ff8a7a' : '#ffe9b0' };   /* 알림은 보이는 웨이브가 바뀔 때와 우두머리가 나올 때만 (안쪽 난이도 칸은 10개) */
@@ -632,6 +651,10 @@
     for (i = 0; i < F.length; i++) { var bo = F[i]; if (!bo.boss || bo.state === 'dead') continue; var sx = hx0 + (bo.x - this.cam.x) * Zm, sy = hy0 + (bo.y - this.cam.y) * Zm;
       if (sx > 16 && sx < W - 16 && sy > 70 && sy < this.hudBot - 10) continue; var ax = Math.max(18, Math.min(W - 18, sx)), ay = Math.max(74, Math.min(this.hudBot - 14, sy)), an = Math.atan2(sy - ay, sx - ax), pu = 0.6 + 0.4 * Math.sin(D.time * 7);
       ctx.save(); ctx.translate(ax, ay); ctx.rotate(an); ctx.globalAlpha = pu; ctx.fillStyle = '#ff5a3a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -8); ctx.lineTo(-2, 0); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    var SH3 = this.shrine; if (SH3) { var s3x = hx0 + (SH3.x - this.cam.x) * Zm, s3y = hy0 + (SH3.y - this.cam.y) * Zm; if (!(s3x > 16 && s3x < W - 16 && s3y > 70 && s3y < this.hudBot - 10)) { var a3x = Math.max(18, Math.min(W - 18, s3x)), a3y = Math.max(74, Math.min(this.hudBot - 14, s3y)), a3 = Math.atan2(s3y - a3y, s3x - a3x);   /* 화면 밖 성소: 가장자리에 종류 색 화살표 */
+        ctx.save(); ctx.translate(a3x, a3y); ctx.rotate(a3); ctx.globalAlpha = 0.75 + 0.25 * Math.sin(D.time * 5); ctx.fillStyle = CFG.SHRINE.kinds[SH3.k].col; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -8); ctx.lineTo(-2, 0); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); } }
+    var BF3 = this.buff, b3 = ['war', 'magic', 'guard'].filter(function (k) { return D.time < BF3[k]; }); for (i = 0; i < b3.length; i++) { var K3 = CFG.SHRINE.kinds[b3[i]], bx3 = 8, by3 = X.y + 64 + i * 11, r3 = Math.max(0, Math.min(1, (BF3[b3[i]] - D.time) / CFG.SHRINE.sec));   /* 성소 강화: 왼쪽 위에 이름과 남은 시간 줄 (작게) */
+      ctx.globalAlpha = 0.9; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(bx3, by3, 40, 4); ctx.fillStyle = K3.col; ctx.fillRect(bx3, by3, Math.round(40 * r3), 4); ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.strokeText(K3.name.slice(0, 2), bx3 + 44, by3 + 2); ctx.fillText(K3.name.slice(0, 2), bx3 + 44, by3 + 2); ctx.globalAlpha = 1; }
     var RW2 = this.rushWarn; if (RW2) { var ex = hx0 - Math.cos(RW2.a) * 900, ey = hy0 - Math.sin(RW2.a) * 900, qx = Math.max(22, Math.min(W - 22, ex)), qy = Math.max(78, Math.min(this.hudBot - 18, ey)), pq = 0.55 + 0.45 * Math.sin(D.time * 12);   // 돌진이 오는 쪽 가장자리: 붉은 겹화살표
       ctx.save(); ctx.translate(qx, qy); ctx.rotate(RW2.a); ctx.globalAlpha = pq; ctx.fillStyle = '#ff4a2a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; for (i = 0; i < 3; i++) { var cx3 = i * 11 - 6; ctx.beginPath(); ctx.moveTo(cx3 + 9, 0); ctx.lineTo(cx3 - 4, -10); ctx.lineTo(cx3, 0); ctx.lineTo(cx3 - 4, 10); ctx.closePath(); ctx.fill(); ctx.stroke(); } ctx.restore(); }
     ctx.textBaseline = 'middle'; ctx.font = 'bold 15px sans-serif';
@@ -1172,7 +1195,7 @@
   /* 매 프레임: 스킬 타이머 · 덫 · 독 구름 · 경험치 (update 가 부른다. G = 적 격자, near = 사거리 안 가장 가까운 적) */
   P._growStep = function (dt, G, near) {
     var self = this, D = this.D, T = D.time, h = this.hero, F = this.foes, tm = this.tm, l, k, i, ev;
-    var due = function (key) { if (!self.sk[key]) return false; tm[key] = (tm[key] == null ? 0.6 : tm[key]) - dt; if (tm[key] > 0) return false;
+    var due = function (key) { if (!self.sk[key]) return false; tm[key] = (tm[key] == null ? 0.6 : tm[key]) - dt * (self.D.time < self.buff.magic ? CFG.SHRINE.kinds.magic.cd : 1); if (tm[key] > 0) return false;   /* 마력의 성소: 쿨타임이 빨리 돈다 */
       if (self.ult === key) { if (!self.fire[key]) { tm[key] = 0; return false; } self.fire[key] = false; }   // 궁극기 칸에 올린 스킬: 준비된 채로 누르기를 기다린다
       return true; };
     if (tm.blink > 0) tm.blink -= dt; if (tm.ult > 0) tm.ult -= dt;
@@ -1403,6 +1426,12 @@
       else if (it.k === 'chest') { ctx.fillRect(it.x - 5.5, iy - 1, 11, 5.5); ctx.fillRect(it.x - 5.5, iy - 5, 11, 3); ctx.fillStyle = '#10131c'; ctx.fillRect(it.x - 1, iy - 2.5, 2, 3.5); }   // 보물상자: 뚜껑 + 몸통 + 자물쇠
       else if (it.k === 'magnet') { ctx.lineWidth = 2.6; ctx.beginPath(); ctx.arc(it.x, iy - 0.5, 4, Math.PI, 0); ctx.moveTo(it.x - 4, iy - 0.5); ctx.lineTo(it.x - 4, iy + 4.5); ctx.moveTo(it.x + 4, iy - 0.5); ctx.lineTo(it.x + 4, iy + 4.5); ctx.stroke(); }   // 자석: U
       else { ctx.beginPath(); ctx.arc(it.x - 0.5, iy + 1, 4.2, 0, 6.3); ctx.fill(); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(it.x + 2, iy - 2.5); ctx.lineTo(it.x + 4.5, iy - 5.5); ctx.stroke(); ctx.fillStyle = '#fff3a0'; ctx.fillRect(it.x + 4, iy - 7, 2, 2); } }   // 폭탄: 공 + 심지
+    var SH = this.shrine, SC = CFG.SHRINE; if (SH) { var SK2 = SC.kinds[SH.k], sl = SC.life - (T - SH.t0), sa = Math.min(1, (T - SH.t0) / 0.5) * (sl < 5 ? 0.55 + 0.45 * Math.sin(T * 10) : 1), sp = D.bld && D.bld.pics[SC.pic], simg2 = D._bldSheet && D._bldSheet();
+      var sg = ctx.createRadialGradient(SH.x, SH.y, 4, SH.x, SH.y, 62); sg.addColorStop(0, 'rgba(' + SK2.rgb + ',' + (0.5 * sa).toFixed(3) + ')'); sg.addColorStop(1, 'rgba(' + SK2.rgb + ',0)'); ctx.save(); ctx.translate(SH.x, SH.y); ctx.scale(1, 0.5); ctx.translate(-SH.x, -SH.y); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(SH.x, SH.y, 62 * (1 + 0.05 * Math.sin(T * 4)), 0, 6.3); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.globalAlpha = sa; ctx.translate(SH.x, SH.y); ctx.scale(SC.scale, SC.scale); if (sp && simg2 && simg2.naturalWidth) ctx.drawImage(simg2, sp[0], sp[1], sp[2], sp[3], -sp[2] / 2, -sp[3] * 0.74, sp[2], sp[3]); else { ctx.fillStyle = SK2.col; ctx.fillRect(-30, -120, 60, 120); } ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; var sb2 = ctx.createLinearGradient(0, SH.y - 96, 0, SH.y - 30); sb2.addColorStop(0, 'rgba(' + SK2.rgb + ',0)'); sb2.addColorStop(1, 'rgba(' + SK2.rgb + ',' + (0.32 * sa * (0.8 + 0.2 * Math.sin(T * 5))).toFixed(3) + ')'); ctx.fillStyle = sb2; ctx.fillRect(SH.x - 7, SH.y - 96, 14, 66); ctx.restore(); }
+    var SF = this.shrineFx; if (SF) { var fq = (T - SF.t0) / 0.6; if (fq >= 1) this.shrineFx = null; else { ctx.save(); ctx.globalCompositeOperation = 'lighter'; var hh = this.hero, fg = ctx.createRadialGradient(hh.x, hh.y - 14, 2, hh.x, hh.y - 14, 20 + 46 * fq); fg.addColorStop(0, 'rgba(' + SF.rgb + ',' + (0.75 * (1 - fq)).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(' + SF.rgb + ',0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(hh.x, hh.y - 14, 20 + 46 * fq, 0, 6.3); ctx.fill(); ctx.restore(); } }
+    var BF = this.buff, bks = ['war', 'magic', 'guard'].filter(function (k) { return T < BF[k]; }); for (i = 0; i < bks.length; i++) { var bh = this.hero, brem = BF[bks[i]] - T, bal = (brem < 3 ? 0.35 + 0.3 * Math.sin(T * 12) : 0.5) ; ctx.strokeStyle = 'rgba(' + SC.kinds[bks[i]].rgb + ',' + bal.toFixed(3) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(bh.x, bh.y + 2, 17 + i * 4, 7 + i * 1.6, 0, 0, 6.3); ctx.stroke(); }   /* 성소 강화 중: 발밑에 종류 색 고리 (끝나기 3초 전부터 깜빡임) */
     if (T < this.stealthUntil) { var h = this.hero; ctx.fillStyle = 'rgba(120,80,200,' + (0.35 + 0.15 * Math.sin(T * 8)).toFixed(3) + ')'; ctx.beginPath(); ctx.ellipse(h.x, h.y + 2, 22, 9, 0, 0, 6.3); ctx.fill(); }
   };
 
