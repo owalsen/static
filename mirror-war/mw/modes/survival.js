@@ -120,7 +120,7 @@
     var A = D.assets, ids = [CFG.HERO];
     this.fxNeed = {};
     [26, 64].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });   /* 천지파열무의 불꽃: 데빌의 플레임 윈드(26, 불꽃 한 송이)와 폭발 함정의 불구름(64). 플레임 헬(27)은 불꽃 고리 뒤에 별 모양이 나오는 고유한 모양이라 쓰지 않는다 — 사용자 "플레임 헬의 모양을 그대로 갖고 오면 안 되고 불꽃만" (327번) */
-    this._need(ids); this._need([56, 15, 59, 68]);   /* 68 = 개미 (트래퍼 궁극기의 폭탄 개미) */   // 59 = 환술사 (트래퍼의 모습)
+    this._need(ids); this._need([56, 15, 59, 68, 47]);   /* 68 = 개미 (트래퍼 궁극기의 폭탄 개미) */   // 59 = 환술사 (트래퍼의 모습)
       // 15 = 마법전사 (섀도우 인필트레이터로 전직하면 이 모습)
     this._need(CFG.WAVE.list[0].add);   // 56 = 대도 (전직하면 이 모습)
     this._need(CFG.WAVE.list[1].add);   // 도둑과 1·2단계 유닛만 먼저 받는다 — 나머지는 한 단계 앞서 받는다 (_need)
@@ -291,6 +291,7 @@
     if (this.zrun) { this._zStep(dt); v = [0, 0]; }   /* 처형으로 달리는 동안은 조작이 안 먹는다 */
     if (this.rift && T - this.rift.t0 > ULT.shadow.life) this.rift = null;
     if (this.rift) { v = [0, 0]; var RA = h.t.anim.atk; var rq = T - this.rift.t0, RU = ULT.shadow; D._faceVec(h, RU.face[0], RU.face[1], true); h.state = 'attack'; h.at = rq < 0.25 ? RU.pose[0] : rq < RU.charge + RU.plant * 0.5 ? RU.pose[1] : RU.pose[2]; this.aimUntil = T + 0.2; this.stick = null; }   /* 329번(사용자 "칼 꽂는 게 캐릭터의 모션 자체가 바뀌어서 꽂아야지 갑자기 없던 칼이 등장하면 안 되지"): 따로 그린 칼은 없앴다 — 마법전사의 공격 동작을 아래 방향으로: 기를 모으는 동안 칼을 치켜들고(pose[1]), 꽂는 순간 내려찍은 자세(pose[2])로 끝까지 */   /* 천지파열무: 스킬이 끝날 때까지(균열이 사라질 때까지) 칼을 꽂은 자세로 못 움직인다 (323번, 2026-11-20 사용자) — 그동안 무적 */
+    if (this.dragCast) { v = [0, 0]; this.stick = null; }   /* 투룡: 기를 모으는 동안 제자리 */
     var moving = !!(v[0] || v[1]);
     var hs = this.speed * (T < this.stealthUntil && this._evo('shadow') ? 1.24 : 1) * (T < this.chillUntil ? CFG.MAGIC.frost.slow : 1);   // 냉기탄에 맞으면 잠깐 느려진다
     if (moving) { this.lastDir = v; h.x += v[0] * hs * dt; h.y += v[1] * hs * dt; if (h.state !== 'attack') h.state = 'move'; h.walkT += dt * Math.max(0.5, Math.hypot(v[0], v[1])) * CFG.SPEED; if (!(T < this.aimUntil)) D._faceVec(h, v[0], v[1]); }   // 단검을 던진 직후에는 던진 쪽을 본 채로 걷는다 (aimUntil)
@@ -630,7 +631,7 @@
     this.menuBtn = { x: W - 8 - 34, y: S.top + 12, w: 34, h: 28 };
     this.slots = []; for (i = 0; i < CFG.SLOTS; i++) this.slots.push({ x: 8 + i * (sw + gap), y: by, w: sw, h: sw });
     this.blinkBtn = { x: W - 8 - 44, y: by - 10, w: 44, h: 44 };
-    this.ultBtn = { x: W - 8 - 44 - 50, y: by - 10, w: 44, h: 44 };   // 궁극기 칸 (축지법 칸 왼쪽)
+    this.ultBtn = { x: W - 8 - 44 - 50, y: by - 10, w: 44, h: 44 }; this.ult2Btn = { x: W - 8 - 44 - 100, y: by - 10, w: 44, h: 44 };   /* 둘째 궁극기 칸 (그 왼쪽) */   // 궁극기 칸 (축지법 칸 왼쪽)
     this.hudBot = by - 36;   // 스킬 줄 + 그 위의 패시브 작은 칸                                   // 이 아래는 조작 영역이 아니다 (스킬 줄)
   };
   P._drawHud = function () {
@@ -678,6 +679,10 @@
     if (UD) { var urdy = !(this.tm.ult > 0), ucd = ULT.cd * (1 - this._pv('haste')); ctx.globalAlpha = 1; D._plate(U.x, U.y, U.w, U.h, 6, urdy); this.hit.push({ x: U.x, y: U.y, w: U.w, h: U.h, key: 'ult' }); if (UD.art) UD.art(ctx, U.x + 5, U.y + 5, U.w - 10, U.h - 10); else icon(UD.icon, U, 6);
       if (!urdy) { var ur = Math.min(1, this.tm.ult / ucd); ctx.fillStyle = 'rgba(0,0,0,.62)'; ctx.fillRect(U.x + 3, U.y + 3 + (U.h - 6) * (1 - ur), U.w - 6, (U.h - 6) * ur); ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(Math.ceil(this.tm.ult), U.x + U.w / 2, U.y + U.h / 2); ctx.fillStyle = '#fff'; ctx.fillText(Math.ceil(this.tm.ult), U.x + U.w / 2, U.y + U.h / 2); }
       else { ctx.strokeStyle = 'rgba(255,225,110,' + (0.55 + 0.45 * Math.sin(D.time * 9)).toFixed(3) + ')'; ctx.lineWidth = 2.5; ctx.strokeRect(U.x + 1, U.y + 1, U.w - 2, U.h - 2); } }
+    var U2 = this.ult2Btn, UD2 = this.cls && ULT2[this.cls];   /* 둘째 궁극기 칸 (무사의 투룡) */
+    if (UD2) { var u2rdy = !(this.tm.ult2 > 0), u2cd = UD2.cd * (1 - this._pv('haste')); ctx.globalAlpha = 1; D._plate(U2.x, U2.y, U2.w, U2.h, 6, u2rdy); this.hit.push({ x: U2.x, y: U2.y, w: U2.w, h: U2.h, key: 'ult2' }); UD2.art(ctx, U2.x + 5, U2.y + 5, U2.w - 10, U2.h - 10);
+      if (!u2rdy) { var u2r = Math.min(1, this.tm.ult2 / u2cd); ctx.fillStyle = 'rgba(0,0,0,.62)'; ctx.fillRect(U2.x + 3, U2.y + 3 + (U2.h - 6) * (1 - u2r), U2.w - 6, (U2.h - 6) * u2r); ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(Math.ceil(this.tm.ult2), U2.x + U2.w / 2, U2.y + U2.h / 2); ctx.fillStyle = '#fff'; ctx.fillText(Math.ceil(this.tm.ult2), U2.x + U2.w / 2, U2.y + U2.h / 2); }
+      else { ctx.strokeStyle = 'rgba(255,150,90,' + (0.55 + 0.45 * Math.sin(D.time * 9 + 1.5)).toFixed(3) + ')'; ctx.lineWidth = 2.5; ctx.strokeRect(U2.x + 1, U2.y + 1, U2.w - 2, U2.h - 2); } }
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
   };
   P._menuRows = function () { return [['resume', '계속하기'], ['sound', '소리: ' + (this.D.soundOn ? '켬' : '끔')], ['retry', '다시 하기'], ['exit', '모드 선택으로']]; };
@@ -733,7 +738,7 @@
       if (e.key === 'Escape') { if (self.menu) self.menu = false; else self.openMenu(); return; }
       if (e.code === 'KeyM' && !e.repeat) { D.sfx.unlock(); D.toggleSound(); return; }
       if (e.code === 'Space' && !e.repeat) { e.preventDefault(); self._blink(0, 0); return; }
-      if (e.code === 'KeyE' && !e.repeat) { self._slotTap('ult'); return; }
+      if (e.code === 'KeyE' && !e.repeat) { self._slotTap('ult'); return; } if (e.code === 'KeyR' && !e.repeat) { self._slotTap('ult2'); return; }
       if (self.cards && /^Digit[1-3]$/.test(e.code)) { var ci = +e.code.charAt(5) - 1; if (self.cards[ci] && self.cardT >= 0.4) self._pick(self.cards[ci]); return; }
       if (/^(Key[WASD]|Arrow(Up|Down|Left|Right))$/.test(e.code)) { e.preventDefault(); if (!self.menu) self.keys[e.code] = true; } });
     root.addEventListener('keyup', function (e) { delete self.keys[e.code]; });
@@ -896,6 +901,19 @@
     spd: { name: '숙련 — 손놀림', icon: 73, v: 0.025, max: 8, desc: function (n) { return '던지는 간격과 모든 스킬의 대기 −' + (this.v * 100).toFixed(1) + '% (지금 −' + (n * this.v * 100).toFixed(1) + '%)'; } },
     crit: { name: '숙련 — 날카로운 눈', icon: 63, v: 0.02, max: 10, desc: function (n) { return '치명타 확률 +' + pc(this.v) + ' (지금 +' + pc(n * this.v) + ', 최대 ' + pc(GROW.critMax) + '까지)'; } },
     hp: { name: '숙련 — 강인함', icon: 2, v: 25, max: 10, desc: function (n) { return '최대 체력 +' + this.v + ', 그만큼 회복 (지금 +' + n * this.v + ')'; } } };
+  /* 둘째 궁극기 칸 (README 366, 2026-11-23 사용자 "무사 궁극기 투룡 생성. 공격 방향으로 큰 빨간 용 머리가 나가면서 일직선상의 대지 전부에 폭발 + 화염 피해" → 칸을 하나 더, 쿨타임은 따로. "피해 범위는 가로 크기 화면 기준 1/3 이상은 때려야"):
+     투룡 = 가까운 적 쪽(없으면 걷던 쪽)으로 붉은 용(거울전쟁의 드래곤 그림, scale 배)이 speed 로 range 만큼 날아간다. 지나간 길(폭 = half × 2 = 150, 화면 가로 390 의 38%)의 적에게 피해 = 공격력 × mul(400%) + 불탐(초당 burn, 3초).
+     용이 지나간 자리는 step 마다 폭 가득 폭발하고 fireSec 초 동안 불길이 남아, 그 위의 적이 fireTick 마다 공격력 × fireMul 을 받는다. 쓰는 순간 0.6초 무적, 움직임은 막지 않는다 */
+  var ULT2 = { shadow: { name: '투룡', icon: 41, unit: 47, cd: q('dragoncd', 36), charge: q('dragoncharge', 0.8), slash: 0.22, pose: [1, 3],   /* 사용자 "무사의 모션은 가로베기 모션. 처음엔 느리게 기를 모은 후 칼을 슬래시하면 용이 나간다": charge 초 동안 칼을 치켜든 자세(pose[0])로 붉은 기운을 모으고(제자리·무적), 가로로 베는 순간(pose[1] 부터, 붉은 칼자국 slash 초) 용이 나간다 */ speed: 400, range: 640, half: q('dragonhalf', 75), mul: q('dragonmul', 4), floorUnit: 54, floor: q('dragonfloor', 0),   /* 사용자 "데미지는 공격력의 400% 정도" — 흑기사 체력 바닥값은 쓰지 않는다 (0) */ burn: 0.1, fireSec: 2.6, fireTick: 0.4, fireMul: 0.1,   /* 불길·불탐은 약하게 — 처음 0.5·0.3 은 합치면 공격력의 1200% 가 됐다 (사용자 "데미지는 공격력의 400% 정도") */ step: 34, scale: 1.5, seek: 420,
+    art: function (ctx, x, y, w, h) {   /* 버튼 그림: 왼쪽 아래에서 오른쪽 위로 뻗는 불길 한 줄기와 그 끝의 붉은 용 머리(뿔 둘·벌린 입) — 캔버스로 */
+      var cx = x + w / 2, cy = y + h / 2; ctx.save(); ctx.fillStyle = '#160708'; ctx.fillRect(x, y, w, h); var bg = ctx.createRadialGradient(cx, cy, 1, cx, cy, w * 0.75); bg.addColorStop(0, 'rgba(255,90,30,.5)'); bg.addColorStop(1, 'rgba(50,8,5,0)'); ctx.fillStyle = bg; ctx.fillRect(x, y, w, h); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+      ctx.translate(cx, cy); ctx.rotate(-0.6); ctx.lineCap = 'round'; var L = w * 0.5, i;
+      [['rgba(255,70,20,.4)', w * 0.34], ['#ff6a1c', w * 0.2], ['#ffc04a', w * 0.09]].forEach(function (ps) { ctx.strokeStyle = ps[0]; ctx.lineWidth = ps[1]; ctx.beginPath(); ctx.moveTo(-L * 1.2, w * 0.04); ctx.quadraticCurveTo(-L * 0.4, -w * 0.1, L * 0.15, 0); ctx.stroke(); });
+      ctx.fillStyle = '#c8281a'; ctx.beginPath(); ctx.moveTo(L * 0.95, 0); ctx.lineTo(L * 0.35, -w * 0.17); ctx.lineTo(-L * 0.1, -w * 0.2); ctx.lineTo(-L * 0.25, 0); ctx.lineTo(-L * 0.1, w * 0.2); ctx.lineTo(L * 0.35, w * 0.17); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#7a1208'; ctx.beginPath(); ctx.moveTo(L * 0.95, 0); ctx.lineTo(L * 0.3, w * 0.05); ctx.lineTo(L * 0.3, w * 0.17); ctx.closePath(); ctx.fill();   /* 벌린 아래턱 */
+      ctx.fillStyle = '#ffe9a0'; for (i = -1; i <= 1; i += 2) { ctx.beginPath(); ctx.moveTo(-L * 0.05, i * w * 0.16); ctx.lineTo(-L * 0.6, i * w * 0.34); ctx.lineTo(L * 0.1, i * w * 0.2); ctx.closePath(); ctx.fill(); }   /* 뿔 */
+      ctx.fillStyle = '#fff2b0'; ctx.fillRect(L * 0.28, -w * 0.11, w * 0.07, w * 0.05); ctx.restore(); },
+    desc: function () { return '겨눈 쪽으로 붉은 용이 날아가며 지나는 길을 넓게 터뜨리고 불태웁니다. 불길은 잠시 남아 그 위의 적을 태웁니다.'; } } };
   var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, ultPow: 1.5, ultCd: 0.75, item: { meat: q('meat', 0.032), magnet: 0.012, bomb: 0.008, pick: 44, max: 12, life: 45,   /* 327번: 아이템이 떨어지자마자 저절로 먹어지던 버그를 고친 뒤 — 이제 직접 주워야 하므로 나오는 확률을 1.6배쯤, 줍는 거리 26 → 44 */ heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, trapPlus: 3, bomb: { mul: q('bombmul', 0.6), r: 32, rLv: 3, speed: 0.5, sec: 1.1 },   /* 트래퍼의 기본 공격 = 폭탄 던지기 (309번, 2026-11-20 사용자 "기본 단도 공격보단 약하게, 대신 소범위 공격"): 단도 피해 × mul 을 맞은 자리 반경 r + rLv × 단계 안의 적 모두에게. 날아가는 속도 × speed(보이게), 던지는 간격 × sec */ critMax: 0.6, xpk: q('xpk', 0.33),   /* 0.6 × 0.7 — 한 판이 7분이 되어 같은 굴곡에서 같은 레벨이 나오게 */ need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
   SurvivalGame.SK = SK; SurvivalGame.CLS = CLS; SurvivalGame.GROW = GROW; SurvivalGame.ULT = ULT;
 
@@ -905,7 +923,7 @@
     this.sk = { dagger: 1, blink: 1 }; this.mast = {}; this.order = ['dagger']; this.tm = {}; this.traps = []; this.zones = []; this.gems = []; this.queue = [];
     this.stealthUntil = 0; this.hide = null; this.hideT = 0; this.lastDir = [1, 0]; this.lastDown = null; this.fire = {}; this.press = null; this.info = null; this.infoT = 0; this.guide = !D._svGuideSeen && !/[?&](tut=0|ts=)/.test(root.location.search); this.guideT = 0; D._svGuideSeen = true;   // 시작 안내: 들어와서 처음 한 번 (다시 하기에는 안 뜬다, 봇·시험 주소는 건너뜀)
     this.ult = null;   // (281번의 "고급 스킬을 궁극기 칸에 올리기"는 뺐다 — 궁극기는 전직이 준다. this.ult 는 늘 null)
-    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.petals = []; this.waves = []; this.blades = []; this.stabs = []; this.zrun = null; this.rift = null; this.crazy = null; this.freezeUntil = 0; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
+    this.items = []; this.fans = []; this.lobs = []; this.ants = []; this.petals = []; this.waves = []; this.blades = []; this.stabs = []; this.dragon = null; this.dragLine = null; this.dragCast = null; this.dragSlash = null; this.fires = []; this.zrun = null; this.rift = null; this.crazy = null; this.freezeUntil = 0; this.flashT = -9; this.awkSeen = {}; this.slashes = []; this.arcs = []; this.ghosts = []; this.puffs = []; this.bladeOn = false;
     Object.keys(SK).forEach(function (k) { var s = SK[k]; [s.arm, s.boom, s.fx].forEach(function (a) { var d = a != null && D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); }); });
     [3, 38].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var pre = /[?&]sk=([a-z,]+)/.exec(root.location.search); if (pre) pre[1].split(',').forEach(function (k) { if (SK[k]) { if (!self.sk[k] && SK[k].slot) self.order.push(k); self.sk[k] = q('sklv', 3); } });   // ?sk=fever,explo&sklv=5 : 시험용
@@ -1012,12 +1030,12 @@
   };
   /* 스킬 설명 카드 (칸을 꾹 누르면): 이름·단계·지금 효과·다음 단계. 각성 조건. 고급 스킬(SK.man)은 [궁극기 칸에 올리기] — 올리면 자동으로 안 나가고 궁극기 칸을 눌러 쓴다(위력 ×1.5·대기 −25%) */
   P._drawInfo = function () {
-    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, k = this.info.key, isU = k === 'ult', s = isU ? ULT[this.cls] : SK[k], l = isU ? 5 : (this.sk[k] || 1), A = s.awk, akl = A ? D._wrap('각성 「' + A.name + '」 — ' + A.text + '  (조건: 5단계 + ' + SK[A.pas].name + ')', Math.min(W - 24, 350) - 36) : [], ev = !isU && this._evo(k), IC = D.data.fx.icon, icons = D.assets.get('acticons'), pw = Math.min(W - 24, 350), px = Math.round((W - pw) / 2), y;
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, k = this.info.key, isU = k === 'ult' || k === 'ult2', s = k === 'ult2' ? ULT2[this.cls] : isU ? ULT[this.cls] : SK[k], l = isU ? 5 : (this.sk[k] || 1), A = s.awk, akl = A ? D._wrap('각성 「' + A.name + '」 — ' + A.text + '  (조건: 5단계 + ' + SK[A.pas].name + ')', Math.min(W - 24, 350) - 36) : [], ev = !isU && this._evo(k), IC = D.data.fx.icon, icons = D.assets.get('acticons'), pw = Math.min(W - 24, 350), px = Math.round((W - pw) / 2), y;
     ctx.fillStyle = 'rgba(4,6,10,.6)'; ctx.fillRect(0, 0, W, H); ctx.font = '12px sans-serif';
     var cur = D._wrap(s.desc(l, ev), pw - 36), nxt = l < 5 ? D._wrap(s.desc(l + 1, ev), pw - 36) : [], ph = 70 + cur.length * 17 + (nxt.length ? 26 + nxt.length * 17 : 0) + (akl.length ? 10 + akl.length * 17 : 0) + 30, py = Math.round(this.slots[0].y - 44 - ph);
     D._plate(px, py, pw, ph, 7, false); var fi = s.icon * 2; if (s.art) s.art(ctx, px + 16, py + 14, 38, 38); else if (icons && IC) ctx.drawImage(icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, px + 16, py + 14, 36, 40);
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText(isU ? s.name : this._name(k), px + 62, py + 26);
-    var TREE = { 'throw': '투척', trap: '함정', shadow: '암살', blade: '검술', pas: '패시브' }; ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = '#9cc0ff'; ctx.fillText(isU ? '궁극기  ·  대기 ' + Math.round(ULT.cd * (1 - this._pv('haste'))) + '초  ·  ' + CLS[this.cls].name : TREE[s.tree] + '  ·  Lv ' + l + (l >= 5 ? ' (최대)' : ''), px + 62, py + 46);
+    var TREE = { 'throw': '투척', trap: '함정', shadow: '암살', blade: '검술', pas: '패시브' }; ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = '#9cc0ff'; ctx.fillText(isU ? '궁극기  ·  대기 ' + Math.round((s.cd || ULT.cd) * (1 - this._pv('haste'))) + '초  ·  ' + CLS[this.cls].name : TREE[s.tree] + '  ·  Lv ' + l + (l >= 5 ? ' (최대)' : ''), px + 62, py + 46);
     ctx.font = '12px sans-serif'; ctx.fillStyle = '#dfe6f5'; y = py + 74; cur.forEach(function (ln) { ctx.fillText(ln, px + 18, y); y += 17; });
     if (nxt.length) { y += 8; ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = '#9fe08a'; ctx.fillText('다음 단계', px + 18, y); y += 18; ctx.font = '12px sans-serif'; ctx.fillStyle = '#aab3c7'; nxt.forEach(function (ln) { ctx.fillText(ln, px + 18, y); y += 17; }); }
     if (akl.length) { y += 8; ctx.font = '12px sans-serif'; ctx.fillStyle = this._awk(k) ? '#7fe0ff' : '#7b93a8'; akl.forEach(function (ln) { ctx.fillText(ln, px + 18, y); y += 17; }); }
@@ -1030,7 +1048,7 @@
   };
   P._slotAt = function (x, y) { var L = this.hit || [], i; for (i = 0; i < L.length; i++) if (x >= L[i].x - 2 && x <= L[i].x + L[i].w + 2 && y >= L[i].y - 2 && y <= L[i].y + L[i].h + 2) return L[i].key; return null; };
   /* 칸을 짧게 눌렀다: 축지법은 걷던 쪽으로, 수동 스킬은 준비됐으면 발동 */
-  P._slotTap = function (k) { if (k === 'blink') this._blink(0, 0); else if (k === 'ult') this._ultFire(); };
+  P._slotTap = function (k) { if (k === 'blink') this._blink(0, 0); else if (k === 'ult') this._ultFire(); else if (k === 'ult2') this._ult2Fire(); };
   P._cardTap = function (x, y) { if (this.cardT < 0.4) return; for (var i = 0; i < this.cards.length; i++) if (inBox(this.cards[i].box, x, y)) { this._pick(this.cards[i]); return; } };
 
   /* 피해: 둘레 폭발 · 단검 한 발 */
@@ -1174,6 +1192,18 @@
         var hg = ctx.createRadialGradient(pe.x, pe.y - 14, 2, pe.x, pe.y - 14, 26); hg.addColorStop(0, 'rgba(170,220,255,.5)'); hg.addColorStop(1, 'rgba(120,180,255,0)'); ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(pe.x, pe.y - 14, 26, 0, 6.2832); ctx.fill(); ctx.restore();
         ctx.globalAlpha = 0.6; h.x = pe.x; h.y = pe.y; if (!pe.back) h.dir = pe.dir; else D._faceVec(h, pe.vx, pe.vy, true); D._drawUnit(h); }
       h.x = qx; h.y = qy; h.hp = qhp; h.dir = qd; h.state = qs; h.at = qa; ctx.globalAlpha = 1; }
+    if (this.fires.length) { var fa2 = D.data.fx.arms[26], ff2 = fa2 && (fa2.hit.length ? fa2.hit : fa2.fly.length ? fa2.fly : fa2.seq);   /* 투룡이 지나간 자리의 불길 (원작 불꽃 이펙트를 작게) */
+      for (i = 0; i < this.fires.length; i++) { var fr2 = this.fires[i], fk2 = Math.min(1, (T - fr2.t0) / 0.15, (fr2.until - T) / 0.5); ctx.save(); ctx.translate(fr2.x, fr2.y); ctx.scale(0.5, 0.5); ctx.globalAlpha = 0.72 * Math.max(0, fk2);
+        if (ff2 && ff2.length) D._fxFrame(ff2[Math.floor((T + fr2.ph) * 14) % ff2.length], 0, 0, true); ctx.restore(); } }
+    var DCd = this.dragCast; if (DCd) { var ck = Math.max(0, Math.min(1, (T - DCd.t0) / ULT2.shadow.charge)), chh = this.hero, cr = 58 - 34 * ck; ctx.save(); ctx.globalCompositeOperation = 'lighter';   /* 투룡의 기 모으기: 붉은 기운이 몸으로 좁혀 들며 짙어진다 */
+      var cg2 = ctx.createRadialGradient(chh.x, chh.y - 16, cr * 0.25, chh.x, chh.y - 16, cr); cg2.addColorStop(0, 'rgba(255,150,60,' + (0.15 + 0.5 * ck).toFixed(3) + ')'); cg2.addColorStop(0.7, 'rgba(255,60,20,' + (0.12 + 0.3 * ck).toFixed(3) + ')'); cg2.addColorStop(1, 'rgba(200,20,10,0)'); ctx.fillStyle = cg2; ctx.beginPath(); ctx.arc(chh.x, chh.y - 16, cr, 0, 6.3); ctx.fill();
+      for (i = 0; i < 6; i++) { var ca = i * 1.047 + T * 2.2, cd2 = (1 - ((ck * 1.6 + i * 0.17) % 1)) * 60 + 8, cgx = chh.x + Math.cos(ca) * cd2, cgy = chh.y - 16 + Math.sin(ca) * cd2 * 0.7, cg3 = ctx.createRadialGradient(cgx, cgy, 0, cgx, cgy, 9); cg3.addColorStop(0, 'rgba(255,190,90,' + (0.55 * ck + 0.2).toFixed(3) + ')'); cg3.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = cg3; ctx.beginPath(); ctx.arc(cgx, cgy, 9, 0, 6.3); ctx.fill(); }   /* 빨려 드는 불씨 */
+      ctx.restore(); }
+    var DSd = this.dragSlash; if (DSd) { var sk3 = 1 - (T - DSd.t0) / ULT2.shadow.slash; if (sk3 <= 0) this.dragSlash = null; else { ctx.save(); ctx.translate(DSd.x, DSd.y - 14); ctx.rotate(DSd.a); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';   /* 가로 베기의 붉은 칼자국: 베는 쪽으로 볼록한 초승달이 앞으로 밀려 나간다 */
+        var so = (1 - sk3) * 22; ctx.strokeStyle = 'rgba(255,80,30,' + (0.6 * sk3).toFixed(3) + ')'; ctx.lineWidth = 13; ctx.beginPath(); ctx.arc(so - 22, 0, 48, -1.15, 1.15); ctx.stroke(); ctx.strokeStyle = 'rgba(255,235,190,' + (0.95 * sk3).toFixed(3) + ')'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(so - 22, 0, 49, -1.05, 1.05); ctx.stroke(); ctx.restore(); } }
+    var DGd = this.dragon; if (DGd) { var du2 = DGd.u, df2 = du2.t.frames[du2.frameIndex(D.rules.tps)], dim = D.assets.get('u' + du2.t.id), dk2 = Math.min(1, DGd.go / 60, (ULT2.shadow.range - DGd.go) / 90 + 0.1), dsc = ULT2.shadow.scale;   /* 붉은 용 (거울전쟁 드래곤 그림) + 뒤따르는 불빛 */
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; var dgl = ctx.createRadialGradient(DGd.x, DGd.y - 40, 6, DGd.x, DGd.y - 40, 100); dgl.addColorStop(0, 'rgba(255,120,40,' + (0.45 * dk2).toFixed(3) + ')'); dgl.addColorStop(1, 'rgba(255,60,10,0)'); ctx.fillStyle = dgl; ctx.beginPath(); ctx.arc(DGd.x, DGd.y - 40, 100, 0, 6.3); ctx.fill(); ctx.restore();
+      if (df2 && dim && dim.naturalWidth) { ctx.save(); ctx.translate(DGd.x, DGd.y + 30); ctx.scale(du2.mir ? -dsc : dsc, dsc); ctx.globalAlpha = Math.max(0, dk2); ctx.drawImage(dim, df2[0], df2[1], df2[2], df2[3], -df2[4], -df2[5], df2[2], df2[3]); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * Math.max(0, dk2); ctx.drawImage(dim, df2[0], df2[1], df2[2], df2[3], -df2[4], -df2[5], df2[2], df2[3]); ctx.restore(); } }
     for (i = this.stabs.length - 1; i >= 0; i--) { var sb = this.stabs[i], sq = 1 - (D.time - sb.t0) / 0.18; if (sq <= 0) { this.stabs.splice(i, 1); continue; }   /* 환영검이 꿰뚫는 순간: 적을 지나 뒤로 길게 빠지는 빛줄기 (푸른 빛 + 흰 속) */
       var sx0 = sb.x - sb.vx * (sb.len || 22), sy0 = sb.y - sb.vy * (sb.len || 22), sfw = sb.rgb ? 6 : 30 + 26 * (1 - sq), sx1 = sb.x + sb.vx * sfw, sy1 = sb.y + sb.vy * sfw; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       var sgd = ctx.createLinearGradient(sx0, sy0, sx1, sy1); var srg = sb.rgb || '150,205,255'; sgd.addColorStop(0, 'rgba(' + srg + ',0)'); sgd.addColorStop(sb.rgb ? 0.7 : 0.45, 'rgba(' + srg + ',' + ((sb.rgb ? 0.6 : 0.85) * sq).toFixed(3) + ')'); sgd.addColorStop(1, 'rgba(' + srg + ',0)'); ctx.strokeStyle = sgd; ctx.lineWidth = (sb.rgb ? 4 : 8) * sq + 1; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1); ctx.stroke();
@@ -1204,7 +1234,7 @@
     var due = function (key) { if (!self.sk[key]) return false; tm[key] = (tm[key] == null ? 0.6 : tm[key]) - dt * (self.D.time < self.buff.magic ? CFG.SHRINE.kinds.magic.cd : 1); if (tm[key] > 0) return false;   /* 마력의 성소: 쿨타임이 빨리 돈다 */
       if (self.ult === key) { if (!self.fire[key]) { tm[key] = 0; return false; } self.fire[key] = false; }   // 궁극기 칸에 올린 스킬: 준비된 채로 누르기를 기다린다
       return true; };
-    if (tm.blink > 0) tm.blink -= dt; if (tm.ult > 0) tm.ult -= dt;
+    if (tm.blink > 0) tm.blink -= dt; if (tm.ult > 0) tm.ult -= dt; if (tm.ult2 > 0) tm.ult2 -= dt; this._dragonStep(dt);
     var HS = 1 - this._pv('haste'), RC = 1 + this._pv('reach'), LS = 1 + this._pv('last');   // 패시브: 대기 배수 · 범위 배수 · 지속 배수
     var CD = function (key, lv) { return SK[key].cd(lv) * HS * (self.ult === key ? GROW.ultCd : 1); }, UP = function (key) { return self.ult === key ? GROW.ultPow : 1; };   // 궁극기 칸: 대기 −25%, 위력 ×1.5
     if (this.hide && T >= this.stealthUntil) this.hide = null;   // 최대 시간이 지나면 저절로 풀린다 (계속 숨어서 버티지 못하게)
@@ -1310,6 +1340,35 @@
         this._hitFoe(u, base, h.act.arm, 1.5); if (T - (this.zSndT || -9) > 0.07) { this.zSndT = T; D._play(h.act.snd, 0.45); } } }
     D._faceVec(h, dx, dy, true); var ZA = h.t.anim.atk; h.state = 'attack'; h.at = ZA && ZA.hit != null ? ZA.hit : 4; this.aimUntil = T + 0.1;
     if (Z.i >= Z.pts.length) { this.zrun = null; this.invUntil = T + 0.5; h.state = 'idle'; }
+  };
+  P._ult2Fire = function () {   /* 둘째 궁극기 (ULT2) — 투룡: 기 모으기부터 */
+    var D = this.D, T = D.time, h = this.hero, U = this.cls && ULT2[this.cls]; if (!U || this.tm.ult2 > 0 || this.over || this.cards || this.info || this.rift || this.dragCast) return;
+    var a = this._dragonAim(); this.tm.ult2 = U.cd * (1 - this._pv('haste')); this._text(h.x, h.y - h.headY - 24, U.name, '#ff9a6a'); D._play(5092, 0.5);
+    this.dragCast = { t0: T, at: T + U.charge, dx: a[0], dy: a[1] }; D._faceVec(h, a[0], a[1], true); h.state = 'attack'; h.at = U.pose[0]; this.aimUntil = T + U.charge + 0.5; this.invUntil = Math.max(this.invUntil, T + U.charge + 0.6); this.stick = null;
+  };
+  P._dragonAim = function () { var h = this.hero, U = ULT2.shadow, nr = this._nearest(1, U.seek, null)[0], dx, dy; if (nr) { dx = nr.x - h.x; dy = nr.y - h.y; } else if (this.lastV) { dx = this.lastV[0]; dy = this.lastV[1]; } else { dx = 0; dy = 1; } var dl = Math.hypot(dx, dy) || 1; return [dx / dl, dy / dl]; };
+  P._dragonLaunch = function () {   /* 베는 순간: 용이 나간다 */
+    var D = this.D, T = D.time, h = this.hero, U = ULT2.shadow, a = this._dragonAim(), dx = a[0], dy = a[1];
+    var du = new MWE.Unit(D.types[U.unit], D.types[U.unit].fac, h.x, h.y); du.state = 'move'; du.walkT = 0; D._faceVec(du, dx, dy, true);
+    this.dragon = { u: du, x0: h.x, y0: h.y, x: h.x, y: h.y, dx: dx, dy: dy, go: 0, step: 0, hit: {}, t0: T }; this.dragLine = { x0: h.x, y0: h.y, dx: dx, dy: dy, len: 0, until: T + U.range / U.speed + U.fireSec, next: T + U.fireTick };
+    D._faceVec(h, dx, dy, true); h.state = 'attack'; h.at = U.pose[1]; this.aimUntil = T + 0.5; this.dragSlash = { t0: T, a: Math.atan2(dy, dx), x: h.x, y: h.y }; this.flashT = T - 0.18; D._play(5064, 0.7);
+  };
+  P._dragonStep = function (dt) {
+    var U = ULT2.shadow, D = this.D, T = D.time, F = this.foes, DC = this.dragCast, i, f, rx, ry, al, pp, w;
+    if (DC) { var hh = this.hero; if (hh.state === 'dead' || this.over) this.dragCast = null; else if (T >= DC.at) { this.dragCast = null; this._dragonLaunch(); } else { hh.state = 'attack'; hh.at = U.pose[0]; } }   /* 기 모으는 동안: 칼을 치켜든 자세로 멈춰 있다 */
+    var DG = this.dragon, DL = this.dragLine;
+    if (DG) { var st = U.speed * dt; DG.go += st; DG.x += DG.dx * st; DG.y += DG.dy * st; DG.u.x = DG.x; DG.u.y = DG.y; DG.u.walkT += dt; if (DL) DL.len = DG.go;
+      var kf = D.types[U.floorUnit], dmg = Math.max(this._base() * U.mul, kf ? kf.hp * CFG.FOE.hp * this._hpK() * U.floor : 0);
+      for (i = 0; i < F.length; i++) { f = F[i]; if (f.state === 'dead' || DG.hit[f.uid]) continue; rx = f.x - DG.x0; ry = f.y - DG.y0; al = rx * DG.dx + ry * DG.dy; pp = Math.abs(rx * DG.dy - ry * DG.dx); if (al < -16 || al > DG.go + 20 || pp > U.half) continue;
+        DG.hit[f.uid] = 1; f.bleedUntil = Math.max(f.bleedUntil || 0, T + 3); f.bleed = Math.max(f.bleed || 0, this._base() * U.burn); this._hitFoe(f, dmg, -1); }
+      while (DG.step <= DG.go) { for (w = -1; w <= 1; w++) { var off = w * U.half * 0.62 + (D.rng.next() - 0.5) * 20, px = DG.x0 + DG.dx * DG.step - DG.dy * off + (D.rng.next() - 0.5) * 14, py = DG.y0 + DG.dy * DG.step + DG.dx * off + (D.rng.next() - 0.5) * 10;   /* 폭 가득: 가운데와 양옆 */
+          var sn = Math.round(DG.step / U.step); if (w === 0 ? sn % 2 === 0 : sn % 4 === (w > 0 ? 1 : 3)) { this._fx(px, py - 6, SK.explo.boom); var se = this.effects[this.effects.length - 1]; if (se) { se.sc = w ? 0.36 : 0.46; se.al = 0.7; } }   /* 폭발은 띄엄띄엄 — 다 터뜨리면 화면이 하얗게 덮인다 */
+          this.fires.push({ x: px, y: py, t0: T, until: T + U.fireSec * (0.8 + 0.4 * D.rng.next()), ph: D.rng.next() * 9 }); }
+        DG.step += U.step; if (T - (this.dragSndT || -9) > 0.22) { this.dragSndT = T; D._play(5012, 0.4); } }
+      if (DG.go >= U.range) this.dragon = null; }
+    if (DL) { if (T >= DL.until) this.dragLine = null; else if (T >= DL.next) { DL.next = T + U.fireTick; var fd = this._base() * U.fireMul;   /* 남은 불길: 그 위의 적이 탄다 */
+        for (i = 0; i < F.length; i++) { f = F[i]; if (f.state === 'dead') continue; rx = f.x - DL.x0; ry = f.y - DL.y0; al = rx * DL.dx + ry * DL.dy; pp = Math.abs(rx * DL.dy - ry * DL.dx); if (al >= -10 && al <= DL.len + 10 && pp <= U.half) this._hitFoe(f, fd, -1); } } }
+    if (this.fires.length) this.fires = this.fires.filter(function (q5) { return T < q5.until; });
   };
   P._ultFire = function () {
     var self = this, D = this.D, T = D.time, h = this.hero, F = this.foes, U = ULT[this.cls], k; if (!U || this.tm.ult > 0 || this.over || this.cards || this.info) return;
