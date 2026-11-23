@@ -84,7 +84,7 @@
     SHRINE: { from: q('shrinefrom', 210), every: q('shrineevery', 55), everyRage: 40, dist: [260, 340], life: 40, touch: 30, sec: q('shrinesec', 20), pic: 18, scale: 0.34,
       kinds: { life: { name: '생명의 성소', note: '체력 전부 회복', col: '#7be07a', rgb: '110,230,120' }, war: { name: '전투의 성소', note: '피해 +40%', col: '#ff8a6a', rgb: '255,120,80', dmg: 1.4 },
         magic: { name: '마력의 성소', note: '쿨타임 2배 빠름', col: '#7fbcff', rgb: '110,170,255', cd: 2 }, guard: { name: '수호의 성소', note: '받는 피해 절반', col: '#ffd35a', rgb: '255,205,80', take: 0.5 } } },
-    RESCUE: { hp: q('rescuehp', 0.2), cd: q('rescuecd', 8), ahead: 62 },
+    RESCUE: { hp: q('rescuehp', 0.2), cd: q('rescuecd', 15), ahead: 62 },   /* 358번(2026-11-23 사용자 "구급 물약 간격을 늘려 줘"): 8 → 15초 — 8초일 때 무사 봇이 처음으로 10분을 버텼다 */
     STORM: { first: q('stormat', 14), every: q('stormevery', 38), vol: q('stormvol', 4), gap: 1.15, n: q('stormn', 8), r: 44, warn: q('stormwarn', 0.95), dmg: 1, lead: [0, 0.55, 1.05], ring: [66, 150], nUp: 1, potion: q('stormpot', 2), potR: [46, 84] },   /* nUp = 차례가 거듭될 때마다 한 번에 떨어지는 자리 +1 (8 → 12). potion = 한 차례가 다 지나가면 주인공 둘레 potR 거리에 회복 아이템(고기)을 이만큼 뿌린다 (2026-11-23 사용자 "한 번 지나면 포션을 두어 개 뿌려서 회복할 수 있게") */
     MAGIC: { from: q('magicfrom', 5), every: [q('magicevery', 7), 3.2], near: 340, ids: [11, 33, 49, 12, 25, 16, 50, 26, 9, 13, 27, 51, 19, 21, 59, 61, 62, 20, 63, 64, 67, 58],
       kinds: [[5, 'fan'], [6, 'blast'], [7, 'frost'], [8, 'orb'], [9, 'rain']],
