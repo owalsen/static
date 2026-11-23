@@ -790,7 +790,7 @@
       desc: function (l) { return this.cd(l) + '초마다 깔아 둔 덫을 모두 터뜨립니다. 덫마다 둘레에 피해 ' + pc(this.dmg(l)); } },
     gas: { awk: { pas: 'last', name: '역병 지대', text: '독 구름이 도둑을 따라다닌다' }, man: 1, name: '유독가스', tree: 'trap', icon: 92, slot: 1, arm: 79, evo: { cls: 'trapper', name: '유독가스' }, cd: L5([9, 8.5, 8, 7.5, 7]), dmg: L5([0.8, 1, 1.2, 1.5, 1.8]), r: 50, dur: 4, v: 0.1,
       desc: function (l, ev) { return this.cd(l) + '초마다 독 구름을 던집니다. ' + (ev ? 6 : 4) + '초 동안 안의 적에게 초당 피해 ' + pc(this.dmg(l)) + ', 받는 피해 +' + (ev ? '16%' : '10%') + (ev ? ' (범위 1.5배)' : ''); } },
-    blink: { name: '축지법', tree: 'shadow', icon: 12, cd: L5([6, 5.5, 5, 4.5, 4]), dist: L5([110, 140, 170, 205, 240]),   /* 355번(2026-11-23 사용자 "텔레포트의 사정거리 증가폭을 좀 늘려줘, 후반엔 금방 따라잡히니까"): 단계마다 +15 → +30~35 (전 110·125·140·155·170) */
+    blink: { name: '축지법', tree: 'shadow', icon: 12, cd: L5([6, 5.5, 5, 4.5, 4]), dist: L5([110, 125, 140, 155, 170]),   /* 355번에서 110·140·170·205·240 으로 늘렸다가 360번(2026-11-23 사용자 "축지법 사거리 원래대로")에 되돌림 */
       desc: function (l) { return '화면을 두 번 누르면 그쪽으로 ' + this.dist(l) + '만큼 순간 이동합니다 (대기 ' + this.cd(l) + '초, 잠깐 무적)'; } },
     surprise: { awk: { pas: 'power', name: '연쇄 기습', text: '가장 튼튼한 적 셋을 한꺼번에' }, man: 1, name: '기습', tree: 'shadow', icon: 85, slot: 1, fx: 74, evo: { cls: 'shadow', name: '교란' }, cd: L5([7, 6.5, 6, 5.5, 5]), dmg: L5([5, 6.5, 8, 10, 12]), range: 230,
       desc: function (l, ev) { return this.cd(l) + '초마다 가장 튼튼한 적을 급습해 피해 ' + pc(this.dmg(l)) + (ev ? ', 둘레의 적을 2초 멈춥니다' : ''); } },
