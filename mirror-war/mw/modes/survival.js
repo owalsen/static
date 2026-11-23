@@ -239,7 +239,7 @@
   P._hitHero = function (dmg) {
     var D = this.D, h = this.hero; if (this.over || D.time < this.invUntil || dmg <= 0) return;
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minHit)); this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; this.invUntil = D.time + CFG.HURT.inv;   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
+    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minHit)); this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
@@ -779,6 +779,9 @@
     haste: { name: '전문 도구', tree: 'pas', icon: 73, v: L5([0.06, 0.12, 0.18, 0.24, 0.3]), desc: function (l) { return '던지는 간격과 모든 스킬의 대기 −' + pc(this.v(l)); } },
     reach: { name: '함정 개조', tree: 'pas', icon: 57, evo: { cls: 'shadow', name: '검기 확장' }, v: L5([0.1, 0.2, 0.3, 0.4, 0.5]), desc: function (l, ev) { return ev ? '회오리 베기·설화난영참이 닿는 범위 +' + pc(this.v(l)) : '폭발·독 구름·덫이 닿는 범위 +' + pc(this.v(l)); } },   /* 무사의 길에서는 이름·설명이 검술용으로 바뀐다 (332번, 2026-11-20 사용자 "무사는 함정 관련 스킬이 아예 없어야 함") — 효과는 같은 범위 배수 */
     last: { name: '전문가의 기술', tree: 'pas', icon: 71, evo: { cls: 'shadow', name: '전문가의 기술' }, v: L5([0.15, 0.3, 0.45, 0.6, 0.75]), desc: function (l, ev) { return (ev ? '그림자 숨기의 지속 시간 +' : '감속·묶기·독·숨기의 지속 시간 +') + pc(this.v(l)); } },   /* 무사에게는 함정·독 이야기를 빼고 보인다 */
+    /* 비켜 피하기 (347번, 2026-11-23 사용자 "후반에 무사가 너무 어려운데 붉은보석 스킬 중에 회피나 무적기 또는 버티기류 아이디어" → 후보 중 "비켜 피하기로 가자" — 무도가의 「비켜 피하기」: 맞으면 재빠르게 옆으로 돌며 후속 공격을 피하고 잠시 무적): 무사 전용 패시브.
+       맞은 뒤의 무적 시간이 0.25초 → v 초로 늘어난다(무리에 둘러싸여 연달아 맞는 것을 끊는다). 맞는 순간 옆으로 비켜서는 잔상이 잠깐 보인다 */
+    sidestep: { only: 'shadow', name: '비켜 피하기', tree: 'pas', icon: 9, v: L5([0.5, 0.65, 0.8, 1, 1.2]), desc: function (l) { return '맞은 뒤 ' + this.v(l) + '초 동안 다음 공격을 피합니다 (보통은 ' + CFG.HURT.inv + '초)'; } },
     regen: { name: '해독', tree: 'pas', icon: 2, v: L5([0.5, 1, 1.5, 2, 2.5]), desc: function (l) { return '체력을 초당 ' + this.v(l) + ' 회복합니다'; } }
   };
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
