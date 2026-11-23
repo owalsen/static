@@ -152,7 +152,7 @@
     var D = this.D;
     if (D.time - (D._groundAt || 0) > 0.5 && D.terrain) D._makeGround();   // 아이폰이 보조 캔버스를 비우는 문제의 복구 (defense.js _frame 과 같은 이유)
     for (var k = 0; k < CFG.TS; k++) {
-      if (!this.menu && !D.paused && this.ready()) { if (this.guide) this.guideT += dt; else if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else this.update(dt); }
+      if (!this.menu && !D.paused && this.ready()) { if (this.guide) this.guideT += dt; else if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else if (this.aim2) { /* 투룡 조준 중: 방향을 찍을 때까지 게임이 멈춘다 (371번) */ } else this.update(dt); }
       D.time += dt; }                                        // D._faceVec·_drawUnit 이 D.time 을 본다
     if (this.menu) this.menuT += dt;
     if (this.press && Date.now() - this.press.t0 >= 350 && !this.cards && !this.over && !this.menu) { var ik = this.press.key === 'ult' && !this.cls ? null : this.press.key; if (ik) { this.info = { key: ik }; this.infoT = 0; } this.press = null; this.stick = null; this.keys = {}; }   // 스킬 칸을 꾹 누르면 설명 (게임은 멈춘다)
@@ -506,6 +506,7 @@
     var ht = 1 - (D.time - this.hurtT) / CFG.HURT.flash, low = h.hp > 0 && h.hp <= h.maxHp * 0.3 ? 0.35 + 0.15 * Math.sin(D.time * 6) : 0, va = Math.max(ht > 0 ? ht * 0.75 : 0, low);
     if (va > 0) { var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.72); vg.addColorStop(0, 'rgba(200,20,10,0)'); vg.addColorStop(1, 'rgba(200,20,10,' + va.toFixed(3) + ')'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
     var bf = 1 - (D.time - this.flashT) / 0.3; if (bf > 0) { ctx.fillStyle = 'rgba(255,245,220,' + (0.55 * bf).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }   // 폭탄: 화면이 번쩍
+    if (this.aim2 && !this.over && !this.cards) { var AD = this.D, ac = AD.ctx; ac.fillStyle = 'rgba(4,6,12,.5)'; ac.fillRect(0, 0, AD.W, AD.H); ac.font = 'bold 15px sans-serif'; ac.textAlign = 'center'; ac.textBaseline = 'middle'; ac.lineWidth = 3; ac.strokeStyle = '#000'; ac.strokeText('투룡 — 시전 방향을 선택하세요', AD.W / 2, AD.H * 0.24); ac.fillStyle = '#ffb27a'; ac.fillText('투룡 — 시전 방향을 선택하세요', AD.W / 2, AD.H * 0.24); ac.textAlign = 'left'; }   /* 투룡 조준 중: 전장을 어둡게 (371번, 사용자 "첫 번째 클릭 시 딤드 처리되고 적들과 투사체 멈춤. 방향을 찍어야 다시 풀림") */
     this._drawStick(); this._drawHud();
     if (this.hide && !this.over) this._drawHide();
     if (this.over) this._drawOver();
@@ -1048,7 +1049,7 @@
   };
   P._slotAt = function (x, y) { var L = this.hit || [], i; for (i = 0; i < L.length; i++) if (x >= L[i].x - 2 && x <= L[i].x + L[i].w + 2 && y >= L[i].y - 2 && y <= L[i].y + L[i].h + 2) return L[i].key; return null; };
   /* 칸을 짧게 눌렀다: 축지법은 걷던 쪽으로, 수동 스킬은 준비됐으면 발동 */
-  P._slotTap = function (k) { if (k === 'blink') this._blink(0, 0); else if (k === 'ult') this._ultFire(); else if (k === 'ult2') this._ult2Aim(); };
+  P._slotTap = function (k) { if (this.aim2 && k !== 'ult2') return;   /* 조준 중에는 다른 칸이 눌리지 않는다 */ if (k === 'blink') this._blink(0, 0); else if (k === 'ult') this._ultFire(); else if (k === 'ult2') this._ult2Aim(); };
   P._cardTap = function (x, y) { if (this.cardT < 0.4) return; for (var i = 0; i < this.cards.length; i++) if (inBox(this.cards[i].box, x, y)) { this._pick(this.cards[i]); return; } };
 
   /* 피해: 둘레 폭발 · 단검 한 발 */
@@ -1344,7 +1345,7 @@
   };
   P._ult2Aim = function () {   /* 둘째 궁극기 칸을 눌렀다: 조준 상태로 (한 번 더 누르면 가장 가까운 적 쪽으로 바로 — 키보드용) */
     var U = this.cls && ULT2[this.cls]; if (!U || this.tm.ult2 > 0 || this.over || this.cards || this.info || this.rift || this.dragCast) return;
-    if (this.aim2) { this.aim2 = 0; this._ult2Fire(); return; } this.aim2 = this.D.time + 8; this.stick = null; this.banner = { s: U.name + ' — 시전 방향을 선택하세요', t0: this.D.time, col: '#ff9a6a' };
+    if (this.aim2) { this.aim2 = 0; this._ult2Fire(); return; } this.aim2 = 1; this.stick = null; this.keys = {};   /* 방향을 찍을 때까지 멈춘다 — 시간 제한 없음 (알림은 어두워진 화면 위에 계속 떠 있다) */
   };
   P._ult2Fire = function (ax, ay) {   /* 둘째 궁극기 (ULT2) — 투룡: 기 모으기부터. ax·ay = 쏠 방향(없으면 가장 가까운 적 쪽) */
     var D = this.D, T = D.time, h = this.hero, U = this.cls && ULT2[this.cls]; if (!U || this.tm.ult2 > 0 || this.over || this.cards || this.info || this.rift || this.dragCast) return;
@@ -1359,7 +1360,7 @@
     D._faceVec(h, dx, dy, true); h.state = 'attack'; h.at = U.pose[1]; this.aimUntil = T + 0.5; this.dragSlash = { t0: T, a: Math.atan2(dy, dx), x: h.x, y: h.y }; this.flashT = T - 0.18; D._play(5064, 0.7);
   };
   P._dragonStep = function (dt) {
-    var U = ULT2.shadow, D = this.D, T = D.time, F = this.foes, DC = this.dragCast, i, f, rx, ry, al, pp, w; if (this.aim2 && (T > this.aim2 || this.over)) this.aim2 = 0;   /* 조준은 8초 뒤 저절로 풀린다 */
+    var U = ULT2.shadow, D = this.D, T = D.time, F = this.foes, DC = this.dragCast, i, f, rx, ry, al, pp, w;
     if (DC) { var hh = this.hero; if (hh.state === 'dead' || this.over) this.dragCast = null; else if (T >= DC.at) { this.dragCast = null; this._dragonLaunch(DC.dx, DC.dy); } else { hh.state = 'attack'; hh.at = U.pose[0]; } }   /* 기 모으는 동안: 칼을 치켜든 자세로 멈춰 있다 */
     var DG = this.dragon, DL = this.dragLine;
     if (DG) { var st = U.speed * dt; DG.go += st; DG.x += DG.dx * st; DG.y += DG.dy * st; DG.u.x = DG.x; DG.u.y = DG.y; DG.u.walkT += dt; if (DL) DL.len = DG.go;
