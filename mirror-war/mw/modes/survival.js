@@ -1344,7 +1344,7 @@
   };
   P._ult2Aim = function () {   /* 둘째 궁극기 칸을 눌렀다: 조준 상태로 (한 번 더 누르면 가장 가까운 적 쪽으로 바로 — 키보드용) */
     var U = this.cls && ULT2[this.cls]; if (!U || this.tm.ult2 > 0 || this.over || this.cards || this.info || this.rift || this.dragCast) return;
-    if (this.aim2) { this.aim2 = 0; this._ult2Fire(); return; } this.aim2 = this.D.time + 8; this.stick = null; this.banner = { s: U.name + ' — 쏠 쪽을 누르십시오', t0: this.D.time, col: '#ff9a6a' };
+    if (this.aim2) { this.aim2 = 0; this._ult2Fire(); return; } this.aim2 = this.D.time + 8; this.stick = null; this.banner = { s: U.name + ' — 시전 방향을 선택하세요', t0: this.D.time, col: '#ff9a6a' };
   };
   P._ult2Fire = function (ax, ay) {   /* 둘째 궁극기 (ULT2) — 투룡: 기 모으기부터. ax·ay = 쏠 방향(없으면 가장 가까운 적 쪽) */
     var D = this.D, T = D.time, h = this.hero, U = this.cls && ULT2[this.cls]; if (!U || this.tm.ult2 > 0 || this.over || this.cards || this.info || this.rift || this.dragCast) return;
