@@ -524,10 +524,19 @@
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(90,150,255,' + (0.9 * gk).toFixed(3) + ')'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ga) * 20, gy + Math.sin(ga) * 20); ctx.stroke();
       ctx.strokeStyle = 'rgba(235,245,255,' + gk.toFixed(3) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ga) * 22, gy + Math.sin(ga) * 22); ctx.stroke(); ctx.restore(); }
     if (h.state !== 'dead' && h.hp >= h.maxHp) D._drawHpBar(h, Math.round(h.x), Math.round(h.y)); };   // 체력 바는 늘 보인다 (닳으면 _drawUnit 이 그린다)
+  /* 명예의 전당 (README 350, 2026-11-23 사용자 "디펜스 모드의 명예의 전당에 올리기처럼 최후의 3분에 죽어도 올릴 수 있게"): 최후의 3분까지 갔거나 10분을 버틴 판만 올린다.
+     순위 = 버틴 시간(긴 순), 같으면 처치. 판은 갈래마다 (0 대도의 길 · 1 무사의 길). 시험용 주소 값(?cls= ?sk= ?edmg= …)으로 시작한 판은 올리지 않는다 */
+  P._rankRes = function () {
+    var self = this, stage = this.cls === 'shadow' ? 1 : 0, win = this.over === 'win', test = (root.location.search || '').replace(/^\?/, '').split('&').some(function (kv) { var k = kv.split('=')[0]; return k && ['mode', 'tut', 'mute', 'game', 'chk', 'bgmvol'].indexOf(k) < 0; });
+    if (!this.over) return null; if (test) return { stage: stage, res: null, msg: '시험용 주소로 시작한 판은 기록을 올릴 수 없습니다' };
+    if (!win && !this._rage()) return { stage: stage, res: null, msg: '최후의 3분(' + mmss(CFG.RAGE.at) + ')까지 버티면 기록을 올릴 수 있습니다' };
+    var units = ['dagger'].concat(Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; })).filter(function (k) { return SK[k] && self.sk[k]; }).map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
+    return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: ['적 레벨 ' + Math.round((this.scaleK || 0) * 100) + '%'].concat(win ? ['완주'] : []) } };
+  };
   /* 끝난 화면 = 결과 리포트: 생존 시간·웨이브·처치·레벨·전직 / 준 피해·최고 한 방·치명타·받은 피해 / 가진 스킬 */
   P._drawOver = function () {
     var D = this.D, ctx = D.ctx, W = D.W, H = D.H, self = this, win = this.over === 'win', al = Math.min(1, this.overT / 0.6), ST = this.stat, pw = Math.min(330, W - 28), px = Math.round((W - pw) / 2), i;
-    var keys = Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; }), all = ['dagger'].concat(keys), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 116, py = Math.max(24, Math.round((H - ph) / 2));
+    var keys = Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; }), all = (this.sk.dagger ? ['dagger'] : []).concat(keys), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 166, py = Math.max(24, Math.round((H - ph) / 2));
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(win ? '10분을 버텼습니다' : '쓰러졌습니다', W / 2, py + 34);
@@ -540,8 +549,8 @@
     ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('스킬', px + 24, sy);
     all.forEach(function (k, n) { var bx = px + 16 + (n % per) * 40, by = sy + 14 + Math.floor(n / per) * 46, fi = SK[k].icon * 2; if (SK[k].art) SK[k].art(ctx, bx, by + 1, 34, 34); else if (icons && IC) ctx.drawImage(icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, bx, by, 34, 37);
       ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'right'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(self.sk[k], bx + 34, by + 32); ctx.fillStyle = self._evo(k) ? '#ffd36e' : '#fff'; ctx.fillText(self.sk[k], bx + 34, by + 32); });
-    var bts = [['retry', '다시 하기'], ['exit', '모드 선택으로']], by0 = py + ph - 112; this.overBtns = []; ctx.textAlign = 'center';
-    for (i = 0; i < bts.length; i++) { var b = { x: px + 14, y: by0 + i * 50, w: pw - 28, h: 42, act: bts[i][0] }; this.overBtns.push(b); D._plate(b.x, b.y, b.w, b.h, 5, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#dfe6f5'; ctx.fillText(bts[i][1], b.x + b.w / 2, b.y + b.h / 2); }
+    var rk = D._rankShow && D.constructor.RANK && D.constructor.RANK.surv ? this._rankRes() : null, bts = (rk ? [['rank', rk.res ? '기록 올리기 · 명예의 전당' : '명예의 전당 보기']] : []).concat([['retry', '다시 하기'], ['exit', '모드 선택으로']]), by0 = py + ph - 12 - bts.length * 50; this.overBtns = []; ctx.textAlign = 'center';
+    for (i = 0; i < bts.length; i++) { var b = { x: px + 14, y: by0 + i * 50, w: pw - 28, h: 42, act: bts[i][0] }; this.overBtns.push(b); D._plate(b.x, b.y, b.w, b.h, 5, b.act === 'rank' && !!rk.res); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = b.act === 'rank' && rk.res ? '#ffd36e' : '#dfe6f5'; ctx.fillText(bts[i][1], b.x + b.w / 2, b.y + b.h / 2); }
     ctx.textAlign = 'left';
   };
   /* 피해 숫자 (2026-11-19 사용자 요청 — 붉은보석처럼 그림 숫자): 글꼴로 매번 쓰지 않고, 굵은 기울임 숫자 0~9 를 색별로 한 장(시트)에 구워 두고 그림으로 찍는다.
@@ -662,7 +671,7 @@
       if (self.menu) { self._menuTap(x, y); return; }
       if (self.cards) { self._cardTap(x, y); return; }
       if (self.info) { self._infoTap(x, y); return; }
-      if (self.over) { (self.overBtns || []).forEach(function (b) { if (inBox(b, x, y)) { if (b.act === 'retry') self.reset(); else self.exit(); } }); return; }
+      if (self.over) { (self.overBtns || []).forEach(function (b) { if (inBox(b, x, y)) { if (b.act === 'rank') D._rankShow(false, self._rankRes()); else if (b.act === 'retry') self.reset(); else self.exit(); } }); return; }
       if (inBox(self.menuBtn, x, y)) { self.openMenu(); return; }
       if (self.hide && self._hideTap(x, y)) return;   // 그림자 숨기: 적을 누르면 기습 (적이 아닌 곳은 평소처럼 조이스틱)
       var pk = self.over ? null : self._slotAt(x, y); if (pk) { self.press = { key: pk, t0: Date.now(), id: e.pointerId }; return; }   // 스킬 칸: 떼면 누르기(_slotTap), 0.35초 넘게 누르고 있으면 설명(frame)
@@ -745,7 +754,15 @@
     /* 환영검 (338번, 2026-11-20 사용자: "설화난영참을 제거하고 — 투검: 360도 방향으로 검들이 쪼개져 나와서 각각의 적을 Z 자로 꿰뚫음. 횟수는 처음엔 각 검당 3번, 업하면서 증가. 처음 쪼개진 검의 개수는 4개, 이것도 점점 증가" + "검 조각들은 한 번 뚫고 지나서 다음번 뚫을 때까지 살짝 딜레이. 모양은 길이는 같되 폭은 작은 검 모양. 스킬 이름: 환영검"):
        무사의 몸에서 검 n 자루가 360° 로 고르게 갈라져 나와(out), 저마다 가까운 적을 꿰뚫고 지나간 뒤(over 만큼 더 나아감) 잠깐 멈춰 방향을 틀고(wait) 다음 적을 꿰뚫는다 — 검마다 hits 번. 곧은 선이 꺾이며 이어져 Z 자가 된다.
        아직 안 찌른 적을 먼저 고르고, 없으면 방금 찌른 적이 아닌 적, 그것도 없으면 같은 적을 다시. 검 그림 = 마법전사 스프라이트의 칼날을 길이는 그대로·폭은 slim 배로 좁힌 것. 무사는 그대로 움직인다 (코드 키는 zrun 그대로) */
-    zrun: { name: '환영검', tree: 'blade', icon: 41, slot: 1, cd: L5([12, 11.5, 11, 10.5, 10]), n: L5([4, 5, 6, 7, 8]), hits: L5([3, 4, 5, 6, 7]), dmg: L5([0.9, 1, 1.1, 1.25, 1.4]), spdK: q('zspd', 1.3), stabK: q('zstab', 3.4), out: 46, over: 22, wait: q('zwait', 0.16), seek: 440, slim: 0.55, life: 14,   /* 340번(사용자 "지금보다 좀 더 빠르게 찌르고, 찌른 뒤에 딜레이를 지금 속도로, 그리고 무조건 근접해 있는 적부터 찌르지 말고 맵의 모든 영역에 랜덤하게 퍼지도록"): 적에게 날아가 꿰뚫는 동안은 걸음 × stabK, 꿰뚫은 뒤 더 나아가는 것과 갈라져 나오는 것은 전처럼 × spdK + 멈춤 wait. 대상 = 무사에게서 seek 안(화면 전체)의 적 가운데 **무작위** — 다른 검이 겨눈 적·이미 찌른 적·방금 찌른 적은 뒤로 미룬다 */   /* 339번(사용자 "검 궤적을 보여 줄 필요는 없고, 쪼개진 검들의 이동이 너무 빨라서 플레이어가 걷는 속도보다 약간 더 빠르게만, 그리고 다른 스킬 시전 시에는 나오면 안 됨"): 검의 속도 = 무사 걸음 × spdK(전에는 초당 820), 지나온 선은 그리지 않는다, 천지파열무·회오리 베기·진공참을 쓰는 중이거나 숨어 있을 때는 발동을 미룬다. life = 검이 남아 있는 최대 시간 */
+    zrun: { name: '환영검', tree: 'blade', icon: 41, slot: 1,
+      art: function (ctx, x, y, w, h) {   /* 버튼 그림: 가운데에서 사방으로 뻗어 나가는 가는 칼날 여덟 (2026-11-23 사용자 "여러 칼날이 사방으로 나가는 모양") — 대각선 넷은 조금 짧고 흐리게 */
+        var s = Math.min(w, h), cx = x + w / 2, cy = y + h / 2, i; artBg(ctx, x, y, w, h);
+        var gl = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.2); gl.addColorStop(0, 'rgba(235,245,255,.95)'); gl.addColorStop(1, 'rgba(150,200,255,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, s * 0.2, 0, 6.2832); ctx.fill();
+        for (i = 0; i < 8; i++) { var dg = i % 2, r0 = s * 0.15, r1 = s * (dg ? 0.4 : 0.49), bw = s * (dg ? 0.045 : 0.06); ctx.save(); ctx.translate(cx, cy); ctx.rotate(i * 0.7854 - 1.5708); ctx.globalAlpha = dg ? 0.8 : 1;
+          ctx.beginPath(); ctx.moveTo(r0, -bw); ctx.lineTo(r1 - bw * 2.2, -bw); ctx.lineTo(r1, 0); ctx.lineTo(r1 - bw * 2.2, bw); ctx.lineTo(r0, bw); ctx.closePath(); ctx.fillStyle = '#dcecff'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#27405c'; ctx.stroke();
+          ctx.fillStyle = '#7fa6d8'; ctx.fillRect(r0, 0, r1 - r0 - bw * 2.2, bw);   /* 날의 한쪽 면은 어둡게 */
+          ctx.fillStyle = '#e8c860'; ctx.fillRect(r0 - s * 0.03, -bw * 2, s * 0.03, bw * 4); ctx.restore(); }   /* 금빛 코등이 */
+        ctx.restore(); }, cd: L5([12, 11.5, 11, 10.5, 10]), n: L5([4, 5, 6, 7, 8]), hits: L5([3, 4, 5, 6, 7]), dmg: L5([0.9, 1, 1.1, 1.25, 1.4]), spdK: q('zspd', 1.3), stabK: q('zstab', 3.4), out: 46, over: 22, wait: q('zwait', 0.16), seek: 440, slim: 0.55, life: 14,   /* 340번(사용자 "지금보다 좀 더 빠르게 찌르고, 찌른 뒤에 딜레이를 지금 속도로, 그리고 무조건 근접해 있는 적부터 찌르지 말고 맵의 모든 영역에 랜덤하게 퍼지도록"): 적에게 날아가 꿰뚫는 동안은 걸음 × stabK, 꿰뚫은 뒤 더 나아가는 것과 갈라져 나오는 것은 전처럼 × spdK + 멈춤 wait. 대상 = 무사에게서 seek 안(화면 전체)의 적 가운데 **무작위** — 다른 검이 겨눈 적·이미 찌른 적·방금 찌른 적은 뒤로 미룬다 */   /* 339번(사용자 "검 궤적을 보여 줄 필요는 없고, 쪼개진 검들의 이동이 너무 빨라서 플레이어가 걷는 속도보다 약간 더 빠르게만, 그리고 다른 스킬 시전 시에는 나오면 안 됨"): 검의 속도 = 무사 걸음 × spdK(전에는 초당 820), 지나온 선은 그리지 않는다, 천지파열무·회오리 베기·진공참을 쓰는 중이거나 숨어 있을 때는 발동을 미룬다. life = 검이 남아 있는 최대 시간 */
       desc: function (l) { return this.cd(l) + '초마다 검 ' + this.n(l) + '자루가 사방으로 갈라져 나와, 저마다 적을 ' + this.hits(l) + '번씩 Z자로 꿰뚫습니다 (한 번에 피해 ' + pc(this.dmg(l)) + ')'; } },
     slash: { awk: { pas: 'power', name: '초승달 베기', text: '베기가 둘레 전체(원)로 넓어진다' }, name: '수직 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([76, 76, 76, 76, 76]), sec: L5([1, 0.92, 0.84, 0.77, 0.7]), crit: L5([0, 0.04, 0.08, 0.12, 0.16]),   /* 316번(2026-11-20 사용자 "기본 스킬을 수평 베기로 하고 올릴수록 빠르기·데미지·크리티컬 확률"): 그림자 베기(단계마다 반경이 커짐 — 회오리 베기와 겹쳤다) → 반경은 그대로 두고 간격·피해·치명타 확률(어쌔신의 모든 타격에 더해진다) */
       desc: function (l) { return '가장 가까운 적 하나를 위에서 아래로 내려 벱니다 — 피해 ' + pc(this.dmg(l)) + ', 베는 간격 ' + pc(this.sec(l)) + ', 치명타 확률 +' + Math.round(this.crit(l) * 100) + '%'; } },

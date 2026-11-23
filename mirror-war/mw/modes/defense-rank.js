@@ -9,8 +9,8 @@
   var MWE = root.MWE, DG = MWE && MWE.DefenseGame; if (!DG || !root.document) return;
   var P = DG.prototype, doc = root.document;
   var API = 'https://mw-rank.zardbird.workers.dev';           // 배포한 Workers 주소 (analysis/cloud/rank)
-  var VER = '268';                                           // 게임 버전 = README 번호 (참고용 — 밸런스를 바꾼 배포 때 올린다)
-  DG.RANK = { api: API, ver: VER };
+  var VER = '350';                                           // 게임 버전 = README 번호 (참고용 — 밸런스를 바꾼 배포 때 올린다)
+  DG.RANK = { api: API, ver: VER, surv: false };   /* surv = 서바이벌 판을 서버가 받는가 — 워커(cloud/rank/worker.js, README 350)를 새로 올린 뒤에 true 로. false 인 동안에는 서바이벌 탭과 끝 화면 버튼이 나오지 않는다 */
   var LS = { nick: 'mwdef.nick', did: 'mwdef.did' };
   function lsGet(k) { try { return root.localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (e) {} }
@@ -32,14 +32,17 @@
   var TAB = 'font:12px sans-serif;padding:5px 8px;border-radius:5px;border:1px solid #3a4152;background:#181c26;color:#9aa3b8;cursor:pointer;white-space:nowrap;';
   var TAB_ON = 'font:bold 12px sans-serif;padding:5px 8px;border-radius:5px;border:1px solid #c9a44a;background:#3a2f17;color:#ffe9b0;cursor:pointer;white-space:nowrap;';
 
-  /* 순위 창을 연다. won = 이긴 화면에서 열었다(이번 기록을 올릴 수 있다) */
-  P._rankShow = function (won) {
+  /* 순위 창을 연다. won = 이긴 화면에서 열었다(이번 기록을 올릴 수 있다).
+     sv = 서바이벌에서 열었다 (README 350): { stage: 0 대도의 길 | 1 무사의 길, res: 올릴 기록 또는 null } — 서바이벌 판은 오래 버틴 순이고 줄에는 레벨·처치·스킬이 나온다 */
+  var SURV = { name: '서바이벌', stages: [{ name: '대도의 길' }, { name: '무사의 길' }] };
+  P._rankShow = function (won, sv) {
     var g = this; if (g.rankOpen) return;
-    var res = won ? g._rankResult() : null, F = DG.FACTIONS, view = { fac: g.faction, stage: g.stageI || 0 }, sentKey = res ? res.fac + ':' + res.stage + ':' + res.time : '';
+    var F = {}; if (DG.RANK.surv) F.surv = SURV; Object.keys(DG.FACTIONS).forEach(function (k) { F[k] = DG.FACTIONS[k]; });
+    var res = sv ? sv.res : won ? g._rankResult() : null, view = sv ? { fac: 'surv', stage: sv.stage || 0 } : { fac: g.faction, stage: g.stageI || 0 }, sentKey = res ? res.fac + ':' + res.stage + ':' + res.time + ':' + res.kills : '';
     var wrap = el('div', 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(6,8,12,.72);touch-action:manipulation;');
     var box = el('div', 'box-sizing:border-box;width:min(360px,94vw);max-height:92vh;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:10px;border:1px solid #6b5a33;background:#12151d;color:#dfe6f5;font:13px sans-serif;');
     var head = el('div', 'display:flex;align-items:center;justify-content:space-between;');
-    head.appendChild(el('b', 'font-size:17px;color:#ffd36e;', '순위'));
+    head.appendChild(el('b', 'font-size:17px;color:#ffd36e;', sv ? '명예의 전당' : '순위'));
     var closeB = el('button', BTN, '닫기'); head.appendChild(closeB); box.appendChild(head);
     var subBox = el('div', 'display:none;flex-direction:column;gap:6px;padding:8px;border-radius:8px;background:#1b2130;border:1px solid #2c3446;'); box.appendChild(subBox);
     var facRow = el('div', 'display:flex;gap:6px;flex-wrap:wrap;'), stRow = el('div', 'display:flex;gap:6px;flex-wrap:wrap;'); box.appendChild(facRow); box.appendChild(stRow);
@@ -65,13 +68,14 @@
           top.appendChild(el('span', 'color:#ffe9b0;font-weight:bold;', mmss(r.time)));
           row.appendChild(top);
           var more = el('div', 'display:none;margin:5px 0 0 30px;color:#9aa3b8;font-size:11px;line-height:1.5;');
-          more.appendChild(el('div', '', '남은 기지 ' + r.base + ' · 잃은 아군 ' + r.lost + ' · 처치 ' + r.kills));
-          if (r.units && r.units.length) more.appendChild(el('div', '', '소환: ' + r.units.slice(0, 8).map(function (u) { return u[0] + ' ' + u[1]; }).join(', ')));
-          if (r.cards && r.cards.length) more.appendChild(el('div', '', '카드: ' + r.cards.slice(0, 10).join(', ')));
+          var sv2 = view.fac === 'surv';
+          more.appendChild(el('div', '', sv2 ? '레벨 ' + r.lost + ' · 처치 ' + r.kills + (r.cards && r.cards.length ? ' · ' + r.cards.slice(0, 3).join(' · ') : '') : '남은 기지 ' + r.base + ' · 잃은 아군 ' + r.lost + ' · 처치 ' + r.kills));
+          if (r.units && r.units.length) more.appendChild(el('div', '', (sv2 ? '스킬: ' : '소환: ') + r.units.slice(0, sv2 ? 16 : 8).map(function (u) { return u[0] + ' ' + u[1]; }).join(', ')));
+          if (!sv2 && r.cards && r.cards.length) more.appendChild(el('div', '', '카드: ' + r.cards.slice(0, 10).join(', ')));
           row.appendChild(more); row.onclick = function () { more.style.display = more.style.display === 'none' ? 'block' : 'none'; };
           list.appendChild(row);
         });
-        foot.textContent = d.me ? '내 기록 ' + mmss(d.me.time) + ' — ' + d.me.rank + '위 / ' + d.total + '명' : d.total ? '기록 ' + d.total + '명 · 줄을 누르면 편성이 보입니다' : '';
+        foot.textContent = d.me ? '내 기록 ' + mmss(d.me.time) + ' — ' + d.me.rank + '위 / ' + d.total + '명' : d.total ? '기록 ' + d.total + '명 · 줄을 누르면 ' + (view.fac === 'surv' ? '스킬이' : '편성이') + ' 보입니다' : '';
       }).catch(function () { if (my !== seq) return; list.textContent = ''; list.appendChild(el('div', 'padding:18px;text-align:center;color:#ff9a8a;', '순위 서버에 연결하지 못했습니다')); });
     };
     var tabs = function () {
@@ -83,24 +87,25 @@
     /* 이번 기록 올리기 (이긴 화면에서만, 같은 판은 한 번) */
     if (res && g._rankSent !== sentKey) {
       subBox.style.display = 'flex';
-      subBox.appendChild(el('div', 'color:#8fe89a;font-weight:bold;', F[res.fac].name + ' ' + (res.stage + 1) + '단계 클리어 — ' + mmss(res.time)));
+      subBox.appendChild(el('div', 'color:#8fe89a;font-weight:bold;', res.fac === 'surv' ? '서바이벌 ' + SURV.stages[res.stage].name + ' — ' + mmss(res.time) + (res.time >= 600 ? ' 완주' : ' 생존') : F[res.fac].name + ' ' + (res.stage + 1) + '단계 클리어 — ' + mmss(res.time)));
       var line = el('div', 'display:flex;gap:6px;');
       var inp = el('input', 'flex:1 1 auto;min-width:0;box-sizing:border-box;padding:7px 8px;border-radius:6px;border:1px solid #3a4152;background:#0d1017;color:#fff;font:14px sans-serif;');
       inp.maxLength = 12; inp.placeholder = '닉네임 (12자까지)'; inp.value = lsGet(LS.nick); inp.autocomplete = 'off';
       var send = el('button', BTN, '기록 올리기'); line.appendChild(inp); line.appendChild(send); subBox.appendChild(line);
-      var msg = el('div', 'min-height:15px;font-size:12px;color:#9aa3b8;', '닉네임·기록·편성이 순위표에 공개됩니다'); subBox.appendChild(msg);
+      var msg = el('div', 'min-height:15px;font-size:12px;color:#9aa3b8;', res.fac === 'surv' ? '닉네임·기록·스킬이 순위표에 공개됩니다' : '닉네임·기록·편성이 순위표에 공개됩니다'); subBox.appendChild(msg);
       var go = function () {
         var nick = inp.value.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 12); if (!nick) { msg.style.color = '#ff9a8a'; msg.textContent = '닉네임을 입력하세요'; inp.focus(); return; }
         lsSet(LS.nick, nick); send.disabled = true; msg.style.color = '#9aa3b8'; msg.textContent = '올리는 중…';
         call('POST', '/score', { did: did(), nick: nick, fac: res.fac, stage: res.stage, time: res.time, base: res.base, lost: res.lost, kills: res.kills, units: res.units, cards: res.cards, ver: DG.RANK.ver }).then(function (d) {
           if (!d || !d.ok) throw new Error('fail');
           g._rankSent = sentKey; msg.style.color = '#8fe89a';
-          msg.textContent = d.best ? d.rank + '위 / ' + d.total + '명 — 내 최고 기록입니다' : '전에 올린 기록(' + mmss(d.time) + ')이 더 빠릅니다 — ' + d.rank + '위 / ' + d.total + '명';
+          msg.textContent = d.best ? d.rank + '위 / ' + d.total + '명 — 내 최고 기록입니다' : '전에 올린 기록(' + mmss(d.time) + ')이 더 ' + (res.fac === 'surv' ? '깁니다' : '빠릅니다') + ' — ' + d.rank + '위 / ' + d.total + '명';
           line.style.display = 'none'; view.fac = res.fac; view.stage = res.stage; tabs(); load();
         }).catch(function () { send.disabled = false; msg.style.color = '#ff9a8a'; msg.textContent = '올리지 못했습니다. 잠시 뒤 다시 눌러 주세요'; });
       };
       send.onclick = go; inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
     }
+    if (sv && !res && sv.msg) { subBox.style.display = 'flex'; subBox.appendChild(el('div', 'color:#9aa3b8;font-size:12px;', sv.msg)); }   /* 올릴 수 없는 판: 까닭 한 줄 */
     tabs(); load();
   };
 })(typeof window !== 'undefined' ? window : globalThis);
