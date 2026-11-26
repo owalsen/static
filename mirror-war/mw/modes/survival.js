@@ -46,7 +46,7 @@
     /* 돌진 (2026-11-19 사용자 지시 — 뱀서류 분석 글의 "무리 돌진"): 3단계부터 한쪽에서 떼가 줄지어 나타나 곧게 달려 지나간다(도둑을 쫓지 않는다).
        먼저 warn 초 동안 지나갈 길(폭 band)을 붉게 보이고 화면 가장자리에 화살표 → 그 길 밖으로 비키면 된다. 닿으면 한 번에 피해 × dmg, 같은 놈은 0.8초 뒤에야 다시 친다.
        every·n = [3단계 값, 10단계 값] (단계에 따라 고르게 바뀐다), unit = [이 단계부터, 유닛] */
-    RUSH: { from: 2, every: [36, 22], n: [12, 30], speed: 150, band: 200, warn: 1.7, dist: 580, dmg: 1.3, touch: 22, dot: q('rushdot', 0.1), tick: 0.25, slowSec: 0.5,   /* 407번(2026-11-26 사용자 "가끔 나오는 늑대 떼들은 때릴 수 없고, 닿으면 슬로우 걸린 것처럼 느려지고 초당 체력 10% 닳도록"): 돌진 떼는 **맞지 않는다**(겨누지도 않는다) — 길에서 비키는 수밖에 없다. 닿아 있는(touch) 동안 걸음이 느려지고(냉기탄과 같은 감속, 떨어진 뒤 slowSec 초까지) tick 초마다 최대 체력 × dot × tick 을 잃는다(초당 10%, 몇 마리가 닿든 같다 · 방어·회피 무시 · 궁극기의 무적 중에는 안 닳는다). 전에는 때려잡을 수 있었고 닿으면 0.8초마다 한 대(× dmg)였다 */ unit: [[0, 43], [5, 36], [8, 44]] },
+    RUSH: { from: 2, every: [36, 22], n: [12, 30], speed: 150, band: 200, warn: 1.7, dist: 580, dmg: 1.3, touch: 22, dot: q('rushdot', 0.3), tick: 0.25, slowSec: 0.5, slow: q('rushslow', 0.3),   /* 409번(2026-11-26 사용자 "감속 70%로 감속하고 닿는 동안 30% 퍼뎀 감소"): 닿으면 걸음이 **70% 느려진다**(× slow 0.3 — 전에는 냉기탄의 감속을 빌려 썼다), 닿아 있는 동안 잃는 체력 초당 10% → **30%** */   /* 407번(2026-11-26 사용자 "가끔 나오는 늑대 떼들은 때릴 수 없고, 닿으면 슬로우 걸린 것처럼 느려지고 초당 체력 10% 닳도록"): 돌진 떼는 **맞지 않는다**(겨누지도 않는다) — 길에서 비키는 수밖에 없다. 닿아 있는(touch) 동안 걸음이 느려지고(냉기탄과 같은 감속, 떨어진 뒤 slowSec 초까지) tick 초마다 최대 체력 × dot × tick 을 잃는다(초당 10%, 몇 마리가 닿든 같다 · 방어·회피 무시 · 궁극기의 무적 중에는 안 닳는다). 전에는 때려잡을 수 있었고 닿으면 0.8초마다 한 대(× dmg)였다 */ unit: [[0, 43], [5, 36], [8, 44]] },
     /* 포위 (296번, 뱀서류 분석 글의 "포위" — 사용자 승인 순서 2): from 단계(0부터)부터 every 초마다 도둑 둘레 타원(가로 rx·세로 ry — 세로 화면 안에 다 보이게. 처음엔 반경 310 원이었는데 예고 고리가 화면 밖이라 안 보였다)에 n 기가 한꺼번에 나타나 좁혀 온다.
        warn 초 동안 그 자리에 붉은 고리로 예고. 걸음은 × speed(조여 오는 것이 보이게). 돌진처럼 경험치·아이템은 없다. every·n = [시작 단계 값, 10단계 값], unit = [이 단계부터, 유닛] */
     SIEGE: { from: q('siegefrom', 4), every: [q('siegeevery', 48), 32], n: [20, 40], rx: 180, ry: 260, warn: 1.8, speed: 0.8, unit: [[0, 28], [5, 29], [8, 54]] },
@@ -301,7 +301,7 @@
     if (this.rift) { v = [0, 0]; var RA = h.t.anim.atk; var rq = T - this.rift.t0, RU = ULT.shadow; D._faceVec(h, RU.face[0], RU.face[1], true); h.state = 'attack'; h.at = rq < 0.25 ? RU.pose[0] : rq < RU.charge + RU.plant * 0.5 ? RU.pose[1] : RU.pose[2]; this.aimUntil = T + 0.2; this.stick = null; }   /* 329번(사용자 "칼 꽂는 게 캐릭터의 모션 자체가 바뀌어서 꽂아야지 갑자기 없던 칼이 등장하면 안 되지"): 따로 그린 칼은 없앴다 — 마법전사의 공격 동작을 아래 방향으로: 기를 모으는 동안 칼을 치켜들고(pose[1]), 꽂는 순간 내려찍은 자세(pose[2])로 끝까지 */   /* 천지파열무: 스킬이 끝날 때까지(균열이 사라질 때까지) 칼을 꽂은 자세로 못 움직인다 (323번, 2026-11-20 사용자) — 그동안 무적 */
     if (this.dragCast) { v = [0, 0]; this.stick = null; }   /* 투룡: 기를 모으는 동안 제자리 */
     var moving = !!(v[0] || v[1]);
-    var hs = this.speed * (T < this.stealthUntil && this._evo('shadow') ? 1.24 : 1) * (T < this.chillUntil ? CFG.MAGIC.frost.slow : 1);   // 냉기탄에 맞으면 잠깐 느려진다
+    var hs = this.speed * (T < this.stealthUntil && this._evo('shadow') ? 1.24 : 1) * (T < this.chillUntil ? CFG.MAGIC.frost.slow : 1) * (T < this.rushSlowUntil ? CFG.RUSH.slow : 1);   // 냉기탄에 맞으면 잠깐 느려진다
     if (moving) { this.lastDir = v; h.x += v[0] * hs * dt; h.y += v[1] * hs * dt; if (h.state !== 'attack') h.state = 'move'; h.walkT += dt * Math.max(0.5, Math.hypot(v[0], v[1])) * CFG.SPEED; if (!(T < this.aimUntil)) D._faceVec(h, v[0], v[1]); }   // 단검을 던진 직후에는 던진 쪽을 본 채로 걷는다 (aimUntil)
     else if (h.state !== 'attack') h.state = 'idle';
     if (h.state === 'attack') { h.at += dt * R.tps * CFG.ATK.anim; if (h.at >= h.t.anim.atk.n) h.state = moving ? 'move' : 'idle'; }   // 던지는 동작: 걷는 중에도 (2026-11-19 사용자 지적) — 그동안 발은 걷지 않고 미끄러진다
@@ -371,7 +371,7 @@
       if (u.boss) { u.stunUntil = 0; u.rootUntil = 0; u.slowUntil = 0; }   // 우두머리는 멈춤·묶임·감속이 안 걸린다
       if (u.stunUntil > T || u.rootUntil > T) { u.state = 'idle'; continue; }   // 멈춤(교란)·묶임(발목 함정)
       if (u.rush) { u.x += u.rush.vx * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.y += u.rush.vy * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.state = 'move'; u.walkT += dt * 1.6;   // 돌진하는 떼: 도둑을 쫓지 않고 곧게 지나간다 (숨어 있어도 지나가다 닿으면 맞는다)
-        if (d < CFG.RUSH.touch && !this.over) { var RH = CFG.RUSH; if (!(T < this.chillUntil)) this._text(h.x, h.y - h.headY - 30, '감속', '#ff9a8a'); this.chillUntil = Math.max(this.chillUntil || 0, T + RH.slowSec);
+        if (d < CFG.RUSH.touch && !this.over) { var RH = CFG.RUSH; if (!(T < this.rushSlowUntil)) this._text(h.x, h.y - h.headY - 30, '감속', '#ff9a8a'); this.rushSlowUntil = T + RH.slowSec;
           if (T >= (this.rushTick || 0) && !(this.invUntil - T > 0.3)) { this.rushTick = T + RH.tick; var rdm = Math.max(1, Math.round(h.maxHp * RH.dot * RH.tick)); this.stat.taken += Math.min(rdm, h.hp); h.hp -= rdm; h.hitT = T; this.hurtT = T;
             if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); } } }
         if (T > u.rush.until) { u.state = 'dead'; u.deadT = 9; u.fade = 1; }   // 화면을 지나 멀리 가면 사라진다 (처치로 세지 않는다)
