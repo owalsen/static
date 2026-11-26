@@ -46,7 +46,7 @@
     /* 돌진 (2026-11-19 사용자 지시 — 뱀서류 분석 글의 "무리 돌진"): 3단계부터 한쪽에서 떼가 줄지어 나타나 곧게 달려 지나간다(도둑을 쫓지 않는다).
        먼저 warn 초 동안 지나갈 길(폭 band)을 붉게 보이고 화면 가장자리에 화살표 → 그 길 밖으로 비키면 된다. 닿으면 한 번에 피해 × dmg, 같은 놈은 0.8초 뒤에야 다시 친다.
        every·n = [3단계 값, 10단계 값] (단계에 따라 고르게 바뀐다), unit = [이 단계부터, 유닛] */
-    RUSH: { from: 2, every: [36, 22], n: [12, 30], speed: 150, band: 200, warn: 1.7, dist: 580, dmg: 1.3, unit: [[0, 43], [5, 36], [8, 44]] },
+    RUSH: { from: 2, every: [36, 22], n: [12, 30], speed: 150, band: 200, warn: 1.7, dist: 580, dmg: 1.3, touch: 22, dot: q('rushdot', 0.1), tick: 0.25, slowSec: 0.5,   /* 407번(2026-11-26 사용자 "가끔 나오는 늑대 떼들은 때릴 수 없고, 닿으면 슬로우 걸린 것처럼 느려지고 초당 체력 10% 닳도록"): 돌진 떼는 **맞지 않는다**(겨누지도 않는다) — 길에서 비키는 수밖에 없다. 닿아 있는(touch) 동안 걸음이 느려지고(냉기탄과 같은 감속, 떨어진 뒤 slowSec 초까지) tick 초마다 최대 체력 × dot × tick 을 잃는다(초당 10%, 몇 마리가 닿든 같다 · 방어·회피 무시 · 궁극기의 무적 중에는 안 닳는다). 전에는 때려잡을 수 있었고 닿으면 0.8초마다 한 대(× dmg)였다 */ unit: [[0, 43], [5, 36], [8, 44]] },
     /* 포위 (296번, 뱀서류 분석 글의 "포위" — 사용자 승인 순서 2): from 단계(0부터)부터 every 초마다 도둑 둘레 타원(가로 rx·세로 ry — 세로 화면 안에 다 보이게. 처음엔 반경 310 원이었는데 예고 고리가 화면 밖이라 안 보였다)에 n 기가 한꺼번에 나타나 좁혀 온다.
        warn 초 동안 그 자리에 붉은 고리로 예고. 걸음은 × speed(조여 오는 것이 보이게). 돌진처럼 경험치·아이템은 없다. every·n = [시작 단계 값, 10단계 값], unit = [이 단계부터, 유닛] */
     SIEGE: { from: q('siegefrom', 4), every: [q('siegeevery', 48), 32], n: [20, 40], rx: 180, ry: 260, warn: 1.8, speed: 0.8, unit: [[0, 28], [5, 29], [8, 54]] },
@@ -95,7 +95,7 @@
     /* 중간 우두머리 (2026-11-19 사용자 "중간보스 더 자주 등장해서 압박"): 2단계부터 단계마다 at 초에 mini: [유닛, 체력 배수] 하나. 우두머리처럼 멈춤·묶임·감속이 안 걸리고 피해 ×BOSS.dmg, 보상은 작다(경험치 gem, 회복 heal, 회복 아이템 확정 없음) */
     MINI: { ats: [q('miniat', 8), 29], hpk: q('minihp', 2), dmg: q('minidmg', 3.2),   /* 320번(2026-11-20 사용자 "중간 보스도 더 자주 나와야 하고 지금보다 2배는 더 강하고 단단해야"): 난이도 칸(42초)마다 한 번 → 두 번(ats 초), 체력 ×hpk, 피해 = 우두머리 배수 1.6 의 두 배 */ at: 21, scale: 1.25, gem: 4, heal: 0 },   // 처음엔 체력 10~16배·경험치 12·회복 10 → 봇이 쉽게 잡아 경험치 보너스가 됐다(셋 다 생존, 3분에 레벨 17) → 체력 20~28배, 경험치 4, 회복 없음
     /* 섀도우 인필트레이터의 근접 검술 (2026-11-19 사용자 "섀도우 스킬이 차별점이 없어 — 근접 위주로, 전직 뒤 스킬셋을 처음부터 다시", 모습은 마법전사): armor = 받는 피해 배수, killHeal = 베어 쓰러뜨릴 때 체력, healCap = 처치 회복의 초당 상한(최대 체력 비율) — 2026-11-19 사용자 "어쌔신이 너무 강해서 후반에는 체력도 안 닳고 스킬도 너무 자주 씀": armor 0.8 → 0.9, killHeal 0.5 → 0.15, 상한 새로, arc = 베기 반각(라디안, 1.2 ≈ 70° — 처음 1.75 는 봇이 5분에 레벨 29, 너무 셌다), comboMax = 연속 베기가 더 치는 적 수(가까운 순), after = 잔상이 다시 베기까지(초), arcLife = 칼자국 보이는 시간 */
-    BLADE: { melee: q('bmelee', 60),   /* 40 → 60 (337번, 사용자 "근접 공격 사거리 조금 더 늘려서 좀비 자폭 거리 벗어나게" — 좀비는 30 안에서 터지고 46 안이면 맞는다. 40 이면 벨 때 늘 폭발 범위 안이었다). 수직 베기가 나가는 거리 (329번, 사용자 "적에게 아주 가까이 붙었을 때만 일반 공격해") — 전에는 90 안이면 휘둘렀다 */ atk: q('batk', 0.7), spd: q('bspd', 1.25),   /* 어쌔신 너프 (315번, 2026-11-20 사용자 "어쌔신 웨이브 4에서부터 너무 세짐. 공속을 낮추고, 공격력도 낮춰 줘"): atk = 어쌔신의 모든 피해 배수(검술·궁극기·기습), spd = 기본 베기 간격 배수(1.25 = 25% 느리게) */ armor: q('barmor', 0.8),   /* 394번(2026-11-26 사용자 "무사가 너무 빨리 죽음" → 권장안대로): 받는 피해 ×1 → ×0.8, 전직 체력 +35 → +70, 레벨마다 +5 → +8 (CLS.shadow). 근접이라 맞는 횟수가 많은데 체력·방어는 대도와 거의 같았다. 회복(처치 회복 한도·비켜 피하기)은 그대로 */ killHeal: 0.1, healCap: q('bheal', 0.012),   /* 381번(2026-11-26 사용자 "무사의 방어력이나 체력을 낮춰야 — 아무것도 안 하고 가만있어도 3단계까지 버텨진다"): 받는 피해 ×0.92 → ×1, 처치 회복 한도 초당 2% → 1.2%, 전직 체력 +50 → +35·레벨마다 +6 → +5 (CLS.shadow) */   /* 320번: 무사의 길 봇이 계수 1 에서 4/4 생존(받은 피해가 최대 체력의 5~8배 — 회복이 과했다) → 0.95·0.06·1.2% 로는 0/4 가 되어 중간값: 받는 피해 −8%, 처치 회복 0.1, 초당 회복 한도 2% */ arc: 1.2, comboMax: 3, after: 0.6, arcLife: 0.24 },
+    BLADE: { melee: q('bmelee', 60),   /* 40 → 60 (337번, 사용자 "근접 공격 사거리 조금 더 늘려서 좀비 자폭 거리 벗어나게" — 좀비는 30 안에서 터지고 46 안이면 맞는다. 40 이면 벨 때 늘 폭발 범위 안이었다). 수직 베기가 나가는 거리 (329번, 사용자 "적에게 아주 가까이 붙었을 때만 일반 공격해") — 전에는 90 안이면 휘둘렀다 */ atk: q('batk', 0.7), spd: q('bspd', 1.25),   /* 어쌔신 너프 (315번, 2026-11-20 사용자 "어쌔신 웨이브 4에서부터 너무 세짐. 공속을 낮추고, 공격력도 낮춰 줘"): atk = 어쌔신의 모든 피해 배수(검술·궁극기·기습), spd = 기본 베기 간격 배수(1.25 = 25% 느리게) */ armor: q('barmor', 1),   /* 405번(사용자 "받는 피해는 1.0으로"): 394번의 ×0.8 을 되돌림 — 전직 체력 +70·레벨마다 +8 은 그대로 */   /* 394번(2026-11-26 사용자 "무사가 너무 빨리 죽음" → 권장안대로): 받는 피해 ×1 → ×0.8, 전직 체력 +35 → +70, 레벨마다 +5 → +8 (CLS.shadow). 근접이라 맞는 횟수가 많은데 체력·방어는 대도와 거의 같았다. 회복(처치 회복 한도·비켜 피하기)은 그대로 */ killHeal: 0.1, healCap: q('bheal', 0.012),   /* 381번(2026-11-26 사용자 "무사의 방어력이나 체력을 낮춰야 — 아무것도 안 하고 가만있어도 3단계까지 버텨진다"): 받는 피해 ×0.92 → ×1, 처치 회복 한도 초당 2% → 1.2%, 전직 체력 +50 → +35·레벨마다 +6 → +5 (CLS.shadow) */   /* 320번: 무사의 길 봇이 계수 1 에서 4/4 생존(받은 피해가 최대 체력의 5~8배 — 회복이 과했다) → 0.95·0.06·1.2% 로는 0/4 가 되어 중간값: 받는 피해 −8%, 처치 회복 0.1, 초당 회복 한도 2% */ arc: 1.2, comboMax: 3, after: 0.6, arcLife: 0.24 },
     BOSS: { pace: { on: q('bpace', 1), burst: 2.8, rest: 2.6, restSpd: 0.45 },   /* 완급 (344번, 2026-11-23 사용자 "보스급의 이속·공속이 플레이어보다 항상 빠르지 않고 완급 조절이 필요함 — 붙으면 계속 맞으니까"): 우두머리·중간 우두머리는 burst 초 동안 쫓아와 치고 rest 초 동안 숨을 고른다 — 그동안 걸음 × restSpd, 새 공격을 시작하지 않는다(휘두르던 것은 끝낸다). 박자는 나타난 때부터 센다 */ scale: 1.5, dmg: 1.2, speed: 1.15, gem: 30, heal: 30, chase: q('bchase', 1.1), miniChase: 1.02, swing: 1.3, lunge: 1, reach: 2, hitReach: 2.3, cdK: 0.65,   /* 처음 값(1.25·1.5·1.5·2.4·2.7·0.5)은 봇이 첫 우두머리(2분 6초)에서 전부 쓰러졌다 */ mini: { swing: 1.2, lunge: 0, reach: 1.7, hitReach: 2, cdK: 0.8 } },   /* mini = 중간 우두머리는 덜 (큰 우두머리와 같은 값은 봇이 전부 1분 30초 안에 쓰러졌다 — 2단계부터 나와 레벨 5~8 일 때 만난다) */   /* 327번(2026-11-20 사용자 "보스 몹이 느리고 공속도 느려서 플레이어가 한 대도 안 맞음"): 우두머리·중간 우두머리는 걸음이 적어도 도둑 속도 × chase(중간 우두머리 miniChase), 휘두르는 동작 × swing, 휘두르는 동안 도둑 쪽으로 파고든다(걸음 × lunge), 닿는 거리 × reach(맞는 판정 hitReach), 공격 대기 × cdK */   // 우두머리: 그림 배율, 피해·속도 배수, 떨어뜨리는 경험치, 쓰러뜨리면 도둑 체력 회복
     TS: q('ts', 1)               // 시간 배속 (시험·측정용: ?ts=4)
   };
@@ -206,7 +206,7 @@
   };
   P._fx = function (x, y, arm) { var d = this.D.data.fx.arms[arm], f = d && (d.hit.length ? d.hit : d.fly.length ? d.fly : d.seq); if (f && f.length) this.effects.push({ x: x, y: y, f: f, t0: this.D.time, add: !d.dir }); };
   P._hitFoe = function (u, dmg, arm, big, cb) {   // cb = 이 한 방에만 더하는 치명타 확률 (크레이지 샷 — 상한 ULT.venom.critCap)
-    if (u.state === 'dead') return; var D = this.D; u.hitT = D.time;
+    if (u.state === 'dead' || u.rush) return;   /* 돌진 떼는 맞지 않는다 (407번) */ var D = this.D; u.hitT = D.time;
     if (u.vulnUntil > D.time) dmg *= 1 + (u.vuln || 0);      // 독 단도·유독가스: 받는 피해 증가
     if (dmg < 1e5 && this.buff && D.time < this.buff.war) dmg *= CFG.SHRINE.kinds.war.dmg;   /* 전투의 성소 */
     if (this.cls === 'shadow') { var lr = u.life / (u.maxHp * CFG.FOE.hp); if (lr <= 0.2) dmg *= 1.6; else if (lr <= 0.5) dmg *= 1.3; }   // 섀도우 인필트레이터: 마무리 일격
@@ -363,7 +363,7 @@
       if (u.state === 'dead') { u.deadT += dt; var dn = u.t.anim.die ? u.t.anim.die.n / R.tps : 0; if (u.deadT > dn) u.fade = Math.min(1, (u.deadT - dn) / 0.4); continue; }
       var dx = h.x - u.x, dy = h.y - u.y, d = Math.hypot(dx, dy) || 1;
       if (d > CFG.FOE.far && !u.rush) { var p = this._edgePoint(); u.x = p[0]; u.y = p[1]; continue; }   // 너무 멀리 떨어진 적은 화면 둘레로 다시 온다
-      if (d < nd) { nd = d; near = u; }
+      if (d < nd && !u.rush) { nd = d; near = u; }   /* 돌진 떼는 자동 공격이 겨누지 않는다 */
       if (u.bleedUntil > T) { u.dotT = (u.dotT || 0) + dt; if (u.dotT >= 0.5) { u.dotT = 0; this._hitFoe(u, u.bleed * 0.5, -1); if (u.state === 'dead') continue; } }   // 출혈 (베놈 쓰로워)
       if (T < this.freezeUntil) { if (u.state === 'move') u.state = 'idle'; continue; }
       if (u.barr && this.barr) { var BQ = this.barr.c, sxq = h.x + Math.cos(u.barrA) * BQ.rx, syq = h.y + Math.sin(u.barrA) * BQ.ry; if (Math.hypot(u.x - sxq, u.y - syq) > BQ.lag) { u.x = sxq; u.y = syq; u.shotT = Math.max(u.shotT, 0.35); }   /* 도둑이 걸어가 제 자리에서 벗어났다 — 지금 화면의 가장자리 제 자리에 다시 나타난다 */
@@ -371,7 +371,9 @@
       if (u.boss) { u.stunUntil = 0; u.rootUntil = 0; u.slowUntil = 0; }   // 우두머리는 멈춤·묶임·감속이 안 걸린다
       if (u.stunUntil > T || u.rootUntil > T) { u.state = 'idle'; continue; }   // 멈춤(교란)·묶임(발목 함정)
       if (u.rush) { u.x += u.rush.vx * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.y += u.rush.vy * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.state = 'move'; u.walkT += dt * 1.6;   // 돌진하는 떼: 도둑을 쫓지 않고 곧게 지나간다 (숨어 있어도 지나가다 닿으면 맞는다)
-        if (d < 20 && T >= (u.rushHit || 0)) { u.rushHit = T + 0.8; this._hitHero(this._foeDmg(u) * CFG.RUSH.dmg); }
+        if (d < CFG.RUSH.touch && !this.over) { var RH = CFG.RUSH; if (!(T < this.chillUntil)) this._text(h.x, h.y - h.headY - 30, '감속', '#ff9a8a'); this.chillUntil = Math.max(this.chillUntil || 0, T + RH.slowSec);
+          if (T >= (this.rushTick || 0) && !(this.invUntil - T > 0.3)) { this.rushTick = T + RH.tick; var rdm = Math.max(1, Math.round(h.maxHp * RH.dot * RH.tick)); this.stat.taken += Math.min(rdm, h.hp); h.hp -= rdm; h.hitT = T; this.hurtT = T;
+            if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); } } }
         if (T > u.rush.until) { u.state = 'dead'; u.deadT = 9; u.fade = 1; }   // 화면을 지나 멀리 가면 사라진다 (처치로 세지 않는다)
         continue; }
       if (T < this.stealthUntil) {   // 그림자 숨기: 도둑을 못 찾는다 — 숨은 자리 둘레로 몰려가 서성인다 (전에는 화면의 적이 전부 그 자리에 멈춰 서서 "적이 갑자기 다 멈추는 버그"로 보였다 — 2026-11-19 사용자 지적)
@@ -629,6 +631,12 @@
     [0, 0.25, 0.5, 1, 2, 4, 8].forEach(function (v) { var b = doc.createElement('button'); b._v = v; b.textContent = v === 0 ? '❚❚' : v + '×'; b.style.cssText = 'font:11px sans-serif;padding:4px 6px;border-radius:5px;border:1px solid #3a4152;background:#181c26;color:#9aa3b8;cursor:pointer;';
       b.onclick = function () { cur = v; game.devSpeed = v; say(); }; btns.push(b); box.appendChild(b); });
     ['pointerdown', 'pointerup', 'pointermove', 'touchstart', 'keydown', 'keyup'].forEach(function (t) { box.addEventListener(t, function (e) { e.stopPropagation(); }); });
+    /* 각성 확인용 (404번, 사용자 "모든 액티브 스킬이 각성된 채 잘 발동이 되는지 실제 게임에서 확인"): 지금 갈래의 액티브를 스킬 칸 가득 5단계로 — 각성이 있는 것부터 채운다. 전직 전이면 아무 일도 안 한다 */
+    var mx = doc.createElement('button'); mx.textContent = '액티브 전부 5단계'; mx.style.cssText = 'font:11px sans-serif;padding:4px 6px;border-radius:5px;border:1px solid #6b5a33;background:#2a2418;color:#ffd36e;cursor:pointer;width:100%;';
+    mx.onclick = function () { var L = { venom: ['dagger', 'double', 'fever', 'surprise', 'mouse', 'explo'], shadow: ['slash', 'shadow', 'whirl', 'dash', 'combo', 'after'] }[game.cls]; if (!L) { mx.textContent = '전직한 뒤에 누르세요'; return; }
+      Object.keys(game.sk).forEach(function (k) { if (SK[k] && SK[k].slot && L.indexOf(k) < 0) delete game.sk[k]; }); L.forEach(function (k) { game.sk[k] = 5; if (game.tm[k] == null || game.tm[k] > 3) game.tm[k] = 0.6; }); game.order = L.slice(); if (game.cls === 'shadow') { delete game.sk.sidestep; game.sk.blood = 5; }
+      mx.textContent = '액티브 전부 5단계 ✓'; };
+    box.appendChild(mx);
     game.devSpeed = cur; say(); doc.body.appendChild(box);
   }
   function inviteFrom(search) {
@@ -900,7 +908,7 @@
       desc: function (l) { return '화면을 두 번 누르면 그쪽으로 ' + this.dist(l) + '만큼 순간 이동합니다 (대기 ' + this.cd(l) + '초, 잠깐 무적)'; } },
     surprise: { awk: { pas: 'power', name: '연쇄 기습', text: '가장 튼튼한 적 셋을 한꺼번에' }, man: 1, name: '기습', tree: 'shadow', icon: 85, slot: 1, fx: 74, evo: { cls: 'shadow', name: '교란' }, cd: L5([7, 6.5, 6, 5.5, 5]), dmg: L5([5, 6.5, 8, 10, 12]), range: 230,
       desc: function (l, ev) { return this.cd(l) + '초마다 가장 튼튼한 적을 급습해 피해 ' + pc(this.dmg(l)) + (ev ? ', 둘레의 적을 2초 멈춥니다' : ''); } },
-    shadow: { awk: { pas: 'regen', name: '그림자 치유', text: '기습할 때 체력 20% 회복' }, man: 1, only: 'shadow', slot: 1,   /* 387번(2026-11-26 사용자 "그림자 동화도 액티브인데 왜 패시브 칸임"): 패시브 줄의 작은 칸(trait) → 스킬 칸. 무사의 액티브는 일곱(수직·연속·회오리·진공참·잔상·환영검·그림자 숨기)이고 칸은 여섯 */ name: '그림자 숨기', tree: 'shadow', icon: 11, evo: { cls: 'shadow', name: '그림자 동화' }, cd: L5([16, 15, 14, 13, 12]), dur: L5([6, 6.5, 7, 7.5, 8]), crit: L5([0.2, 0.275, 0.35, 0.425, 0.5]), amb: L5([4, 5, 6, 7.5, 9]),
+    shadow: { awk: { pas: 'regen', name: '그림자 치유', text: '기습할 때 체력 20% 회복' }, man: 1, only: 'shadow', slot: 1,   /* 387번(2026-11-26 사용자 "그림자 동화도 액티브인데 왜 패시브 칸임"): 패시브 줄의 작은 칸(trait) → 스킬 칸. 무사의 액티브는 일곱(수직·연속·회오리·진공참·잔상·환영검·그림자 숨기)이고 칸은 여섯 */ name: '그림자 숨기', tree: 'shadow', icon: 11, evo: { cls: 'shadow', name: '그림자 동화' }, cd: L5([16, 15, 14, 13, 12]), dur: L5([2, 2.25, 2.5, 2.75, 3]),   /* 405번(2026-11-26 사용자 "숨은 뒤 적을 누르지 않으면 2~3초 만에 풀리게"): 숨어 있는 최대 시간 6~8초 → 2~3초. 가만히 있는 사람이 매번 끝까지 숨어 판의 40~50% 를 안전하게 보냈다(404번의 측정) */ crit: L5([0.2, 0.275, 0.35, 0.425, 0.5]), amb: L5([4, 5, 6, 7.5, 9]),
       desc: function (l) { return this.cd(l) + '초마다 숨습니다(최대 ' + this.dur(l) + '초) — 적이 도둑을 놓치고 서성이며, 자동 공격은 멈춥니다. 적을 누르면 그 적 옆으로 가서 기습하고 풀립니다(피해 ' + pc(this.amb(l)) + ', 반드시 치명타)'; } },   /* 2026-11-19 사용자: "모든 적이 멈추는 게 아닌, 어그로만 끌리지 않은 상태에서(게임 진행) 내가 타겟한 적을 공격" */   /* 2026-11-19 사용자 "그림자 숨기 하고 난 후 자동 공격 말고 적을 찍어야 풀리면서 게임 진행되도록" — 전에는 몇 초 숨었다 저절로 풀렸다 */
     assassin: { name: '암살', tree: 'shadow', icon: 41, slot: 1, evo: { cls: 'shadow', name: '암살' }, p: L5([0.03, 0.05, 0.07, 0.09, 0.12]),
       desc: function (l, ev) { return '단검에 맞은 적이 ' + pc(this.p(l) * (ev ? 1.5 : 1)) + ' 확률로 즉사합니다 (우두머리는 5배 피해)'; } },
@@ -1036,7 +1044,7 @@
       else { ctx.strokeStyle = '#ff6a1c'; ctx.lineWidth = w * 0.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + w * 0.2, y + h * 0.8); ctx.lineTo(x + w * 0.8, y + h * 0.2); ctx.stroke(); }
       ctx.restore(); },
     desc: function () { return '겨눈 쪽으로 붉은 용이 날아가며 지나는 길을 넓게 터뜨리고 불태웁니다. 불길은 잠시 남아 그 위의 적을 태웁니다.'; } } };
-  var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, cardLv: q('cardlv', 2), clsFull: true, lvHeal: q('lvheal', 0.5), ultPow: 1.5, ultCd: 0.75, item: { meat: q('meat', 0.032), magnet: 0.012, bomb: 0.008, pick: 44, max: 12, life: 45,   /* 327번: 아이템이 떨어지자마자 저절로 먹어지던 버그를 고친 뒤 — 이제 직접 주워야 하므로 나오는 확률을 1.6배쯤, 줍는 거리 26 → 44 */ heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, trapPlus: 3, bomb: { mul: q('bombmul', 0.6), r: 32, rLv: 3, speed: 0.5, sec: 1.1 },   /* 트래퍼의 기본 공격 = 폭탄 던지기 (309번, 2026-11-20 사용자 "기본 단도 공격보단 약하게, 대신 소범위 공격"): 단도 피해 × mul 을 맞은 자리 반경 r + rLv × 단계 안의 적 모두에게. 날아가는 속도 × speed(보이게), 던지는 간격 × sec */ critMax: 0.6, xpk: q('xpk', 0.33),   /* 0.6 × 0.7 — 한 판이 7분이 되어 같은 굴곡에서 같은 레벨이 나오게 */ need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
+  var GROW = { chest: { p: [0.5, 0.35], heal: 0.3 }, pasMax: 4, cardLv: q('cardlv', 2), clsFull: true, lvHeal: q('lvheal', 0.1),   /* 405번(사용자 "레벨업 회복 10%로"): 0.5 → 0.3(403번) → 0.1 */   /* 403번(2026-11-26 사용자 "렙업해서 회복하는 양을 30%로"): 0.5 → 0.3 */ ultPow: 1.5, ultCd: 0.75, item: { meat: q('meat', 0.032), magnet: 0.012, bomb: 0.008, pick: 44, max: 12, life: 45,   /* 327번: 아이템이 떨어지자마자 저절로 먹어지던 버그를 고친 뒤 — 이제 직접 주워야 하므로 나오는 확률을 1.6배쯤, 줍는 거리 26 → 44 */ heal: 0.3, bombR: 330, bombMul: 10 }, classLv: q('classlv', 7), clsUnit: 56, clsHp: 50, pickup: 64, gemSpeed: 330, hpLv: 6, heal: 30, trapR: 16, trapRx: 1.7, trapPlus: 3, bomb: { mul: q('bombmul', 0.6), r: 32, rLv: 3, speed: 0.5, sec: 1.1 },   /* 트래퍼의 기본 공격 = 폭탄 던지기 (309번, 2026-11-20 사용자 "기본 단도 공격보단 약하게, 대신 소범위 공격"): 단도 피해 × mul 을 맞은 자리 반경 r + rLv × 단계 안의 적 모두에게. 날아가는 속도 × speed(보이게), 던지는 간격 × sec */ critMax: 0.6, xpk: q('xpk', 0.33),   /* 0.6 × 0.7 — 한 판이 7분이 되어 같은 굴곡에서 같은 레벨이 나오게 */ need: function (lv) { return Math.max(2, Math.round((3 + lv * 2 + lv * lv * 0.12) * this.xpk)); }   /* 다음 레벨까지: 뒤로 갈수록 가파르게 (2026-11-19 사용자 요청 "레벨 올리기 조금 더 어렵게"). xpk = 곡선 배수 — 285번 공격력 너프(×0.47) 뒤 "경험치 곡선 완화"로 0.5 (레벨 10 에 18, 20 에 46, 30 에 86) */ };
   SurvivalGame.greenSheet = greenSheet; SurvivalGame.isPas = isPas; SurvivalGame.skArt = skArt; SurvivalGame.artOf = artOf; SurvivalGame.SK = SK; SurvivalGame.CLS = CLS; SurvivalGame.GROW = GROW; SurvivalGame.ULT = ULT;
 
   P._palStart = function () {   /* 성전사: 처음부터 그 모습·그 스킬 (전직 없음). 궁극기는 45초 뒤부터 */
@@ -1077,7 +1085,7 @@
   P._name = function (k) { return this._evo(k) ? SK[k].evo.name : SK[k].name; };
   P._pv = function (k) { var l = this.sk[k]; return (l ? SK[k].v(l) : 0) + (k === 'haste' ? this._mv('spd') : 0); };   // 패시브 값 (없으면 0) — 전문 도구에는 숙련 '손놀림'이 더해진다
   P._mv = function (k) { return ((this.mast && this.mast[k]) || 0) * MAST[k].v; };   // 숙련 카드 값 (쌓인 수 × v)
-  P._awk = function (k) { var a = SK[k].awk; return !!(a && this.sk[k] >= 5 && this.sk[a.pas]); };
+  P._awk = function (k) { var a = SK[k].awk; return !!(a && this.sk[k] >= 5); };   /* 404번(2026-11-26 사용자 "스킬 각성의 필요조건이 왜 필요한 패시브가 있는 조건이지? 그런 조건 없애 줘"): 5단계 + 짝 패시브 → **5단계면 각성**. awk.pas 는 이제 쓰지 않는다(정의에는 남아 있다) */
   P._base = function () { return this.D.rules.attackValue(this.hero) * (1 + this._pv('power') + this._mv('dmg')) * (this.cls === 'shadow' ? CFG.BLADE.atk : this.cls === 'paladin' ? CFG.MACE.atk : 1); };
   P._text = function (x, y, s, col) { this.texts.push({ x: x, y: y, s: s, t0: this.D.time, col: col }); };
   /* 경험치 */
@@ -1128,7 +1136,7 @@
       ctx.textAlign = 'left'; ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = c.cls ? CLS[c.cls].col : '#ffe9b0'; ctx.fillText(c.cls ? CLS[c.cls].name : c.heal ? '응급처치' : M ? M.name : self._name(c.k), b.x + 68, b.y + 24);
       if (M) { ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#ffd36e'; ctx.fillText(mn + ' → ' + (mn + 1) + ' / ' + M.max, b.x + b.w - 16, b.y + 24); }   // 숙련: 쌓인 수
       ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = l ? '#9cc0ff' : '#9fe08a'; if (c.k) ctx.fillText(l ? 'Lv ' + l + ' → ' + (l + 1) : '새 스킬', b.x + b.w - 16, b.y + 24);
-      if (c.k) { var wk = null; Object.keys(SK).forEach(function (q2) { var a2 = SK[q2].awk; if (!a2 || self._awk(q2)) return; if ((q2 === c.k && l === 4 && self.sk[a2.pas]) || (a2.pas === c.k && !l && self.sk[q2] >= 5)) wk = a2.name; });   // 이 카드를 고르면 각성이 완성된다
+      if (c.k) { var wk = null; Object.keys(SK).forEach(function (q2) { var a2 = SK[q2].awk; if (!a2 || self._awk(q2)) return; if (q2 === c.k && l === 4) wk = a2.name; });   // 이 카드를 고르면 각성이 완성된다
         if (wk) { var wks = '각성 「' + wk + '」', wkw; ctx.font = 'bold 11px sans-serif'; wkw = ctx.measureText(wks).width + 16; ctx.fillStyle = 'rgba(8,20,30,.95)'; ctx.fillRect(b.x + b.w - 14 - wkw, b.y - 9, wkw, 19); ctx.strokeStyle = '#7fe0ff'; ctx.lineWidth = 1; ctx.strokeRect(b.x + b.w - 14 - wkw + 0.5, b.y - 8.5, wkw - 1, 18); ctx.fillStyle = '#7fe0ff'; ctx.fillText(wks, b.x + b.w - 22, b.y + 1); } }   /* 391번: 각성 표시를 카드 위 가장자리의 꼬리표로 — 전에는 설명 첫 줄 자리(y+40)에 써서 설명이 긴 카드에서 글자가 겹쳤다 */
       ctx.textAlign = 'left'; ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9d1e3';
       var lines = c.cls ? CLS[c.cls].lines : D._wrap(c.heal ? '체력을 ' + GROW.heal + ' 회복합니다' : M ? M.desc(mn) : s.desc(l + 1, ev), b.w - 84);
@@ -1173,7 +1181,7 @@
   };
   /* 스킬 설명 카드 (칸을 꾹 누르면): 이름·단계·지금 효과·다음 단계. 각성 조건. 고급 스킬(SK.man)은 [궁극기 칸에 올리기] — 올리면 자동으로 안 나가고 궁극기 칸을 눌러 쓴다(위력 ×1.5·대기 −25%) */
   P._drawInfo = function () {
-    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, k = this.info.key, isU = k === 'ult' || k === 'ult2', s = k === 'ult2' ? ULT2[this.cls] : isU ? ULT[this.cls] : SK[k], l = isU ? 5 : (this.sk[k] || 1), A = s.awk, akl = A ? D._wrap('각성 「' + A.name + '」 — ' + A.text + '  (조건: 5단계 + ' + this._name(A.pas) + ')', Math.min(W - 24, 350) - 36) : [], ev = !isU && this._evo(k), IC = D.data.fx.icon, icons = D.assets.get('acticons'), pw = Math.min(W - 24, 350), px = Math.round((W - pw) / 2), y;
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, k = this.info.key, isU = k === 'ult' || k === 'ult2', s = k === 'ult2' ? ULT2[this.cls] : isU ? ULT[this.cls] : SK[k], l = isU ? 5 : (this.sk[k] || 1), A = s.awk, akl = A ? D._wrap('각성 「' + A.name + '」 — ' + A.text + '  (5단계에서 각성)', Math.min(W - 24, 350) - 36) : [], ev = !isU && this._evo(k), IC = D.data.fx.icon, icons = D.assets.get('acticons'), pw = Math.min(W - 24, 350), px = Math.round((W - pw) / 2), y;
     ctx.fillStyle = 'rgba(4,6,10,.6)'; ctx.fillRect(0, 0, W, H); ctx.font = '12px sans-serif';
     var cur = D._wrap(s.desc(l, ev), pw - 36), nxt = l < 5 ? D._wrap(s.desc(l + 1, ev), pw - 36) : [], ph = 70 + cur.length * 17 + (nxt.length ? 26 + nxt.length * 17 : 0) + (akl.length ? 10 + akl.length * 17 : 0) + 30, py = Math.round(this.slots[0].y - 44 - ph);
     D._plate(px, py, pw, ph, 7, false); var fi = s.icon * 2; if (artOf(s, ev)) skArt(s, ctx, px + 16, py + 14, 38, 38, ev); else if (icons && IC) ctx.drawImage(isPas(s) ? greenSheet(icons) : icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, px + 16, py + 14, 36, 40);
@@ -1246,7 +1254,7 @@
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 13px sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = '#000';
     var tx = '숨는 중 — 적을 눌러 기습  ' + Math.max(0, Math.ceil(this.stealthUntil - T)) + '초'; ctx.globalAlpha = 0.75 + 0.25 * Math.sin(T * 5); ctx.strokeText(tx, W / 2, 96); ctx.fillStyle = mk ? '#ff9a8a' : '#d9c4ff'; ctx.fillText(tx, W / 2, 96); ctx.globalAlpha = 1; ctx.textAlign = 'left';
   };
-  P._nearest = function (n, range, skip) { var h = this.hero, L = [], F = this.foes, i; for (i = 0; i < F.length; i++) { var u = F[i]; if (u.state === 'dead' || u === skip) continue; var d = Math.hypot(u.x - h.x, u.y - h.y); if (d <= range) L.push([d, u]); } L.sort(function (a, b) { return a[0] - b[0]; }); return L.slice(0, n).map(function (e) { return e[1]; }); };
+  P._nearest = function (n, range, skip) { var h = this.hero, L = [], F = this.foes, i; for (i = 0; i < F.length; i++) { var u = F[i]; if (u.state === 'dead' || u === skip || u.rush) continue; var d = Math.hypot(u.x - h.x, u.y - h.y); if (d <= range) L.push([d, u]); } L.sort(function (a, b) { return a[0] - b[0]; }); return L.slice(0, n).map(function (e) { return e[1]; }); };
   P._blink = function (dx, dy) {
     var D = this.D, h = this.hero, l = this._lvOf('blink'); if (!l || this.tm.blink > 0 || this.over || this.cards || this._casting()) return;   /* 궁극기 시전 중(이동 불가)에는 축지법도 안 된다 (378번) */
     var d = Math.hypot(dx, dy); if (d < 0.01) { dx = this.lastDir[0]; dy = this.lastDir[1]; d = 1; }

@@ -37,7 +37,7 @@
   var SURV = { name: '서바이벌', stages: [{ name: '대도의 길' }, { name: '무사의 길' }, { name: '성전사', soon: true }] };   /* soon = 탭을 숨긴다 (README 384, 2026-11-26 사용자 "명예의 전당의 성전사 탭도 가려 줘" — 성전사는 아직 개발 중). 서버의 판(stage 2)과 올리는 길은 그대로 */
   P._rankShow = function (won, sv) {
     var g = this; if (g.rankOpen) return;
-    var F = {}; if (DG.RANK.surv) F.surv = SURV; Object.keys(DG.FACTIONS).forEach(function (k) { F[k] = DG.FACTIONS[k]; });
+    var F = {}; if (sv) F.surv = SURV; else Object.keys(DG.FACTIONS).forEach(function (k) { F[k] = DG.FACTIONS[k]; });   /* 406번(2026-11-26 사용자 "명예의 전당은 서바이벌은 서바이벌만 나오게, 디펜스는 그것만 나오게"): 서바이벌에서 열면 서바이벌 판만, 디펜스에서 열면 진영 판만 — 전에는 두 쪽 탭이 다 나왔다 */
     var res = sv ? sv.res : won ? g._rankResult() : null, view = sv ? { fac: 'surv', stage: sv.stage || 0 } : { fac: g.faction, stage: g.stageI || 0 }, sentKey = res ? res.fac + ':' + res.stage + ':' + res.time + ':' + res.kills : '';
     var wrap = el('div', 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(6,8,12,.72);touch-action:manipulation;');
     var box = el('div', 'box-sizing:border-box;width:min(360px,94vw);max-height:92vh;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:10px;border:1px solid #6b5a33;background:#12151d;color:#dfe6f5;font:13px sans-serif;');
@@ -92,7 +92,8 @@
         if (!ov.parentNode) return; grid.textContent = '';
         var byName = {}; if (SK) Object.keys(SK).forEach(function (k) { var s = SK[k]; if (s.name && !byName[s.name]) byName[String(s.name).slice(0, 16)] = k; if (s.evo && s.evo.name && !byName[s.evo.name]) byName[String(s.evo.name).slice(0, 16)] = k; });
         var IC = g.data && g.data.fx && g.data.fx.icon, icons = g.assets && g.assets.get('acticons');
-        (r.units || []).forEach(function (u) {
+        var isP = function (u) { var k0 = byName[u[0]]; return !!(k0 && SK[k0].tree === 'pas'); }, US = (r.units || []).filter(function (u) { return !isP(u); }).concat((r.units || []).filter(isP));   /* 408번(2026-11-26 사용자 "명예의 전당에서 카드 보기도 패시브와 액티브 소팅"): 액티브 먼저, 패시브 뒤 — 올릴 때의 차례가 섞여 있는 옛 기록도 여기서 가른다 (이름을 못 찾는 옛 스킬은 액티브 쪽) */
+        US.forEach(function (u) {
           var k = byName[u[0]], s = k && SK[k], lv = u[1] | 0, ev = !!(s && s.evo && s.evo.cls === CK), name = s ? (ev ? s.evo.name : s.name) : u[0];
           var cell = el('div', 'position:relative;width:38px;height:42px;cursor:pointer;touch-action:none;' + NOSEL);
           if (s && (s.art || (ev && s.evo && s.evo.art) || (IC && icons))) { var cv = doc.createElement('canvas'); cv.width = 72; cv.height = 80; cv.style.cssText = 'width:36px;height:40px;display:block;pointer-events:none;'; var cx = cv.getContext('2d'); cx.scale(2, 2);
@@ -137,7 +138,7 @@
     };
     var tabs = function () {
       facRow.textContent = ''; stRow.textContent = '';
-      Object.keys(F).forEach(function (k) { var b = el('button', k === view.fac ? TAB_ON : TAB, F[k].name); b.onclick = function () { view.fac = k; view.stage = 0; tabs(); load(); }; facRow.appendChild(b); });
+      facRow.style.display = Object.keys(F).length > 1 ? 'flex' : 'none';   /* 탭이 하나뿐이면(서바이벌) 그 줄은 숨긴다 */ Object.keys(F).forEach(function (k) { var b = el('button', k === view.fac ? TAB_ON : TAB, F[k].name); b.onclick = function () { view.fac = k; view.stage = 0; tabs(); load(); }; facRow.appendChild(b); });
       (F[view.fac].stages || []).forEach(function (S, i) { if (S.soon) return; var b = el('button', i === view.stage ? TAB_ON : TAB, (i + 1) + '. ' + S.name); b.onclick = function () { view.stage = i; tabs(); load(); }; stRow.appendChild(b); });
     };
 
