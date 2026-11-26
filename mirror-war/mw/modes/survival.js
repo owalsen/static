@@ -117,7 +117,7 @@
   function mmss(t) { t = Math.max(0, Math.ceil(t)); return (t < 600 ? '0' : '') + Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60); }
 
   function SurvivalGame(D) {
-    this.D = D; this.keys = {}; this.stick = null; this.menu = false; this.menuT = 0; this.done = false;
+    this.D = D; this.keys = {}; this.stick = null; this.menu = false; this.menuT = 0; this.done = false; this.invite = inviteFrom(root.location.search);   /* 초대 링크로 들어왔으면 시작 전에 토스트 (379번) */
     var A = D.assets, ids = [CFG.HERO];
     this.fxNeed = {};
     [26, 64].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });   /* 천지파열무의 불꽃: 데빌의 플레임 윈드(26, 불꽃 한 송이)와 폭발 함정의 불구름(64). 플레임 헬(27)은 불꽃 고리 뒤에 별 모양이 나오는 고유한 모양이라 쓰지 않는다 — 사용자 "플레임 헬의 모양을 그대로 갖고 오면 안 되고 불꽃만" (327번) */
@@ -153,10 +153,10 @@
     var D = this.D;
     if (D.time - (D._groundAt || 0) > 0.5 && D.terrain) D._makeGround();   // 아이폰이 보조 캔버스를 비우는 문제의 복구 (defense.js _frame 과 같은 이유)
     for (var k = 0; k < CFG.TS; k++) {
-      if (!this.menu && !D.paused && this.ready()) { if (this.charPick) this.charPick.t += dt; else if (this.guide) this.guideT += dt; else if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else if (this.aim2) { /* 투룡 조준 중: 방향을 찍을 때까지 게임이 멈춘다 (371번) */ } else this.update(dt); }
+      if (!this.menu && !D.paused && this.ready()) { if (this.charPick) this.charPick.t += dt; else if (this.invite) { this.invite.t += dt; if (this.invite.t >= INVITE.sec) this.invite = null; } else if (this.guide) this.guideT += dt; else if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else if (this.aim2) { /* 투룡 조준 중: 방향을 찍을 때까지 게임이 멈춘다 (371번) */ } else this.update(dt); }
       D.time += dt; }                                        // D._faceVec·_drawUnit 이 D.time 을 본다
     if (this.menu) this.menuT += dt;
-    if (this.press && Date.now() - this.press.t0 >= 350 && !this.cards && !this.over && !this.menu) { var ik = this.press.key === 'ult' && !this.cls ? null : this.press.key; if (ik) { this.info = { key: ik }; this.infoT = 0; } this.press = null; this.stick = null; this.keys = {}; }   // 스킬 칸을 꾹 누르면 설명 (게임은 멈춘다)
+    if (this.press && Date.now() - this.press.t0 >= 350 && !this.cards && (!this.over || this.press.over) && !this.menu) { var ik = this.press.key === 'ult' && !this.cls ? null : this.press.key; if (ik) { this.info = { key: ik }; this.infoT = 0; } this.press = null; this.stick = null; this.keys = {}; }   // 스킬 칸을 꾹 누르면 설명 (게임은 멈춘다)
     this.draw();
   };
   P.ready = function () { return this.started || (this.started = this.D.assets.ready() && !!this.D.ground); };   // 처음 한 번만 기다린다 (뒤 단계 유닛 그림은 하면서 받는다)
@@ -519,7 +519,7 @@
     if (this.cards) this._drawCards();
     if (this.info) this._drawInfo();
     if (D.time - this.rageT < CFG.RAGE.show) this._drawRage();
-    if (this.charPick) this._drawChars(); else if (this.guide) this._drawGuide();
+    if (this.charPick) this._drawChars(); else if (this.invite) this._drawInvite(); else if (this.guide) this._drawGuide();
     if (this.menu) this._drawMenu();
   };
   /* 천지파열무의 '칼을 꽂은 자세' (331번, 2026-11-20 사용자가 시안 A·B·C 중 "원래 C 안으로"): 마법전사의 앞쪽 대각선 방향 공격 프레임 1(칼을 정면에 곧게 든 자세)에서
@@ -576,16 +576,51 @@
   /* 명예의 전당 (README 350, 2026-11-23 사용자 "디펜스 모드의 명예의 전당에 올리기처럼 최후의 3분에 죽어도 올릴 수 있게"): 최후의 3분까지 갔거나 10분을 버틴 판만 올린다.
      순위 = 버틴 시간(긴 순), 같으면 처치. 판은 갈래마다 (0 대도의 길 · 1 무사의 길). 시험용 주소 값(?sk= ?edmg= …)으로 시작한 판은 올리지 않는다 (?cls= 로 갈래를 골라 시작한 판은 올린다) */
   P._rankRes = function () {
-    var self = this, stage = this.cls === 'shadow' ? 1 : this.cls === 'paladin' ? 2 : 0, win = this.over === 'win', test = (root.location.search || '').replace(/^\?/, '').split('&').some(function (kv) { var k = kv.split('=')[0]; return k && ['mode', 'tut', 'mute', 'game', 'chk', 'bgmvol', 'cls'].indexOf(k) < 0   /* cls = 갈래로 바로 시작하는 주소 — 올릴 수 있다 (2026-11-23 사용자 "해당 클래스로 시작해도 작성할 수 있게") */; });
+    var self = this, stage = this.cls === 'shadow' ? 1 : this.cls === 'paladin' ? 2 : 0, win = this.over === 'win', test = (root.location.search || '').replace(/^\?/, '').split('&').some(function (kv) { var k = kv.split('=')[0]; return k && ['mode', 'tut', 'mute', 'game', 'chk', 'bgmvol', 'cls', 'inv', 'by'].indexOf(k) < 0   /* cls = 갈래로 바로 시작하는 주소 — 올릴 수 있다 (2026-11-23 사용자 "해당 클래스로 시작해도 작성할 수 있게") */; });
     if (!this.over) return null; if (test) return { stage: stage, res: null, msg: '시험용 주소로 시작한 판은 기록을 올릴 수 없습니다' };
     if (!win && !this._rage()) return { stage: stage, res: null, msg: '최후의 3분(' + mmss(CFG.RAGE.at) + ')까지 버티면 기록을 올릴 수 있습니다' };
     var units = ['dagger'].concat(Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; })).filter(function (k) { return SK[k] && self.sk[k]; }).map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
     return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: ['적 레벨 ' + Math.round((this.scaleK || 0) * 100) + '%'].concat(win ? ['완주'] : []) } };
   };
+  /* 친구 초대 · 공유 (379번, 2026-11-26 사용자 "쓰러지거나 클리어 시 나오는 카드 화면에 공유하기 — 카카오톡에 보낼 수 있게(썸네일도), 그 링크를 타고 들어오면 서바이벌이 시작되고 시작 전에 '이름없는 대도(또는 무사)가 당신을 초대했습니다' 토스트. 명예의 전당에 입력한 이름이 '이름없는'을 대체"):
+     보내는 주소 = 초대 페이지 defense/i/<갈래>.html?by=<이름> (갈래 t 대도 · m 무사 · d 전직 전 도둑). 그 페이지는 카카오톡 미리보기용 제목·그림(og)만 갖고 바로 게임(?mode=survival&inv=&by=)으로 넘긴다 — tools/dist.js 가 만든다.
+     이름 = 명예의 전당에 기록을 올릴 때 넣은 닉네임(localStorage mwdef.nick), 없으면 '이름없는'. itch 판은 iframe 안이라 주소가 itch 것이므로 정적 사이트 주소로 보낸다.
+     휴대폰은 공유 시트(navigator.share — 카카오톡을 고른다), 안 되면 링크를 복사하고 알린다 */
+  var INVITE = { sec: 3.2, inn: 0.35, out: 0.4, base: 'https://owalsen.github.io/static/mirror-war/defense/i/', who: { t: '대도', m: '무사', d: '도둑' }, josa: { t: '가', m: '가', d: '이' } };   /* 성전사는 아직 개발 중이라 초대 갈래에 없다 (사용자) — 성전사로 한 판은 '도둑'으로 나간다 */
+  function inviteFrom(search) {
+    var q0 = {}; String(search || '').replace(/^\?/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) { try { q0[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' ')); } catch (e) {} } });
+    if (!q0.inv || !INVITE.who[q0.inv]) return null;
+    var nick = String(q0.by || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 12);
+    return { t: 0, k: q0.inv, who: (nick || '이름없는') + ' ' + INVITE.who[q0.inv] };
+  }
+  P._shareInfo = function () {
+    var k = this.cls === 'venom' ? 't' : this.cls === 'shadow' ? 'm' : 'd', nick = '', loc = root.location, base = INVITE.base;
+    try { nick = (root.localStorage.getItem('mwdef.nick') || '').trim().slice(0, 12); } catch (e) {}
+    if (/(^|\.)github\.io$|^localhost$|^127\.0\.0\.1$/.test(loc.hostname)) base = loc.origin + loc.pathname.replace(/[^\/]*$/, '') + 'i/';   /* 정적 사이트·로컬에서는 지금 주소 기준 */
+    var who = (nick || '이름없는') + ' ' + INVITE.who[k];
+    return { url: base + k + '.html' + (nick ? '?by=' + encodeURIComponent(nick) : ''), title: '거울전쟁 서바이벌', text: who + INVITE.josa[k] + ' 당신을 초대했습니다 — ' + (this.over === 'win' ? '10분 완주' : mmss(Math.floor(this.t)) + ' 생존') + ', 처치 ' + this.kills };
+  };
+  P._share = function () {
+    var self = this, D = this.D, S = this._shareInfo(), say = function (s) { self.shareMsg = { s: s, t0: D.time }; }, nav = root.navigator || {};
+    var copy = function () { var done = function () { say('초대 링크를 복사했습니다 — 카카오톡에 붙여 넣으세요'); }, fail = function () { say(S.url); };
+      if (nav.clipboard && nav.clipboard.writeText) nav.clipboard.writeText(S.url).then(done, function () { legacy(); }); else legacy();
+      function legacy() { try { var ta = document.createElement('textarea'); ta.value = S.url; ta.style.cssText = 'position:fixed;left:-999px;top:0;opacity:0'; document.body.appendChild(ta); ta.select(); var ok = document.execCommand('copy'); document.body.removeChild(ta); (ok ? done : fail)(); } catch (e) { fail(); } } };
+    if (D._raceSnd) D._raceSnd('click');
+    if (nav.share) { try { nav.share({ title: S.title, text: S.text, url: S.url }).then(function () {}, function (e) { if (!e || e.name !== 'AbortError') copy(); }); } catch (e) { copy(); } } else copy();
+  };
+  /* 초대 토스트: 화면 위에서 내려왔다가 올라간다 — 그동안 게임은 멈춰 있고, 사라지면 시작(안내가 있으면 안내로) */
+  P._drawInvite = function () {
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, I = this.invite, a = I.t, k = Math.min(1, a / INVITE.inn) * Math.min(1, Math.max(0, (INVITE.sec - a) / INVITE.out)), e = 1 - Math.pow(1 - k, 3), pw = Math.min(W - 28, 330), ph = 74, px = Math.round((W - pw) / 2), py = Math.round(-ph + (ph + Math.max(64, H * 0.16)) * e);
+    ctx.fillStyle = 'rgba(4,6,10,' + (0.45 * k).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = Math.min(1, k * 1.5); D._plate(px, py, pw, ph, 8, true); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText(I.who + INVITE.josa[I.k], W / 2, py + 27, pw - 28);
+    ctx.font = '13px sans-serif'; ctx.fillStyle = '#e6ecf8'; ctx.fillText('당신을 초대했습니다', W / 2, py + 51);
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
+  };
   /* 끝난 화면 = 결과 리포트: 생존 시간·웨이브·처치·레벨·전직 / 준 피해·최고 한 방·치명타·받은 피해 / 가진 스킬 */
   P._drawOver = function () {
     var D = this.D, ctx = D.ctx, W = D.W, H = D.H, self = this, win = this.over === 'win', al = Math.min(1, this.overT / 0.6), ST = this.stat, pw = Math.min(330, W - 28), px = Math.round((W - pw) / 2), i;
-    var keys = Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; }), all = (this.sk.dagger ? ['dagger'] : []).concat(keys), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 166, py = Math.max(24, Math.round((H - ph) / 2));
+    var keys = Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; }), all = (this.sk.dagger ? ['dagger'] : []).concat(keys), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 216, py = Math.max(24, Math.round((H - ph) / 2));
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(win ? '10분을 버텼습니다' : '쓰러졌습니다', W / 2, py + 34);
@@ -595,11 +630,12 @@
     for (i = 0; i < rows.length; i++) { var ry = py + 68 + i * 24; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(rows[i][0], px + 24, ry); ctx.textAlign = 'right'; ctx.fillStyle = i < 4 ? '#ffe9b0' : '#dfe6f5'; ctx.fillText(rows[i][1], px + pw - 24, ry);
       if (i === 3) { ctx.fillStyle = 'rgba(168,130,58,.5)'; ctx.fillRect(px + 20, ry + 12, pw - 40, 1); } }
     var sy = py + 68 + rows.length * 24 + 10, IC = D.data.fx.icon, icons = D.assets.get('acticons');
-    ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('스킬', px + 24, sy);
-    all.forEach(function (k, n) { var bx = px + 16 + (n % per) * 40, by = sy + 14 + Math.floor(n / per) * 46, fi = SK[k].icon * 2; if (SK[k].art) SK[k].art(ctx, bx, by + 1, 34, 34); else if (icons && IC) ctx.drawImage(icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, bx, by, 34, 37);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('스킬', px + 24, sy); ctx.textAlign = 'right'; ctx.font = '11px sans-serif'; ctx.fillStyle = '#6f7890'; ctx.fillText('길게 누르면 설명', px + pw - 24, sy); ctx.font = '13px sans-serif'; this.overSk = [];   /* 380번: 스킬 그림을 길게 누르면 단계·설명(_drawInfo) */
+    all.forEach(function (k, n) { var bx = px + 16 + (n % per) * 40, by = sy + 14 + Math.floor(n / per) * 46, fi = SK[k].icon * 2; self.overSk.push({ x: bx, y: by, w: 36, h: 40, key: k }); if (SK[k].art) SK[k].art(ctx, bx, by + 1, 34, 34); else if (icons && IC) ctx.drawImage(icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, bx, by, 34, 37);
       ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'right'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(self.sk[k], bx + 34, by + 32); ctx.fillStyle = self._evo(k) ? '#ffd36e' : '#fff'; ctx.fillText(self.sk[k], bx + 34, by + 32); });
-    var rk = D._rankShow && D.constructor.RANK && D.constructor.RANK.surv ? this._rankRes() : null, bts = (rk ? [['rank', rk.res ? '기록 올리기 · 명예의 전당' : '명예의 전당 보기']] : []).concat([['retry', '다시 하기'], ['exit', '모드 선택으로']]), by0 = py + ph - 12 - bts.length * 50; this.overBtns = []; ctx.textAlign = 'center';
-    for (i = 0; i < bts.length; i++) { var b = { x: px + 14, y: by0 + i * 50, w: pw - 28, h: 42, act: bts[i][0] }; this.overBtns.push(b); D._plate(b.x, b.y, b.w, b.h, 5, b.act === 'rank' && !!rk.res); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = b.act === 'rank' && rk.res ? '#ffd36e' : '#dfe6f5'; ctx.fillText(bts[i][1], b.x + b.w / 2, b.y + b.h / 2); }
+    var rk = D._rankShow && D.constructor.RANK && D.constructor.RANK.surv ? this._rankRes() : null, bts = (rk ? [['rank', rk.res ? '기록 올리기 · 명예의 전당' : '명예의 전당 보기']] : []).concat([['share', '친구 초대 · 공유하기'], ['retry', '다시 하기'], ['exit', '모드 선택으로']]), by0 = py + ph - 12 - bts.length * 50; this.overBtns = []; ctx.textAlign = 'center';
+    for (i = 0; i < bts.length; i++) { var b = { x: px + 14, y: by0 + i * 50, w: pw - 28, h: 42, act: bts[i][0] }; this.overBtns.push(b); D._plate(b.x, b.y, b.w, b.h, 5, b.act === 'rank' && !!rk.res); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = b.act === 'rank' && rk.res ? '#ffd36e' : b.act === 'share' ? '#ffe08a' : '#dfe6f5'; ctx.fillText(bts[i][1], b.x + b.w / 2, b.y + b.h / 2); }
+    var SM = this.shareMsg; if (SM && D.time - SM.t0 < 2.6) { var sk2 = Math.min(1, (D.time - SM.t0) / 0.15) * Math.min(1, (2.6 - (D.time - SM.t0)) / 0.4), sw2; ctx.font = 'bold 12px sans-serif'; sw2 = ctx.measureText(SM.s).width + 28; ctx.globalAlpha = sk2; ctx.fillStyle = 'rgba(10,14,22,.92)'; ctx.fillRect(Math.round(W / 2 - sw2 / 2), by0 - 34, sw2, 26); ctx.strokeStyle = '#a8823a'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(W / 2 - sw2 / 2) + 0.5, by0 - 33.5, sw2 - 1, 25); ctx.fillStyle = '#ffe9b0'; ctx.fillText(SM.s, W / 2, by0 - 21); ctx.globalAlpha = 1; }   /* 공유 결과 알림(링크 복사됨 등) — 버튼 위에 잠깐 */
     ctx.textAlign = 'left';
   };
   /* 피해 숫자 (2026-11-19 사용자 요청 — 붉은보석처럼 그림 숫자): 글꼴로 매번 쓰지 않고, 굵은 기울임 숫자 0~9 를 색별로 한 장(시트)에 구워 두고 그림으로 찍는다.
@@ -726,12 +762,14 @@
     var self = this, D = this.D, cv = D.cv, on = function () { return D.sub === self && !self.done; };
     cv.addEventListener('pointerdown', function (e) { if (!on()) return; e.preventDefault(); var p = D._pos(e), x = p[0], y = p[1];
       if (self.charPick) { if (self.charPick.t > 0.3) (self.charBtns || []).forEach(function (b) { if (inBox(b, x, y)) self._pickChar(b.k); }); return; }   /* 캐릭터 고르기 (?chars=1) */
+      if (self.invite) { if (self.invite.t > 0.4 && self.invite.t < INVITE.sec - INVITE.out) self.invite.t = INVITE.sec - INVITE.out; return; }   /* 초대 토스트: 누르면 바로 들어간다 */
       if (self.guide) { if (self.guideT > 0.4) { self.guide = false; if (D._raceSnd) D._raceSnd('click'); } return; }   // 시작 안내: 아무 데나 누르면 시작
       D.sfx.unlock(); D.bgm.resume();
       if (self.menu) { self._menuTap(x, y); return; }
       if (self.cards) { self._cardTap(x, y); return; }
       if (self.info) { self._infoTap(x, y); return; }
-      if (self.over) { (self.overBtns || []).forEach(function (b) { if (inBox(b, x, y)) { if (b.act === 'rank') D._rankShow(false, self._rankRes()); else if (b.act === 'retry') self.reset(); else self.exit(); } }); return; }
+      if (self.over) { var osk = null; (self.overBtns ? self.overSk || [] : []).forEach(function (b) { if (inBox(b, x, y)) osk = b.key; }); if (osk) { self.press = { key: osk, t0: Date.now(), id: e.pointerId, over: true }; return; }   /* 결과 카드의 스킬 그림: 0.35초 넘게 누르고 있으면 설명 (frame) */
+        (self.overBtns || []).forEach(function (b) { if (inBox(b, x, y)) { if (b.act === 'rank') D._rankShow(false, self._rankRes()); else if (b.act === 'share') self.sharePend = { id: e.pointerId, b: b }; else if (b.act === 'retry') self.reset(); else self.exit(); } }); return; }
       if (inBox(self.menuBtn, x, y)) { self.openMenu(); return; }
       if (self.hide && self._hideTap(x, y)) return;   // 그림자 숨기: 적을 누르면 기습 (적이 아닌 곳은 평소처럼 조이스틱)
       var pk = self.over ? null : self._slotAt(x, y); if (pk) { self.press = { key: pk, t0: Date.now(), id: e.pointerId }; return; }   // 스킬 칸: 떼면 누르기(_slotTap), 0.35초 넘게 누르고 있으면 설명(frame)
@@ -743,6 +781,7 @@
     cv.addEventListener('pointermove', function (e) { var S = self.stick; if (!on() || !S || S.id !== e.pointerId) return; var p = D._pos(e); S.x = p[0]; S.y = p[1];
       var dx = S.x - S.x0, dy = S.y - S.y0, m = Math.hypot(dx, dy), R = CFG.STICK.r * 1.6; if (m > R) { S.x0 = S.x - dx / m * R; S.y0 = S.y - dy / m * R; } });   // 멀리 끌면 중심이 따라온다 (방향을 바꾸려고 손가락을 한참 되돌리지 않게)
     var end = function (e) { var S = self.stick; if (S && S.id === e.pointerId) self.stick = null;
+      var SP = self.sharePend; if (SP && SP.id === e.pointerId) { self.sharePend = null; if (e.type === 'pointerup' && on() && self.over) { var sp = D._pos(e); if (inBox(SP.b, sp[0], sp[1])) self._share(); } }
       var PR = self.press; if (PR && PR.id === e.pointerId) { self.press = null; if (e.type === 'pointerup' && on() && !self.cards && !self.menu && !self.over) self._slotTap(PR.key); } };
     cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
     root.addEventListener('keydown', function (e) { if (!on()) return;

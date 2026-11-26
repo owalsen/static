@@ -53,6 +53,61 @@
     closeB.onclick = close; wrap.addEventListener('pointerdown', function (e) { if (e.target === wrap) close(); });
     ['keydown', 'keyup', 'pointerdown', 'pointerup', 'pointermove', 'wheel', 'touchstart'].forEach(function (t) { box.addEventListener(t, function (e) { e.stopPropagation(); }); });
 
+    /* 기록 카드 (README 380, 2026-11-26 사용자 "명예의 전당 리스트의 아이템을 누르면 펼쳐지는데, 그 상태에서 내용을 한 번 더 누르면 카드가 나오도록. 카드의 스킬 아이콘을 길게 누르면 스킬 레벨과 설명"):
+       서바이벌 기록 한 줄을 결과 화면 같은 카드로 — 서버에 있는 것만(시간·처치·레벨·적 레벨·스킬·버전. 준 피해 같은 것은 올리지 않는다). 스킬 그림·설명은 survival.js 의 SK 에서 이름으로 찾는다(디펜스에서 열었으면 그때 받는다, 못 찾는 옛 이름은 글자로) */
+    var needSK = function (cb) {
+      if (MWE.SurvivalGame) { cb(MWE.SurvivalGame.SK); return; }
+      var base = '../mw/modes/', tags = doc.getElementsByTagName('script'), ti; for (ti = 0; ti < tags.length; ti++) { var m = /^(.*\/)defense\.js(\?.*)?$/.exec(tags[ti].getAttribute('src') || ''); if (m && /modes\/$/.test(m[1])) base = m[1]; }
+      var sc = doc.createElement('script'); sc.src = base + 'survival.js'; sc.onload = function () { cb(MWE.SurvivalGame ? MWE.SurvivalGame.SK : null); }; sc.onerror = function () { cb(null); }; doc.head.appendChild(sc);
+    };
+    var card = function (r, rank) {
+      var CK = ['venom', 'shadow', 'paladin'][view.stage] || 'venom', NOSEL = '-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;';
+      var ov = el('div', 'position:fixed;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:rgba(6,8,12,.78);touch-action:manipulation;' + NOSEL);
+      var cb = el('div', 'box-sizing:border-box;width:min(340px,92vw);max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:10px;border:1px solid #a8823a;background:#1a1410;color:#dfe6f5;font:13px sans-serif;');
+      var hd = el('div', 'display:flex;align-items:center;justify-content:space-between;gap:8px;'), nm = el('div', 'flex:1 1 auto;min-width:0;');
+      nm.appendChild(el('div', 'font:bold 18px sans-serif;color:#ffd36e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;', r.nick));
+      nm.appendChild(el('div', 'font-size:11px;color:#9aa3b8;margin-top:2px;', '서바이벌 · ' + SURV.stages[view.stage].name + ' · ' + (rank + 1) + '위'));
+      var cl = el('button', BTN, '닫기'); hd.appendChild(nm); hd.appendChild(cl); cb.appendChild(hd);
+      var rows = [['생존 시간', mmss(r.time) + (r.time >= 600 ? '  (완주)' : '')], ['처치', String(r.kills)], ['레벨', String(r.lost)]];
+      (r.cards || []).slice(0, 3).forEach(function (c) { var m2 = /^(적 레벨)\s*(.+)$/.exec(c); if (m2) rows.push([m2[1], m2[2]]); });
+      if (r.ver) rows.push(['버전', (/\./.test(r.ver) ? 'v' : '') + r.ver]);
+      var tb = el('div', 'display:flex;flex-direction:column;gap:5px;padding:8px 4px;border-top:1px solid rgba(168,130,58,.5);border-bottom:1px solid rgba(168,130,58,.5);');
+      rows.forEach(function (rw) { var ln = el('div', 'display:flex;justify-content:space-between;'); ln.appendChild(el('span', 'color:#9aa3b8;', rw[0])); ln.appendChild(el('span', 'color:#ffe9b0;font-weight:bold;', rw[1])); tb.appendChild(ln); }); cb.appendChild(tb);
+      var sh = el('div', 'display:flex;justify-content:space-between;align-items:baseline;'); sh.appendChild(el('span', 'color:#9aa3b8;', '스킬')); sh.appendChild(el('span', 'color:#6f7890;font-size:11px;', '길게 누르면 설명')); cb.appendChild(sh);
+      var grid = el('div', 'display:flex;flex-wrap:wrap;gap:6px;min-height:44px;'); cb.appendChild(grid);
+      var tip = el('div', 'display:none;flex-direction:column;gap:4px;padding:9px;border-radius:8px;background:#0d1017;border:1px solid #3a4152;'); cb.appendChild(tip);
+      ov.appendChild(cb); doc.body.appendChild(ov);
+      var shut = function () { if (ov.parentNode) ov.parentNode.removeChild(ov); };
+      cl.onclick = shut; ov.addEventListener('pointerdown', function (e) { if (e.target === ov) shut(); });
+      ['keydown', 'keyup', 'pointerdown', 'pointerup', 'pointermove', 'wheel', 'touchstart', 'click'].forEach(function (t) { ov.addEventListener(t, function (e) { e.stopPropagation(); }); });
+      ov.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      var showTip = function (name, lv, s, ev) {
+        tip.textContent = ''; tip.style.display = 'flex';
+        var t1 = el('div', 'display:flex;justify-content:space-between;align-items:baseline;'); t1.appendChild(el('b', 'color:#ffe9b0;font-size:14px;', name)); t1.appendChild(el('span', 'color:#9cc0ff;font-weight:bold;font-size:12px;', 'Lv ' + lv + (lv >= 5 ? ' (최대)' : ''))); tip.appendChild(t1);
+        var d = ''; try { d = s && s.desc ? String(s.desc(Math.max(1, Math.min(5, lv)), ev)) : ''; } catch (e) {}
+        tip.appendChild(el('div', 'color:#dfe6f5;font-size:12px;line-height:1.5;', d || '설명을 찾지 못했습니다 (지금 판에는 없는 스킬)'));
+      };
+      grid.appendChild(el('span', 'color:#7b8397;font-size:12px;', '불러오는 중…'));
+      needSK(function (SK) {
+        if (!ov.parentNode) return; grid.textContent = '';
+        var byName = {}; if (SK) Object.keys(SK).forEach(function (k) { var s = SK[k]; if (s.name && !byName[s.name]) byName[String(s.name).slice(0, 16)] = k; if (s.evo && s.evo.name && !byName[s.evo.name]) byName[String(s.evo.name).slice(0, 16)] = k; });
+        var IC = g.data && g.data.fx && g.data.fx.icon, icons = g.assets && g.assets.get('acticons');
+        (r.units || []).forEach(function (u) {
+          var k = byName[u[0]], s = k && SK[k], lv = u[1] | 0, ev = !!(s && s.evo && s.evo.cls === CK), name = s ? (ev ? s.evo.name : s.name) : u[0];
+          var cell = el('div', 'position:relative;width:38px;height:42px;cursor:pointer;touch-action:none;' + NOSEL);
+          if (s && (s.art || (IC && icons))) { var cv = doc.createElement('canvas'); cv.width = 72; cv.height = 80; cv.style.cssText = 'width:36px;height:40px;display:block;pointer-events:none;'; var cx = cv.getContext('2d'); cx.scale(2, 2);
+            try { var fi = s.icon * 2; if (s.art) s.art(cx, 0, 1, 34, 34); else cx.drawImage(icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, 0, 0, 34, 37); } catch (e) {} cell.appendChild(cv); }
+          else { cell.style.cssText += 'width:auto;height:auto;padding:4px 6px;border-radius:5px;border:1px solid #3a4152;color:#9aa3b8;font-size:11px;'; cell.appendChild(el('span', 'pointer-events:none;', u[0])); }
+          cell.appendChild(el('span', 'position:absolute;right:0;bottom:0;font:bold 10px sans-serif;color:' + (ev ? '#ffd36e' : '#fff') + ';text-shadow:0 0 2px #000,0 0 2px #000,1px 1px 0 #000;pointer-events:none;', String(lv)));
+          var tmr = 0, stop = function () { if (tmr) { root.clearTimeout(tmr); tmr = 0; } };
+          cell.addEventListener('pointerdown', function () { stop(); tmr = root.setTimeout(function () { tmr = 0; cell.style.outline = '1px solid #ffd36e'; root.setTimeout(function () { cell.style.outline = ''; }, 600); showTip(name, lv, s, ev); }, 350); });
+          ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (t) { cell.addEventListener(t, stop); });
+          grid.appendChild(cell);
+        });
+        if (!(r.units || []).length) grid.appendChild(el('span', 'color:#7b8397;font-size:12px;', '기록된 스킬이 없습니다'));
+      });
+    };
+
     var seq = 0;
     var load = function () {
       var my = ++seq; list.textContent = ''; list.appendChild(el('div', 'padding:18px;text-align:center;color:#7b8397;', '불러오는 중…')); foot.textContent = '';
@@ -72,10 +127,12 @@
           more.appendChild(el('div', '', sv2 ? '레벨 ' + r.lost + ' · 처치 ' + r.kills + (r.cards && r.cards.length ? ' · ' + r.cards.slice(0, 3).join(' · ') : '') : '남은 기지 ' + r.base + ' · 잃은 아군 ' + r.lost + ' · 처치 ' + r.kills));
           if (r.units && r.units.length) more.appendChild(el('div', '', (sv2 ? '스킬: ' : '소환: ') + r.units.slice(0, sv2 ? 16 : 8).map(function (u) { return u[0] + ' ' + u[1]; }).join(', ')));
           if (!sv2 && r.cards && r.cards.length) more.appendChild(el('div', '', '카드: ' + r.cards.slice(0, 10).join(', ')));
-          if (r.ver) more.appendChild(el('div', 'color:#6f7890;', (/\./.test(r.ver) ? '버전 v' : '버전 ') + r.ver)); row.appendChild(more); row.onclick = function () { more.style.display = more.style.display === 'none' ? 'block' : 'none'; };
+          if (r.ver) more.appendChild(el('div', 'color:#6f7890;', (/\./.test(r.ver) ? '버전 v' : '버전 ') + r.ver)); row.appendChild(more);
+          if (sv2) { more.appendChild(el('div', 'color:#c9a44a;', '한 번 더 누르면 카드 ▸')); more.onclick = function (e) { e.stopPropagation(); card(r, i); }; }   /* 펼친 내용을 한 번 더 누르면 그 기록의 카드 (README 380) */
+          row.onclick = function () { more.style.display = more.style.display === 'none' ? 'block' : 'none'; };
           list.appendChild(row);
         });
-        foot.textContent = d.me ? '내 기록 ' + mmss(d.me.time) + ' — ' + d.me.rank + '위 / ' + d.total + '명' : d.total ? '기록 ' + d.total + '명 · 줄을 누르면 ' + (view.fac === 'surv' ? '스킬이' : '편성이') + ' 보입니다' : '';
+        foot.textContent = d.me ? '내 기록 ' + mmss(d.me.time) + ' — ' + d.me.rank + '위 / ' + d.total + '명' : d.total ? '기록 ' + d.total + '명 · 줄을 누르면 ' + (view.fac === 'surv' ? '스킬이, 한 번 더 누르면 카드가' : '편성이') + ' 보입니다' : '';
       }).catch(function () { if (my !== seq) return; list.textContent = ''; list.appendChild(el('div', 'padding:18px;text-align:center;color:#ff9a8a;', '순위 서버에 연결하지 못했습니다')); });
     };
     var tabs = function () {
