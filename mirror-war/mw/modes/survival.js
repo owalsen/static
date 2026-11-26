@@ -14,7 +14,7 @@
     HERO_Y: q('heroy', 0.47),   /* 0.42 → 0.47 (372번, 2026-11-23 사용자 "투룡을 위로 쏘면 잘 안 보여서 플레이어 위치를 살짝만 더 아래로") */    // 도둑이 서는 화면 세로 자리 (가운데보다 조금 위 — 끄는 엄지가 아래쪽을 가린다)
     SPEED: q('speed', 1.6),      // 도둑 걷는 속도 = 디펜스의 걷는 속도 × 이 값 (적보다 확실히 빨라야 보고 피한다)
     TIME: 600, SHOWN: 7,   /* 328번: 7웨이브(7분) 뒤 '최후의 3분'(RAGE)까지 한 판 10분 */
-    RAGE: { show: 3.4, at: q('rageat', 420), hp: q('ragehp', 2), minHit: q('ragehit', 0.2), spd: 1.2 },   /* 2026-11-20 사용자 "7분 이후에는 전체 몹들이 7분대보다 2배 이상 강해져서 10분까지 지속. 한 대 맞으면 1/5 이상은 무조건 닳게. 공속과 걷기 빠르기는 1.2배": at 초부터 적 체력 × hp(그때 살아 있던 적도), 한 대 피해가 적어도 최대 체력 × minHit, 걸음·휘두르기·공격 대기 × spd */         // 한 판 7분, 화면에 보이는 웨이브 7단계 (319번, 2026-11-20 사용자 "10웨이브가 길게 느껴져서 7까지로, 대신 어려움 굴곡은 똑같이"): 아래 WAVE.list 의 난이도 10칸은 그대로 두고 한 칸을 60초 → 42초로 — 같은 굴곡을 7분에 지난다. 화면의 '웨이브 n/7' 은 1분마다
+    RAGE: { show: 3.4, at: q('rageat', 420), hp: q('ragehp', 2), minHit: q('ragehit', 0.2), spd: 1.2, stageSec: 60, hpS: [1.5, 2, 2.5], minS: [0.1, 0.2, 0.2], spdS: [1.2, 1.2, 1.3], names: ['최후의 3분', '최후의 2분 — 적이 더 단단해진다', '최후의 1분 — 적이 더 빨라진다'] },   /* 411번(2026-11-27 사용자, 굴곡 안 1·2·3): 최후의 3분을 **1분씩 세 단계**로 — 7:00 에 한꺼번에(체력 2배·최소 피해 20%·속도 1.2배) 조이던 것을 hpS·minS·spdS 차례로. 처음 1분은 전보다 약하고(1.5배·10%), 마지막 1분은 더 세다(2.5배·속도 1.3배). 봇이 대부분 7:10~7:30 에 쓰러져 '벽에 부딪혀 바로 끝나는' 판이었다 */   /* 2026-11-20 사용자 "7분 이후에는 전체 몹들이 7분대보다 2배 이상 강해져서 10분까지 지속. 한 대 맞으면 1/5 이상은 무조건 닳게. 공속과 걷기 빠르기는 1.2배": at 초부터 적 체력 × hp(그때 살아 있던 적도), 한 대 피해가 적어도 최대 체력 × minHit, 걸음·휘두르기·공격 대기 × spd */         // 한 판 7분, 화면에 보이는 웨이브 7단계 (319번, 2026-11-20 사용자 "10웨이브가 길게 느껴져서 7까지로, 대신 어려움 굴곡은 똑같이"): 아래 WAVE.list 의 난이도 10칸은 그대로 두고 한 칸을 60초 → 42초로 — 같은 굴곡을 7분에 지난다. 화면의 '웨이브 n/7' 은 1분마다
     STICK: { r: 44, dead: 5 },   // 가상 조이스틱: 누른 곳이 중심, r 만큼 끌면 최고 속도, dead 안쪽은 멈춤
     SAFE: { top: 20, bottom: 24 },   // 디펜스의 SAFE 와 같다 (상태 표시줄·홈 막대 자리)
     SLOTS: 6,
@@ -41,15 +41,15 @@
       { add: [39, 15, 8, 53, 49, 1], rate: 3.8, cap: 230, hp: 2, mini: [39, 20] },                  // 6 데몬 마법전사 무도가 흑전사 흑마술사 기사
       { add: [69, 25, 12, 10, 56, 57, 40], rate: 4.3, cap: 260, hp: 2.6, boss: [47, 16], mini: [57, 18] },   // 7 거미 악령술사 마법사 의적 대도 마기사 데빌 · 우두머리 드래곤
       { add: [30, 44, 45, 2, 16, 50, 26, 5, 66], rate: 4.8, cap: 290, hp: 3.2, mini: [44, 16] },      // 8 듀라한 켈베로스 펜릴 창기사 마법기사 요마술사 강신술사 명궁 구렁이
-      { add: [70, 54, 3, 22, 9, 13, 41, 27, 51, 19], rate: 5.4, cap: 320, hp: 4, mini: [54, 14] },  // 9 전갈 흑기사 성기사 엔젤 나이트 도사 장로 사탄 사술사 대마술사 주교
-      { add: [47, 67, 21, 59, 61, 62, 20, 58, 63, 64], rate: 6.2, cap: 340, hp: 5, boss: [34, 32], mini: [47, 10] } ] },   /* 5단계부터 적 체력 (2026-11-19 사용자 "6단계부터 애들이 너무 빠르게 죽음"): 1.2·1.3·1.4·1.5·1.6·1.8 → 1.5·2·2.6·3.2·4·5 (1.8·2.6·3.4·4.4·5.5·7 은 봇 셋 다 6~8단계에서 쓰러짐). 우두머리·중간 우두머리의 배수는 웨이브 배수와 곱해지므로 그만큼 나눠 절대 체력을 거의 그대로(중간 우두머리는 조금 위로) */   // 10 드래곤 신수사 환술사 인챈터 마녀 소환사 … · 우두머리 다크로드
+      { add: [70, 54, 3, 22, 9, 13, 41, 27, 51, 19], rate: 5.4, cap: 320, hp: 3.4, mini: [54, 14] },   /* 411번: 6분대(이 칸과 다음 칸)의 적 체력 4·5 → 3.4·4.2 — 최후의 3분 직전은 '내가 가장 센 순간'이 되게 */  // 9 전갈 흑기사 성기사 엔젤 나이트 도사 장로 사탄 사술사 대마술사 주교
+      { add: [47, 67, 21, 59, 61, 62, 20, 58, 63, 64], rate: 6.2, cap: 340, hp: 4.2, boss: [34, 32], mini: [47, 10] } ] },   /* 5단계부터 적 체력 (2026-11-19 사용자 "6단계부터 애들이 너무 빠르게 죽음"): 1.2·1.3·1.4·1.5·1.6·1.8 → 1.5·2·2.6·3.2·4·5 (1.8·2.6·3.4·4.4·5.5·7 은 봇 셋 다 6~8단계에서 쓰러짐). 우두머리·중간 우두머리의 배수는 웨이브 배수와 곱해지므로 그만큼 나눠 절대 체력을 거의 그대로(중간 우두머리는 조금 위로) */   // 10 드래곤 신수사 환술사 인챈터 마녀 소환사 … · 우두머리 다크로드
     /* 돌진 (2026-11-19 사용자 지시 — 뱀서류 분석 글의 "무리 돌진"): 3단계부터 한쪽에서 떼가 줄지어 나타나 곧게 달려 지나간다(도둑을 쫓지 않는다).
        먼저 warn 초 동안 지나갈 길(폭 band)을 붉게 보이고 화면 가장자리에 화살표 → 그 길 밖으로 비키면 된다. 닿으면 한 번에 피해 × dmg, 같은 놈은 0.8초 뒤에야 다시 친다.
        every·n = [3단계 값, 10단계 값] (단계에 따라 고르게 바뀐다), unit = [이 단계부터, 유닛] */
     RUSH: { from: 2, every: [36, 22], n: [12, 30], speed: 150, band: 200, warn: 1.7, dist: 580, dmg: 1.3, touch: 22, dot: q('rushdot', 0.3), tick: 0.25, slowSec: 0.5, slow: q('rushslow', 0.3),   /* 409번(2026-11-26 사용자 "감속 70%로 감속하고 닿는 동안 30% 퍼뎀 감소"): 닿으면 걸음이 **70% 느려진다**(× slow 0.3 — 전에는 냉기탄의 감속을 빌려 썼다), 닿아 있는 동안 잃는 체력 초당 10% → **30%** */   /* 407번(2026-11-26 사용자 "가끔 나오는 늑대 떼들은 때릴 수 없고, 닿으면 슬로우 걸린 것처럼 느려지고 초당 체력 10% 닳도록"): 돌진 떼는 **맞지 않는다**(겨누지도 않는다) — 길에서 비키는 수밖에 없다. 닿아 있는(touch) 동안 걸음이 느려지고(냉기탄과 같은 감속, 떨어진 뒤 slowSec 초까지) tick 초마다 최대 체력 × dot × tick 을 잃는다(초당 10%, 몇 마리가 닿든 같다 · 방어·회피 무시 · 궁극기의 무적 중에는 안 닳는다). 전에는 때려잡을 수 있었고 닿으면 0.8초마다 한 대(× dmg)였다 */ unit: [[0, 43], [5, 36], [8, 44]] },
     /* 포위 (296번, 뱀서류 분석 글의 "포위" — 사용자 승인 순서 2): from 단계(0부터)부터 every 초마다 도둑 둘레 타원(가로 rx·세로 ry — 세로 화면 안에 다 보이게. 처음엔 반경 310 원이었는데 예고 고리가 화면 밖이라 안 보였다)에 n 기가 한꺼번에 나타나 좁혀 온다.
        warn 초 동안 그 자리에 붉은 고리로 예고. 걸음은 × speed(조여 오는 것이 보이게). 돌진처럼 경험치·아이템은 없다. every·n = [시작 단계 값, 10단계 값], unit = [이 단계부터, 유닛] */
-    SIEGE: { from: q('siegefrom', 4), every: [q('siegeevery', 48), 32], n: [20, 40], rx: 180, ry: 260, warn: 1.8, speed: 0.8, unit: [[0, 28], [5, 29], [8, 54]] },
+    SIEGE: { first: 22,   /* 첫 포위는 3:10(from 단계가 시작되는 2:48 + first) — 411번의 '3분대 고비'. 전에는 every × 0.4 = 3:07 쯤이었다(거의 같다) */ from: q('siegefrom', 4), every: [q('siegeevery', 48), 32], n: [20, 40], rx: 180, ry: 260, warn: 1.8, speed: 0.8, unit: [[0, 28], [5, 29], [8, 54]] },
     /* 치유형·소환형 적 (298번, 사용자 승인 순서 4): 기본 공격이 없어 웨이브 표에 못 들어가던 원작 유닛. 도둑에게서 keep 만큼 떨어져 서서(단도 사거리 170 밖) tick 초마다
        heal = 둘레 r 안 다친 적을 최대 체력의 pct 만큼 회복(우두머리는 1/4) / summon = unit 을 n 기 불러낸다(불러낸 적은 경험치 없음). from 단계부터 every 초마다 하나, 동시에 max 기까지. hp = 체력 배수. 발밑 고리(녹색·보라)로 구별 */
     SUP: { heal: { from: q('supfrom', 5), ids: [[0, 17], [7, 18]], every: q('supevery', 20), max: 3, keep: 190, r: 120, tick: 2.5, pct: 0.12, hp: 2.5, col: '127,227,106' },
@@ -144,7 +144,7 @@
     this.speed = this.hero.speedPx * CFG.SPEED;              // 초당 px
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
-    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.shrine = null; this.shrineNext = CFG.SHRINE.from; this.shrineLast = null; this.buff = { war: 0, magic: 0, guard: 0 }; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
+    this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageSt = -1; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.shrine = null; this.shrineNext = CFG.SHRINE.from; this.shrineLast = null; this.buff = { war: 0, magic: 0, guard: 0 }; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
     this._growReset();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
@@ -188,9 +188,10 @@
     return out;
   };
   P._rage = function () { return this.t >= CFG.RAGE.at; };
+  P._rageSt = function () { var R = CFG.RAGE; return this.t < R.at ? -1 : Math.min(R.hpS.length - 1, Math.floor((this.t - R.at) / R.stageSec)); };   // 최후의 3분의 단계 (0·1·2, 아니면 −1)
   P._shown = function () { return Math.min(CFG.SHOWN, Math.floor(this.t / (CFG.WAVE.list.length * CFG.WAVE.sec / CFG.SHOWN)) + 1); };   // 화면에 보이는 웨이브 번호 (1~7)
   P._foeLv = function () { return 1 + (this.lv - 1) * this.scaleK; };   // 적 레벨 (레벨 스케일링)
-  P._hpK = function (w) { var S = CFG.SCALE, W = CFG.WAVE.list[w == null ? this.wave : w]; return (this._rage() ? CFG.RAGE.hp : 1) * (this.scaleK > 0 ? (1 + S.hp * (this._foeLv() - 1)) * Math.pow(W.hp, S.wave) : W.hp); };   // 적 체력 배수
+  P._hpK = function (w) { var S = CFG.SCALE, W = CFG.WAVE.list[w == null ? this.wave : w]; return (this._rage() ? CFG.RAGE.hpS[this._rageSt()] : 1) * (this.scaleK > 0 ? (1 + S.hp * (this._foeLv() - 1)) * Math.pow(W.hp, S.wave) : W.hp); };   // 적 체력 배수
   P._atkK = function () { var S = CFG.SCALE; return this.scaleK > 0 ? 1 + S.atk * (this._foeLv() - 1) : 1; };   // 적 피해 배수
   P._spawn = function (bossId, bossHp, pos, plain) {   // pos = 나타날 자리(없으면 화면 둘레), plain = 유닛을 지정하되 우두머리는 아님(포위·치유형·소환형·불러낸 적)
     var D = this.D, W = CFG.WAVE.list[this.wave], id = bossId;
@@ -288,7 +289,7 @@
         this.foes.forEach(function (u) { if (u.state === 'dead' || Math.hypot(u.x - h.x, (u.y - h.y) / 0.62) > FS.r) return; if (!u.boss) u.stunUntil = Math.max(u.stunUntil || 0, D.time + FS.v(fl2)); self2._hitFoe(u, fb2, -1); }); }
       return; }
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minHit)); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
+    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minS[this._rageSt()])); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
@@ -310,8 +311,9 @@
     if (T < this.feverUntil) { var fo = Math.floor((T - this.feverT0) / 0.045) % 8, FA = h.t.anim.atk; D._faceVec(h, Math.cos(fo * 0.7854), Math.sin(fo * 0.7854), true); h.state = 'attack'; h.at = FA && FA.hit != null ? FA.hit : 4; this.aimUntil = this.feverUntil; }   // 다팅 피버: 던지는 자세로 8방향을 빠르게 돈다 (걷는 중이면 돌면서 미끄러진다)
     // 스폰
     // 웨이브: 1분마다 다음 단계. 단계가 바뀌면 알림 한 줄 + 우두머리 + 다음 단계 유닛 그림을 미리 받는다
-    var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec)), RG = this._rage() ? CFG.RAGE.spd : 1;
-    if (this._rage() && !this.rageOn) { this.rageOn = true; F.forEach(function (x) { if (x.state === 'dead') return; x.life = Math.round(x.life * CFG.RAGE.hp); x.life0 = Math.round(x.life0 * CFG.RAGE.hp); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.rageT = T; this.flashT = T; D._play(5064, 0.9); }
+    var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec)), RG = this._rage() ? CFG.RAGE.spdS[this._rageSt()] : 1;
+    var rst = this._rageSt(); if (rst >= 0 && rst !== this.rageSt) { var RGC = CFG.RAGE, rk = RGC.hpS[rst] / (this.rageSt >= 0 ? RGC.hpS[this.rageSt] : 1), first = !this.rageOn; this.rageOn = true; this.rageSt = rst;   /* 단계가 바뀌는 순간: 살아 있는 적의 체력도 그 비율만큼 */
+      F.forEach(function (x) { if (x.state === 'dead' || x.rush) return; x.life = Math.round(x.life * rk); x.life0 = Math.round(x.life0 * rk); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.flashT = T; D._play(5064, first ? 0.9 : 0.6); if (first) this.rageT = T; else this.banner = { s: RGC.names[rst], t0: T, col: '#ff6a5a' }; }
     this._rescue(T, v); this._shrine(T); if (this.rageOn) this._storm(T, v);
     if (!this.rageOn && !this.rageSoon && this.t >= CFG.RAGE.at - 10) { this.rageSoon = true; this.banner = { s: '경고 — 10초 뒤 최후의 3분', t0: T, col: '#ff6a5a' }; }
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
@@ -339,7 +341,7 @@
           u.rush = { vx: ca * RU.speed, vy: sa2 * RU.speed, until: T + (2 * RU.dist + 300 + row * 34) / RU.speed }; u.state = 'move'; u.cd = 0; D._faceVec(u, ca, sa2, true); F.push(u); } } }
     // 포위: 예고(도둑 둘레 붉은 고리) → warn 초 뒤 원으로 나타나 좁혀 온다
     var SG = CFG.SIEGE; if (wv >= SG.from) { var gk = (wv - SG.from) / Math.max(1, WL.length - 1 - SG.from);
-      if (this.siegeIn == null) this.siegeIn = SG.every[0] * 0.4; this.siegeIn -= dt;
+      if (this.siegeIn == null) this.siegeIn = SG.first; this.siegeIn -= dt;
       if (this.siegeIn <= 0 && !this.siegeWarn && !this.rushWarn) { this.siegeIn = SG.every[0] + (SG.every[1] - SG.every[0]) * gk; var sid = 28; SG.unit.forEach(function (e) { if (wv >= e[0] && self._has(e[1])) sid = e[1]; });
         if (this._has(sid)) { this.siegeWarn = { t0: T, at: T + SG.warn, id: sid, n: Math.round(SG.n[0] + (SG.n[1] - SG.n[0]) * gk) }; this.banner = { s: '포위 — ' + D.types[sid].name + ' 떼', t0: T, col: '#ff8a7a' }; } }
       var SW = this.siegeWarn; if (SW && T >= SW.at) { this.siegeWarn = null; var a0 = rng.next() * 6.2832;
@@ -676,7 +678,7 @@
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(win ? '10분을 버텼습니다' : '쓰러졌습니다', W / 2, py + 34);
-    var rows = [['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN + (this.scaleK > 0 ? '  ·  적 레벨 ' + Math.round(this.scaleK * 100) + '%' : '')], ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
+    var rows = [['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN],   /* 410번(2026-11-26 사용자 "쓰러졌습니다에서 웨이브 다음 '적 레벨 85%' 의미가 뭐야? 빼면 안 됨?"): 결과 카드에서 적 레벨 계수 표시를 뺐다 */ ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
       ['준 피해', Math.round(ST.dealt).toLocaleString()], ['최고 한 방', ST.maxHit.toLocaleString()], ['치명타 / 더블', ST.crit + ' / ' + ST.dbl], ['받은 피해', Math.round(ST.taken).toLocaleString()]];
     ctx.font = '13px sans-serif';
     for (i = 0; i < rows.length; i++) { var ry = py + 68 + i * 24; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(rows[i][0], px + 24, ry); ctx.textAlign = 'right'; ctx.fillStyle = i < 4 ? '#ffe9b0' : '#dfe6f5'; ctx.fillText(rows[i][1], px + pw - 24, ry);
@@ -1155,7 +1157,7 @@
     ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffb0a0'; ctx.fillText('— 경 고 —', 0, -24);
     ctx.font = '900 34px sans-serif'; ctx.lineWidth = 6; ctx.strokeStyle = '#1a0000'; ctx.strokeText('최후의 3분', 0, 4); ctx.fillStyle = '#ff4a34'; ctx.fillText('최후의 3분', 0, 4); ctx.fillStyle = 'rgba(255,220,200,.9)'; ctx.fillText('최후의 3분', 0, 3);
     ctx.fillStyle = '#ff4a34'; ctx.globalCompositeOperation = 'source-atop'; ctx.globalCompositeOperation = 'source-over';
-    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffe2d8'; ctx.fillText('적이 광폭해졌다 — 체력 ' + R.hp + '배 · 속도 ' + R.spd + '배', 0, 34);   // "한 대만 맞아도 체력의 20% 가 사라진다" 줄은 뺐다 (343번, 사용자 — 규칙 자체는 그대로)
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffe2d8'; ctx.fillText('적이 광폭해졌다 — 1분마다 더 강해진다', 0, 34);   // "한 대만 맞아도 체력의 20% 가 사라진다" 줄은 뺐다 (343번, 사용자 — 규칙 자체는 그대로)
     ctx.restore(); ctx.textAlign = 'left';
   };
   P._drawChars = function () {   /* 캐릭터 고르는 화면 (주소에 ?chars=1 이 있을 때만) — 칸마다 서 있는 모습·이름·한두 줄 */
