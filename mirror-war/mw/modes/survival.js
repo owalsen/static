@@ -613,7 +613,7 @@
       if (nav.clipboard && nav.clipboard.writeText) nav.clipboard.writeText(S.url).then(done, function () { legacy(); }); else legacy();
       function legacy() { try { var ta = document.createElement('textarea'); ta.value = S.url; ta.style.cssText = 'position:fixed;left:-999px;top:0;opacity:0'; document.body.appendChild(ta); ta.select(); var ok = document.execCommand('copy'); document.body.removeChild(ta); (ok ? done : fail)(); } catch (e) { fail(); } } };
     if (D._raceSnd) D._raceSnd('click');
-    if (nav.share) { try { nav.share({ title: S.title, text: S.text, url: S.url }).then(function () {}, function (e) { if (!e || e.name !== 'AbortError') copy(); }); } catch (e) { copy(); } } else copy();
+    if (nav.share) { try { nav.share({ url: S.url })   /* 385번(2026-11-26 사용자 "카카오톡으로 초대할 때 메신저에 '이름없는 무사가 당신을…' 문구가 나오던데 안 나오게"): 제목·글을 함께 넘기면 메신저가 그 글을 메시지 본문으로 붙인다 — 주소만 넘겨 미리보기(제목·그림)만 보이게 */.then(function () {}, function (e) { if (!e || e.name !== 'AbortError') copy(); }); } catch (e) { copy(); } } else copy();
   };
   /* 초대 토스트: 화면 위에서 내려왔다가 올라간다 — 그동안 게임은 멈춰 있고, 사라지면 시작(안내가 있으면 안내로) */
   P._drawInvite = function () {
