@@ -95,8 +95,8 @@
         (r.units || []).forEach(function (u) {
           var k = byName[u[0]], s = k && SK[k], lv = u[1] | 0, ev = !!(s && s.evo && s.evo.cls === CK), name = s ? (ev ? s.evo.name : s.name) : u[0];
           var cell = el('div', 'position:relative;width:38px;height:42px;cursor:pointer;touch-action:none;' + NOSEL);
-          if (s && (s.art || (IC && icons))) { var cv = doc.createElement('canvas'); cv.width = 72; cv.height = 80; cv.style.cssText = 'width:36px;height:40px;display:block;pointer-events:none;'; var cx = cv.getContext('2d'); cx.scale(2, 2);
-            try { var fi = s.icon * 2; if (s.art) s.art(cx, 0, 1, 34, 34); else cx.drawImage(s.tree === 'pas' && MWE.SurvivalGame.greenSheet ? MWE.SurvivalGame.greenSheet(icons) : icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, 0, 0, 34, 37); } catch (e) {} cell.appendChild(cv); }
+          if (s && (s.art || (ev && s.evo && s.evo.art) || (IC && icons))) { var cv = doc.createElement('canvas'); cv.width = 72; cv.height = 80; cv.style.cssText = 'width:36px;height:40px;display:block;pointer-events:none;'; var cx = cv.getContext('2d'); cx.scale(2, 2);
+            try { var fi = s.icon * 2; var SG = MWE.SurvivalGame, gp = SG.isPas ? SG.isPas(s) : s.tree === 'pas'; if (SG.artOf ? SG.artOf(s, ev) : s.art) { if (SG.skArt) SG.skArt(s, cx, 0, 1, 34, 34, ev); else s.art(cx, 0, 1, 34, 34); } else cx.drawImage(gp && SG.greenSheet ? SG.greenSheet(icons) : icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, 0, 0, 34, 37); } catch (e) {} cell.appendChild(cv); }
           else { cell.style.cssText += 'width:auto;height:auto;padding:4px 6px;border-radius:5px;border:1px solid #3a4152;color:#9aa3b8;font-size:11px;'; cell.appendChild(el('span', 'pointer-events:none;', u[0])); }
           cell.appendChild(el('span', 'position:absolute;right:0;bottom:0;font:bold 10px sans-serif;color:' + (ev ? '#ffd36e' : '#fff') + ';text-shadow:0 0 2px #000,0 0 2px #000,1px 1px 0 #000;pointer-events:none;', String(lv)));
           var tmr = 0, stop = function () { if (tmr) { root.clearTimeout(tmr); tmr = 0; } };
