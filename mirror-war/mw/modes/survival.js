@@ -95,7 +95,7 @@
     /* 중간 우두머리 (2026-11-19 사용자 "중간보스 더 자주 등장해서 압박"): 2단계부터 단계마다 at 초에 mini: [유닛, 체력 배수] 하나. 우두머리처럼 멈춤·묶임·감속이 안 걸리고 피해 ×BOSS.dmg, 보상은 작다(경험치 gem, 회복 heal, 회복 아이템 확정 없음) */
     MINI: { ats: [q('miniat', 8), 29], hpk: q('minihp', 2), dmg: q('minidmg', 3.2),   /* 320번(2026-11-20 사용자 "중간 보스도 더 자주 나와야 하고 지금보다 2배는 더 강하고 단단해야"): 난이도 칸(42초)마다 한 번 → 두 번(ats 초), 체력 ×hpk, 피해 = 우두머리 배수 1.6 의 두 배 */ at: 21, scale: 1.25, gem: 4, heal: 0 },   // 처음엔 체력 10~16배·경험치 12·회복 10 → 봇이 쉽게 잡아 경험치 보너스가 됐다(셋 다 생존, 3분에 레벨 17) → 체력 20~28배, 경험치 4, 회복 없음
     /* 섀도우 인필트레이터의 근접 검술 (2026-11-19 사용자 "섀도우 스킬이 차별점이 없어 — 근접 위주로, 전직 뒤 스킬셋을 처음부터 다시", 모습은 마법전사): armor = 받는 피해 배수, killHeal = 베어 쓰러뜨릴 때 체력, healCap = 처치 회복의 초당 상한(최대 체력 비율) — 2026-11-19 사용자 "어쌔신이 너무 강해서 후반에는 체력도 안 닳고 스킬도 너무 자주 씀": armor 0.8 → 0.9, killHeal 0.5 → 0.15, 상한 새로, arc = 베기 반각(라디안, 1.2 ≈ 70° — 처음 1.75 는 봇이 5분에 레벨 29, 너무 셌다), comboMax = 연속 베기가 더 치는 적 수(가까운 순), after = 잔상이 다시 베기까지(초), arcLife = 칼자국 보이는 시간 */
-    BLADE: { melee: q('bmelee', 60),   /* 40 → 60 (337번, 사용자 "근접 공격 사거리 조금 더 늘려서 좀비 자폭 거리 벗어나게" — 좀비는 30 안에서 터지고 46 안이면 맞는다. 40 이면 벨 때 늘 폭발 범위 안이었다). 수직 베기가 나가는 거리 (329번, 사용자 "적에게 아주 가까이 붙었을 때만 일반 공격해") — 전에는 90 안이면 휘둘렀다 */ atk: q('batk', 0.7), spd: q('bspd', 1.25),   /* 어쌔신 너프 (315번, 2026-11-20 사용자 "어쌔신 웨이브 4에서부터 너무 세짐. 공속을 낮추고, 공격력도 낮춰 줘"): atk = 어쌔신의 모든 피해 배수(검술·궁극기·기습), spd = 기본 베기 간격 배수(1.25 = 25% 느리게) */ armor: q('barmor', 1), killHeal: 0.1, healCap: q('bheal', 0.012),   /* 381번(2026-11-26 사용자 "무사의 방어력이나 체력을 낮춰야 — 아무것도 안 하고 가만있어도 3단계까지 버텨진다"): 받는 피해 ×0.92 → ×1, 처치 회복 한도 초당 2% → 1.2%, 전직 체력 +50 → +35·레벨마다 +6 → +5 (CLS.shadow) */   /* 320번: 무사의 길 봇이 계수 1 에서 4/4 생존(받은 피해가 최대 체력의 5~8배 — 회복이 과했다) → 0.95·0.06·1.2% 로는 0/4 가 되어 중간값: 받는 피해 −8%, 처치 회복 0.1, 초당 회복 한도 2% */ arc: 1.2, comboMax: 3, after: 0.6, arcLife: 0.24 },
+    BLADE: { melee: q('bmelee', 60),   /* 40 → 60 (337번, 사용자 "근접 공격 사거리 조금 더 늘려서 좀비 자폭 거리 벗어나게" — 좀비는 30 안에서 터지고 46 안이면 맞는다. 40 이면 벨 때 늘 폭발 범위 안이었다). 수직 베기가 나가는 거리 (329번, 사용자 "적에게 아주 가까이 붙었을 때만 일반 공격해") — 전에는 90 안이면 휘둘렀다 */ atk: q('batk', 0.7), spd: q('bspd', 1.25),   /* 어쌔신 너프 (315번, 2026-11-20 사용자 "어쌔신 웨이브 4에서부터 너무 세짐. 공속을 낮추고, 공격력도 낮춰 줘"): atk = 어쌔신의 모든 피해 배수(검술·궁극기·기습), spd = 기본 베기 간격 배수(1.25 = 25% 느리게) */ armor: q('barmor', 0.8),   /* 394번(2026-11-26 사용자 "무사가 너무 빨리 죽음" → 권장안대로): 받는 피해 ×1 → ×0.8, 전직 체력 +35 → +70, 레벨마다 +5 → +8 (CLS.shadow). 근접이라 맞는 횟수가 많은데 체력·방어는 대도와 거의 같았다. 회복(처치 회복 한도·비켜 피하기)은 그대로 */ killHeal: 0.1, healCap: q('bheal', 0.012),   /* 381번(2026-11-26 사용자 "무사의 방어력이나 체력을 낮춰야 — 아무것도 안 하고 가만있어도 3단계까지 버텨진다"): 받는 피해 ×0.92 → ×1, 처치 회복 한도 초당 2% → 1.2%, 전직 체력 +50 → +35·레벨마다 +6 → +5 (CLS.shadow) */   /* 320번: 무사의 길 봇이 계수 1 에서 4/4 생존(받은 피해가 최대 체력의 5~8배 — 회복이 과했다) → 0.95·0.06·1.2% 로는 0/4 가 되어 중간값: 받는 피해 −8%, 처치 회복 0.1, 초당 회복 한도 2% */ arc: 1.2, comboMax: 3, after: 0.6, arcLife: 0.24 },
     BOSS: { pace: { on: q('bpace', 1), burst: 2.8, rest: 2.6, restSpd: 0.45 },   /* 완급 (344번, 2026-11-23 사용자 "보스급의 이속·공속이 플레이어보다 항상 빠르지 않고 완급 조절이 필요함 — 붙으면 계속 맞으니까"): 우두머리·중간 우두머리는 burst 초 동안 쫓아와 치고 rest 초 동안 숨을 고른다 — 그동안 걸음 × restSpd, 새 공격을 시작하지 않는다(휘두르던 것은 끝낸다). 박자는 나타난 때부터 센다 */ scale: 1.5, dmg: 1.2, speed: 1.15, gem: 30, heal: 30, chase: q('bchase', 1.1), miniChase: 1.02, swing: 1.3, lunge: 1, reach: 2, hitReach: 2.3, cdK: 0.65,   /* 처음 값(1.25·1.5·1.5·2.4·2.7·0.5)은 봇이 첫 우두머리(2분 6초)에서 전부 쓰러졌다 */ mini: { swing: 1.2, lunge: 0, reach: 1.7, hitReach: 2, cdK: 0.8 } },   /* mini = 중간 우두머리는 덜 (큰 우두머리와 같은 값은 봇이 전부 1분 30초 안에 쓰러졌다 — 2단계부터 나와 레벨 5~8 일 때 만난다) */   /* 327번(2026-11-20 사용자 "보스 몹이 느리고 공속도 느려서 플레이어가 한 대도 안 맞음"): 우두머리·중간 우두머리는 걸음이 적어도 도둑 속도 × chase(중간 우두머리 miniChase), 휘두르는 동작 × swing, 휘두르는 동안 도둑 쪽으로 파고든다(걸음 × lunge), 닿는 거리 × reach(맞는 판정 hitReach), 공격 대기 × cdK */   // 우두머리: 그림 배율, 피해·속도 배수, 떨어뜨리는 경험치, 쓰러뜨리면 도둑 체력 회복
     TS: q('ts', 1)               // 시간 배속 (시험·측정용: ?ts=4)
   };
@@ -578,11 +578,17 @@
     if (h.state !== 'dead' && h.hp >= h.maxHp) D._drawHpBar(h, Math.round(h.x), Math.round(h.y)); };   // 체력 바는 늘 보인다 (닳으면 _drawUnit 이 그린다)
   /* 명예의 전당 (README 350, 2026-11-23 사용자 "디펜스 모드의 명예의 전당에 올리기처럼 최후의 3분에 죽어도 올릴 수 있게"): 최후의 3분까지 갔거나 10분을 버틴 판만 올린다.
      순위 = 버틴 시간(긴 순), 같으면 처치. 판은 갈래마다 (0 대도의 길 · 1 무사의 길). 시험용 주소 값(?sk= ?edmg= …)으로 시작한 판은 올리지 않는다 (?cls= 로 갈래를 골라 시작한 판은 올린다) */
+  /* 가진 스킬을 보여 주는 차례 (400번, 2026-11-26 사용자 "쓰러짐·클리어 카드에 액티브 스킬 먼저 나오고 패시브 스킬이 이어서"): 스킬 칸의 차례(order) → 축지법 같은 그 밖의 액티브 → 패시브. 결과 화면과 명예의 전당에 올리는 목록이 같이 쓴다 */
+  P._skList = function () {
+    var self = this, own = Object.keys(this.sk).filter(function (k) { return SK[k] && self.sk[k]; }), act = this.order.filter(function (k) { return own.indexOf(k) >= 0; });
+    own.forEach(function (k) { if (act.indexOf(k) < 0 && SK[k].tree !== 'pas') act.push(k); });
+    return act.concat(own.filter(function (k) { return SK[k].tree === 'pas'; }));
+  };
   P._rankRes = function () {
     var self = this, stage = this.cls === 'shadow' ? 1 : this.cls === 'paladin' ? 2 : 0, win = this.over === 'win', test = (root.location.search || '').replace(/^\?/, '').split('&').some(function (kv) { var k = kv.split('=')[0]; return k && ['mode', 'tut', 'mute', 'game', 'chk', 'bgmvol', 'cls', 'inv', 'by'].indexOf(k) < 0   /* cls = 갈래로 바로 시작하는 주소 — 올릴 수 있다 (2026-11-23 사용자 "해당 클래스로 시작해도 작성할 수 있게") */; });
     if (!this.over) return null; if (test) return { stage: stage, res: null, msg: '시험용 주소로 시작한 판은 기록을 올릴 수 없습니다' };
     if (!win && !this._rage()) return { stage: stage, res: null, msg: '최후의 3분(' + mmss(CFG.RAGE.at) + ')까지 버티면 기록을 올릴 수 있습니다' };
-    var units = ['dagger'].concat(Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; })).filter(function (k) { return SK[k] && self.sk[k]; }).map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
+    var units = this._skList().map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
     return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: ['적 레벨 ' + Math.round((this.scaleK || 0) * 100) + '%'].concat(win ? ['완주'] : []) } };
   };
   /* 친구 초대 · 공유 (379번, 2026-11-26 사용자 "쓰러지거나 클리어 시 나오는 카드 화면에 공유하기 — 카카오톡에 보낼 수 있게(썸네일도), 그 링크를 타고 들어오면 서바이벌이 시작되고 시작 전에 '이름없는 대도(또는 무사)가 당신을 초대했습니다' 토스트. 명예의 전당에 입력한 이름이 '이름없는'을 대체"):
@@ -592,6 +598,11 @@
   var INVITE = { sec: 3.2, inn: 0.35, out: 0.4, base: 'https://owalsen.github.io/static/mirror-war/defense/i/', who: { t: '대도', m: '무사', d: '도둑' }, josa: { t: '가', m: '가', d: '이' } };   /* 성전사는 아직 개발 중이라 초대 갈래에 없다 (사용자) — 성전사로 한 판은 '도둑'으로 나간다 */
   /* 패시브의 그림은 초록 (382번, 사용자 "패시브는 스킬 색깔을 노란색이 아닌 초록색 느낌으로"): 원작 아이콘 시트(노란 그림)를 통째로 초록으로 물들인 사본을 한 번 만들어 두고 패시브·숙련 카드는 거기서 그린다 */
   /* 초록으로 그리는 스킬 = 패시브(tree 'pas' — 윗줄의 작은 칸). 아랫줄 스킬 칸의 것은 전부 액티브라 노란 그림 그대로다. (386번에서 더블 드로잉·독 단도·암살·연속 베기·잔상을 '성격이 패시브'라며 초록으로 했다가 387번에서 되돌렸다 — 사용자 "아랫칸은 액티브 스킬인데 연속 베기는 액티브인데 왜 초록색으로 했어". pasv 는 이제 아무 스킬에도 없다) */
+  /* 그려진 그림을 흰색으로: 그림이 있는 자리에만(source-atop) 흰색을 PAS_W 만큼 섞는다 — 다 덮으면(0.86) 안쪽의 어두운 선이 사라져 덩어리로 보였다. 0.66 이면 노란 면은 거의 흰색, 어두운 선은 회색으로 남는다 */
+  var PAS_W = q('pasw', 0.92);
+  function whiten(x, w, h) {   /* 396번(2026-11-26 사용자 "패시브가 색깔은 좋은데 스킬 선이 더 두꺼워진 것 같은데"): 흰색을 통째로 섞으면 그림 둘레의 어두운 테두리·그림자까지 밝아져 선이 부풀어 보였다 → 점마다 **밝은 곳만** 희게(밝기 = 가장 센 색, 그 밝기만큼만 흰색 쪽으로) — 어두운 테두리는 어두운 채로 남는다 */
+    try { var im = x.getImageData(0, 0, w, h), d = im.data, i, v, k; for (i = 0; i < d.length; i += 4) { if (!d[i + 3]) continue; v = Math.max(d[i], d[i + 1], d[i + 2]); k = PAS_W * Math.min(1, v / 200); d[i] += (v - d[i]) * k + (255 - v) * k * 0.5; d[i + 1] += (v - d[i + 1]) * k + (255 - v) * k * 0.5; d[i + 2] += (v - d[i + 2]) * k + (255 - v) * k * 0.5; } x.putImageData(im, 0, 0); }
+    catch (e) { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,255,255,' + PAS_W * 0.7 + ')'; x.fillRect(0, 0, w, h); x.globalCompositeOperation = 'source-over'; } }
   function isPas(s) { return !!(s && (s.tree === 'pas' || s.pasv)); }
   var artCv = null;
   function artOf(s, ev) { return s ? ((ev && s.evo && s.evo.art) || s.art || null) : null; }   /* ev = 전직해 이름이 바뀐 스킬(evo) — 그림도 따로 둘 수 있다 (검기 확장) */
@@ -600,12 +611,12 @@
     if (!isPas(s)) { s.art(ctx, x, y, w, h); return; }
     try { var K = 3, c = artCv || (artCv = document.createElement('canvas')), cw = Math.ceil(w * K), ch = Math.ceil(h * K); if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; } var cx = c.getContext('2d');
       cx.setTransform(1, 0, 0, 1, 0, 0); cx.globalCompositeOperation = 'source-over'; cx.clearRect(0, 0, cw, ch); cx.setTransform(K, 0, 0, K, 0, 0); s.art(cx, 0, 0, w, h);
-      cx.setTransform(1, 0, 0, 1, 0, 0); cx.globalCompositeOperation = 'source-atop'; cx.globalAlpha = 1; cx.fillStyle = 'rgba(40,255,110,.62)'; cx.fillRect(0, 0, cw, ch); cx.globalCompositeOperation = 'source-over';
+      cx.setTransform(1, 0, 0, 1, 0, 0); cx.globalAlpha = 1; whiten(cx, cw, ch);
       ctx.drawImage(c, 0, 0, cw, ch, x, y, w, h); } catch (e) { s.art(ctx, x, y, w, h); }
   }
   function greenSheet(img) {
-    if (!img || !img.width) return img; if (img._mwGreen) return img._mwGreen;
-    try { var c = document.createElement('canvas'); c.width = img.width; c.height = img.height; var x = c.getContext('2d'); x.drawImage(img, 0, 0); x.globalCompositeOperation = 'multiply'; x.fillStyle = '#62ff8a'; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = 'destination-in'; x.drawImage(img, 0, 0); img._mwGreen = c; return c; } catch (e) { return img; }
+    if (!img || !img.width) return img; if (img._mwGreen) return img._mwGreen;   /* (393번부터 흰색 사본) */
+    try { var c = document.createElement('canvas'); c.width = img.width; c.height = img.height; var x = c.getContext('2d'); x.drawImage(img, 0, 0); whiten(x, c.width, c.height); img._mwGreen = c; return c; }   /* 393번(2026-11-26 사용자 "패시브를 초록색으로 하니까 더 눈에 띄는 것 같아서 흰색으로"): 초록 → 흰색(원래 그림의 명암이 살짝 비친다). 이름(greenSheet·_mwGreen)은 그대로 둔다 */ catch (e) { return img; }
   }
   /* 개발 모드 (389번, 2026-11-26 사용자 "dev 모드를 쿼리파라미터로 활성화시켜서 전체 빠르기 조절 가능한 인터페이스"): 주소에 ?dev=1 — 화면 왼쪽 위에 빠르기 버튼(멈춤·0.25~8배). 게임 전체(적·스킬·시간)가 그 빠르기로 돈다.
      시험용 주소라 이 판의 기록은 명예의 전당에 올릴 수 없다(_rankRes). 버튼은 DOM — 캔버스 입력과 섞이지 않는다 */
@@ -653,7 +664,7 @@
   /* 끝난 화면 = 결과 리포트: 생존 시간·웨이브·처치·레벨·전직 / 준 피해·최고 한 방·치명타·받은 피해 / 가진 스킬 */
   P._drawOver = function () {
     var D = this.D, ctx = D.ctx, W = D.W, H = D.H, self = this, win = this.over === 'win', al = Math.min(1, this.overT / 0.6), ST = this.stat, pw = Math.min(330, W - 28), px = Math.round((W - pw) / 2), i;
-    var keys = Object.keys(this.sk).filter(function (k) { return k !== 'dagger'; }), all = (this.sk.dagger ? ['dagger'] : []).concat(keys), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 216, py = Math.max(24, Math.round((H - ph) / 2));
+    var all = this._skList(), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 216, py = Math.max(24, Math.round((H - ph) / 2));
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(win ? '10분을 버텼습니다' : '쓰러졌습니다', W / 2, py + 34);
@@ -740,6 +751,7 @@
     var IC = D.data.fx.icon, icons = D.assets.get('acticons'), self = this, icon = function (ic, b, pad, pas) { var fi = ic * 2; if (icons && IC) ctx.drawImage(pas ? greenSheet(icons) : icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, b.x + pad, b.y + pad, b.w - pad * 2, b.h - pad * 2); }, skIcon = function (k, b, pad) { if (artOf(SK[k], self._evo(k))) skArt(SK[k], ctx, b.x + pad, b.y + pad, b.w - pad * 2, b.h - pad * 2, self._evo(k)); else icon(SK[k].icon, b, pad, isPas(SK[k])); };   // 캔버스 그림(art)이 있는 스킬은 그것으로
     var cool = function (key, b) { var s = SK[key], l = self.sk[key], r = s.cd && self.tm[key] > 0 ? Math.min(1, self.tm[key] / (s.cd(l) * (1 - self._pv('haste')) * (self.ult === key ? GROW.ultCd : 1))) : 0; if (r > 0) { ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(b.x + 3, b.y + 3 + (b.h - 6) * (1 - r), b.w - 6, (b.h - 6) * r); } };
     this.hit = [];   // 누를 수 있는 칸들 [{x,y,w,h,key}] (꾹 누르면 설명, 수동 스킬은 짧게 누르면 발동)
+    if (this.order.some(function (k) { return !SK[k] || !SK[k].slot; })) this.order = this.order.filter(function (k) { return SK[k] && SK[k].slot; });   /* 스킬 칸에는 칸을 차지하는 스킬만 (안전망) */
     for (i = 0; i < this.slots.length; i++) { var b = this.slots[i], key = this.order[i], isU = key && this.ult === key, ak = key && this._awk(key); ctx.globalAlpha = key ? (isU ? 0.6 : 1) : 0.4; D._plate(b.x, b.y, b.w, b.h, 4, false);
       if (key) { this.hit.push({ x: b.x, y: b.y, w: b.w, h: b.h, key: key }); skIcon(key, b, 4); if (!isU) cool(key, b);
         if (isU) { ctx.globalAlpha = 1; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#000'; ctx.fillRect(b.x + 2, b.y + 2, 11, 10); ctx.fillStyle = '#ffd36e'; ctx.fillText('궁', b.x + 3, b.y + 8); }
@@ -804,6 +816,7 @@
       if (self.over) { var osk = null; (self.overBtns ? self.overSk || [] : []).forEach(function (b) { if (inBox(b, x, y)) osk = b.key; }); if (osk) { self.press = { key: osk, t0: Date.now(), id: e.pointerId, over: true }; return; }   /* 결과 카드의 스킬 그림: 0.35초 넘게 누르고 있으면 설명 (frame) */
         (self.overBtns || []).forEach(function (b) { if (inBox(b, x, y)) { if (b.act === 'rank') D._rankShow(false, self._rankRes()); else if (b.act === 'share') self.sharePend = { id: e.pointerId, b: b }; else if (b.act === 'retry') self.reset(); else self.exit(); } }); return; }
       if (inBox(self.menuBtn, x, y)) { self.openMenu(); return; }
+      if (self.aim2 && y < self.hudBot) { self.aim2 = 0; self.lastDown = null; self._ult2Fire(x - D.W / 2, y - D.H * CFG.HERO_Y); return; }   /* 402번(2026-11-26 사용자 "투룡 선택 후 지정 시에 숨기나 즉사가 발동되는 버그"): 투룡 조준 중의 누르기는 방향 지정일 뿐 — 숨어 있을 때 적을 누르면 아래의 '숨은 채 적 누르기 = 기습'이 먼저 걸려, 방향 대신 그 적에게 기습(순간 이동 + 일격)이 나가고 조준은 남아 있었다 */
       if (self.hide && self._hideTap(x, y)) return;   // 그림자 숨기: 적을 누르면 기습 (적이 아닌 곳은 평소처럼 조이스틱)
       var pk = self.over ? null : self._slotAt(x, y); if (pk) { self.press = { key: pk, t0: Date.now(), id: e.pointerId }; return; }   // 스킬 칸: 떼면 누르기(_slotTap), 0.35초 넘게 누르고 있으면 설명(frame)
       if (y >= self.hudBot) return;                          // 스킬 줄
@@ -896,7 +909,7 @@
     /* 환영검 (338번, 2026-11-20 사용자: "설화난영참을 제거하고 — 투검: 360도 방향으로 검들이 쪼개져 나와서 각각의 적을 Z 자로 꿰뚫음. 횟수는 처음엔 각 검당 3번, 업하면서 증가. 처음 쪼개진 검의 개수는 4개, 이것도 점점 증가" + "검 조각들은 한 번 뚫고 지나서 다음번 뚫을 때까지 살짝 딜레이. 모양은 길이는 같되 폭은 작은 검 모양. 스킬 이름: 환영검"):
        무사의 몸에서 검 n 자루가 360° 로 고르게 갈라져 나와(out), 저마다 가까운 적을 꿰뚫고 지나간 뒤(over 만큼 더 나아감) 잠깐 멈춰 방향을 틀고(wait) 다음 적을 꿰뚫는다 — 검마다 hits 번. 곧은 선이 꺾이며 이어져 Z 자가 된다.
        아직 안 찌른 적을 먼저 고르고, 없으면 방금 찌른 적이 아닌 적, 그것도 없으면 같은 적을 다시. 검 그림 = 마법전사 스프라이트의 칼날을 길이는 그대로·폭은 slim 배로 좁힌 것. 무사는 그대로 움직인다 (코드 키는 zrun 그대로) */
-    zrun: { name: '환영검', tree: 'blade', icon: 41, slot: 1,
+    zrun: { name: '환영검', tree: 'blade', icon: 41, slot: 1, leech: q('zleech', 0.006),   /* 398번(2026-11-26 사용자 "환영검에 피흡을 넣어 줘, 약소하게만"): 검이 꿰뚫을 때마다 준 피해의 0.6% 만큼 체력 회복 — 레벨 40 무사(공격 63)의 5단계 한 번(10자루 × 7번 × 140%)에 37쯤(최대 체력 495 의 7%), 1단계 한 번(4 × 3 × 90%)에 4쯤 */
       art: function (ctx, x, y, w, h) {   /* 버튼 그림: 가운데에서 사방으로 뻗어 나가는 가는 칼날 여덟 (2026-11-23 사용자 "여러 칼날이 사방으로 나가는 모양") — 대각선 넷은 조금 짧고 흐리게 */
         var s = Math.min(w, h), cx = x + w / 2, cy = y + h / 2, i; artBg(ctx, x, y, w, h);
         var gl = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.2); gl.addColorStop(0, 'rgba(255,250,190,.95)'); gl.addColorStop(1, 'rgba(255,220,40,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, s * 0.2, 0, 6.2832); ctx.fill();
@@ -905,7 +918,7 @@
           ctx.fillStyle = '#c9a400'; ctx.fillRect(r0, 0, r1 - r0 - bw * 2.2, bw);   /* 날의 한쪽 면은 어둡게 */
           ctx.fillStyle = '#fff6a0'; ctx.fillRect(r0 - s * 0.03, -bw * 2, s * 0.03, bw * 4); ctx.restore(); }   /* 밝은 코등이 */
         ctx.restore(); }, cd: L5([12, 11.5, 11, 10.5, 10]), n: L5([4, 5, 6, 8, 10]), hits: L5([3, 4, 5, 6, 7]), dmg: L5([0.9, 1, 1.1, 1.25, 1.4]), stop: 0.06, push: 5,   /* 354번(2026-11-23 사용자 "스킬 오를수록 갯수 증가와 데미지 증가, 찌르는 횟수 증가" · "찌를 때 임팩트 좀 더 있게"): 검 수는 4·5단계에서 7·8 → 8·10 (찌르는 횟수·피해는 전부터 단계마다 올랐다). 찌르는 순간 — 검이 stop 초 동안 적에게 박혀 멈추고, 적이 push 만큼 밀리고, 꿰뚫는 빛줄기와 큰 섬광 */ spdK: q('zspd', 1.3), stabK: q('zstab', 3.4), out: 46, over: 22, wait: q('zwait', 0.16), seek: 440, slim: 0.55, life: 14,   /* 340번(사용자 "지금보다 좀 더 빠르게 찌르고, 찌른 뒤에 딜레이를 지금 속도로, 그리고 무조건 근접해 있는 적부터 찌르지 말고 맵의 모든 영역에 랜덤하게 퍼지도록"): 적에게 날아가 꿰뚫는 동안은 걸음 × stabK, 꿰뚫은 뒤 더 나아가는 것과 갈라져 나오는 것은 전처럼 × spdK + 멈춤 wait. 대상 = 무사에게서 seek 안(화면 전체)의 적 가운데 **무작위** — 다른 검이 겨눈 적·이미 찌른 적·방금 찌른 적은 뒤로 미룬다 */   /* 339번(사용자 "검 궤적을 보여 줄 필요는 없고, 쪼개진 검들의 이동이 너무 빨라서 플레이어가 걷는 속도보다 약간 더 빠르게만, 그리고 다른 스킬 시전 시에는 나오면 안 됨"): 검의 속도 = 무사 걸음 × spdK(전에는 초당 820), 지나온 선은 그리지 않는다, 천지파열무·회오리 베기·진공참을 쓰는 중이거나 숨어 있을 때는 발동을 미룬다. life = 검이 남아 있는 최대 시간 */
-      desc: function (l) { return this.cd(l) + '초마다 검 ' + this.n(l) + '자루가 사방으로 갈라져 나와, 저마다 적을 ' + this.hits(l) + '번씩 Z자로 꿰뚫습니다 (한 번에 피해 ' + pc(this.dmg(l)) + ')'; } },
+      desc: function (l) { return this.cd(l) + '초마다 검 ' + this.n(l) + '자루가 사방으로 갈라져 나와, 저마다 적을 ' + this.hits(l) + '번씩 Z자로 꿰뚫습니다 (한 번에 피해 ' + pc(this.dmg(l)) + '). 꿰뚫을 때마다 체력을 조금 회복합니다'; } },
     slash: { awk: { pas: 'power', name: '수평 베기', text: '앞쪽 반원(180°)의 적 모두를 가로로 벤다' },   /* 392번(2026-11-26 사용자 "초승달 베기 말고 수평 베기로 이름 바꾸고, 원 형태로 베지 말고 180도만큼만 베는 모션과 효과로"): 각성하면 둘레 전체(원)를 베던 것 → 베는 쪽 앞 반원만. 칼자국도 반원이 한쪽 끝에서 반대쪽 끝으로 휘둘러진다 */ name: '수직 베기', tree: 'blade', icon: 0, slot: 1, dmg: L5([1, 1.15, 1.3, 1.5, 1.7]), r: L5([76, 76, 76, 76, 76]), sec: L5([1, 0.92, 0.84, 0.77, 0.7]), crit: L5([0, 0.04, 0.08, 0.12, 0.16]),   /* 316번(2026-11-20 사용자 "기본 스킬을 수평 베기로 하고 올릴수록 빠르기·데미지·크리티컬 확률"): 그림자 베기(단계마다 반경이 커짐 — 회오리 베기와 겹쳤다) → 반경은 그대로 두고 간격·피해·치명타 확률(어쌔신의 모든 타격에 더해진다) */
       desc: function (l) { return '가장 가까운 적 하나를 위에서 아래로 내려 벱니다 — 피해 ' + pc(this.dmg(l)) + ', 베는 간격 ' + pc(this.sec(l)) + ', 치명타 확률 +' + Math.round(this.crit(l) * 100) + '%'; } },
     /* 388번(2026-11-26 사용자 "연속 베기는 왜 쿨타임이 없지" → "쿨타임 스킬로 — 잔상도"): 둘 다 기본 베기에 붙어 늘 나가던 것(벨 때마다 n번 더 / 벤 자리에서 한 번 더)을 **대기마다 따로 발동하는 스킬**로.
@@ -935,7 +948,7 @@
     darkdag: { only: 'trapper', trait: 1, name: '암흑 폭탄', tree: 'trap', icon: 103, cd: L5([5, 4.5, 4, 3.5, 3]), n: L5([1, 1, 2, 2, 3]), dmg: L5([0.5, 0.6, 0.7, 0.8, 0.9]), sec: 3, r: L5([60, 66, 72, 80, 90]), boom: L5([1.6, 2, 2.5, 3, 3.6]),
       desc: function (l) { return this.cd(l) + '초마다 암흑 폭탄 ' + this.n(l) + '개를 던집니다 (피해 ' + pc(this.dmg(l)) + '). 맞은 적은 ' + this.sec + '초 동안 암흑 물질에 감염 — 그동안 쓰러지면 폭발해 반경 ' + this.r(l) + ' 안의 적 모두에게 피해 ' + pc(this.boom(l)); } },
     sense: { name: '육감', tree: 'pas', icon: 9, v: L5([0.06, 0.12, 0.18, 0.24, 0.3]), desc: function (l) { return '적의 공격을 ' + pc(this.v(l)) + ' 확률로 피합니다'; } },
-    pick: { name: '소매치기', tree: 'pas', icon: 53, v: L5([1.25, 1.5, 1.75, 2, 2.3]), desc: function (l) { return '경험치를 끌어오는 범위 ' + pc(this.v(l)); } },
+    pick: { name: '소매치기', tree: 'pas', icon: 53, v: L5([1.25, 1.5, 1.75, 2, 2.3]), xp: L5([0.03, 0.06, 0.09, 0.12, 0.15]),   /* 사용자 "경험치 보너스를 좀 낮춰 줘": +5~25% → +3~15% */ desc: function (l) { return '경험치·아이템을 끌어오는(줍는) 범위 ' + pc(this.v(l)) + ', 얻는 경험치 +' + pc(this.xp(l)); } },   /* 397번(2026-11-26 사용자 "소매치기 스킬은 어때?" → 약하다는 평가와 안 → "1, 2번도 넣어 줘"): 보석 끄는 범위만 → ① 얻는 경험치 +xp ② 필드 아이템(회복·자석·폭탄·상자)을 줍는 범위도 같은 배수 */
     /* 패시브 5종 추가 (2026-11-19, 뱀서류 분석 글의 "패시브 조건부 진화"): 이름은 붉은보석 도둑의 보조 스킬에서, 효과는 이 게임에 맞게 다시 풀었다 */
     power: { name: '비열한 전략', tree: 'pas', icon: 85, v: L5([0.08, 0.16, 0.24, 0.32, 0.4]), desc: function (l) { return '모든 피해 +' + pc(this.v(l)); } },
     haste: { name: '전문 도구', tree: 'pas', icon: 73, evo: { cls: 'shadow', name: '검의 숙련' }, v: L5([0.06, 0.12, 0.18, 0.24, 0.3]), desc: function (l, ev) { return (ev ? '베는 간격과 모든 스킬의 대기 −' : '던지는 간격과 모든 스킬의 대기 −') + pc(this.v(l)); } },   /* 383번(2026-11-26 사용자): 무사에게는 이름·설명이 '검의 숙련 — 베는 간격'으로 보인다. 효과는 같다(기본 베기 간격·스킬 대기·궁극기 대기) */
@@ -952,7 +965,7 @@
     last: { off: true,   /* 383번(2026-11-26 사용자 "전문가의 기술 스킬(패시브)은 없애줘"): 카드에 나오지 않는다 — 정의는 남겨 둔다(옛 기록 카드의 그림·설명, _pv('last') 는 0) */ name: '전문가의 기술', tree: 'pas', icon: 71, evo: { cls: 'shadow', name: '전문가의 기술' }, v: L5([0.15, 0.3, 0.45, 0.6, 0.75]), desc: function (l, ev) { return (ev ? '그림자 숨기의 지속 시간 +' : '감속·묶기·독·숨기의 지속 시간 +') + pc(this.v(l)); } },   /* 무사에게는 함정·독 이야기를 빼고 보인다 */
     /* 비켜 피하기 (347번, 2026-11-23 사용자 "후반에 무사가 너무 어려운데 붉은보석 스킬 중에 회피나 무적기 또는 버티기류 아이디어" → 후보 중 "비켜 피하기로 가자" — 무도가의 「비켜 피하기」: 맞으면 재빠르게 옆으로 돌며 후속 공격을 피하고 잠시 무적): 무사 전용 패시브.
        맞은 뒤의 무적 시간이 0.25초 → v 초로 늘어난다(무리에 둘러싸여 연달아 맞는 것을 끊는다). 맞는 순간 옆으로 비켜서는 잔상이 잠깐 보인다 */
-    sidestep: { only: 'shadow', not: 'blood', name: '비켜 피하기', tree: 'pas', icon: 9, v: L5([0.4, 0.5, 0.6, 0.75, 0.9]),   /* 381번: 0.5~1.2초 → 0.4~0.9초 (−20~25%) */ desc: function (l) { return '맞은 뒤 ' + this.v(l) + '초 동안 다음 공격을 피합니다 (보통은 ' + CFG.HURT.inv + '초). 피의 칼날과 함께 배울 수 없습니다'; } },
+    sidestep: { only: 'shadow', not: 'blood', name: '비켜 피하기', tree: 'pas', icon: 9, v: L5([0.36, 0.45, 0.54, 0.68, 0.81]),   /* 381번: 0.5~1.2초 → 0.4~0.9초 (−20~25%) · 399번(2026-11-26 사용자 "비켜 피하기를 10% 정도 너프"): → 0.36~0.81초 */ desc: function (l) { return '맞은 뒤 ' + this.v(l) + '초 동안 다음 공격을 피합니다 (보통은 ' + CFG.HURT.inv + '초). 피의 칼날과 함께 배울 수 없습니다'; } },
     regen: { name: '해독', tree: 'pas', icon: 2, v: L5([0.5, 1, 1.5, 2, 2.5]), desc: function (l) { return '체력을 초당 ' + this.v(l) + ' 회복합니다'; } }
   };
   /* 각성: 스킬 5단계 + 짝이 되는 패시브(단계 무관)를 갖추면 그 스킬에 효과가 하나 더 붙는다 (SK[k].awk = { pas, name, text }). 전직의 상위 스킬(evo)과는 따로 겹친다 */
@@ -971,7 +984,7 @@
  col: '#ffcf7a', lines: ['독 없이 단검만으로 — 가장 많이, 가장 넓게', '맞은 적은 피를 흘리고 다팅 피버가 강해집니다', '궁극기: 무차별 난사 — 화면의 모든 적에게 단검을 퍼붓습니다'] },
     /* 전직은 두 갈래로 확정 (319번, 2026-11-20 사용자: "전직을 두 갈래로 확정. 네이밍은 대도의 길, 무사의 길. 기존의 함정 전문가 전직은 없애자"). 트래퍼의 정의는 CLS_OFF 로 옮겨 두었다 — 폭탄 던지기·독 폭탄·암흑 폭탄·폭탄 다발·폭탄 개미 코드는 남아 있지만 고를 수 없다 */
     paladin: { name: '성전사', char: true, icon: 2, col: '#ffd35a', unit: PAL_ID, hp: 90, hpLv: 8, armor: 0.8, spd: 0.9, lines: ['방패와 도리깨를 든 단단한 전사'] },   /* char = 처음에 고르는 캐릭터 — 전직 카드에는 안 나온다. 전직 체력 +90, 레벨마다 +8, 받는 피해 ×0.8, 걸음 ×0.9 */
-    shadow: { name: '무사의 길', icon: 80, col: '#c9a8ff', unit: 15, hp: q('bhp', 35), hpLv: 5, lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기 「천지파열무」: 대지를 갈라 화면의 모든 적을 칩니다', '한 명씩 베는 길 — 대도의 길보다 어렵습니다'] }
+    shadow: { name: '무사의 길', icon: 80, col: '#c9a8ff', unit: 15, hp: q('bhp', 70), hpLv: q('bhplv', 8), lines: ['마법전사가 되어 칼로 가까이서 벱니다', '그림자에 숨었다가 적을 눌러 기습합니다', '궁극기 「천지파열무」: 대지를 갈라 화면의 모든 적을 칩니다', '한 명씩 베는 길 — 대도의 길보다 어렵습니다'] }
   };
   var CLS_OFF = {
     trapper: { name: '트래퍼', icon: 64, unit: 59, stat: 56,   /* 모습 = 확장판 환술사(59) 그대로 (2026-11-20 사용자 "이제부터 트래퍼의 아트는 확장판의 환술사의 아트를 그대로"). 능력치·단도 던지기는 대도(stat 56) 것 — 그림만 바뀐다. 전에는 대도 그림의 보라색만 녹색으로 돌렸다 */ drop: ['fever', 'scatter', 'double', 'surprise', 'assassin'],   /* 단도 흩뿌리기·더블 드로잉도 못 쓴다 (2026-11-20 사용자 "트래퍼는 단도 흩뿌리기 스킬 없어야 함" · "더블 드로잉도 없어야 해") */ col: '#7fe36a', lines: ['단검 대신 폭탄 — 한 발은 약하지만 둘레까지 터집니다', '독 폭탄·암흑 폭탄과 더 많은 함정(+3개씩)', '궁극기: 폭탄 개미 떼가 화면 곳곳으로 달려가 터집니다'] }
@@ -1015,7 +1028,7 @@
   /* 둘째 궁극기 칸 (README 366, 2026-11-23 사용자 "무사 궁극기 투룡 생성. 공격 방향으로 큰 빨간 용 머리가 나가면서 일직선상의 대지 전부에 폭발 + 화염 피해" → 칸을 하나 더, 쿨타임은 따로. "피해 범위는 가로 크기 화면 기준 1/3 이상은 때려야"):
      투룡 = 가까운 적 쪽(없으면 걷던 쪽)으로 붉은 용(거울전쟁의 드래곤 그림, scale 배)이 speed 로 range 만큼 날아간다. 지나간 길(폭 = half × 2 = 150, 화면 가로 390 의 38%)의 적에게 피해 = 공격력 × mul(400%) + 불탐(초당 burn, 3초).
      용이 지나간 자리는 step 마다 폭 가득 폭발하고 fireSec 초 동안 불길이 남아, 그 위의 적이 fireTick 마다 공격력 × fireMul 을 받는다. 쓰는 순간 0.6초 무적, 움직임은 막지 않는다 */
-  var ULT2 = { shadow: { name: '투룡', icon: 41, unit: 47, cd: q('dragoncd', 36), charge: q('dragoncharge', 0.8), slash: 0.22, pose: [1, 3],   /* 사용자 "무사의 모션은 가로베기 모션. 처음엔 느리게 기를 모은 후 칼을 슬래시하면 용이 나간다": charge 초 동안 칼을 치켜든 자세(pose[0])로 붉은 기운을 모으고(제자리·무적), 가로로 베는 순간(pose[1] 부터, 붉은 칼자국 slash 초) 용이 나간다 */ speed: q('dragonspd', 250),   /* 400 → 250 (369번, 사용자 "너무 빨라서 안 보임"). 같은 때 용 머리만 캔버스로 그려 봤으나 "너무 조악해" — 370번에 원작 드래곤 그림으로 되돌리고 속도만 남겼다 */ range: 640, half: q('dragonhalf', 75), mul: q('dragonmul', 4), floorUnit: 54, floor: q('dragonfloor', 0),   /* 사용자 "데미지는 공격력의 400% 정도" — 흑기사 체력 바닥값은 쓰지 않는다 (0) */ burn: 0.1, fireSec: 2.6, fireTick: 0.4, fireMul: 0.1,   /* 불길·불탐은 약하게 — 처음 0.5·0.3 은 합치면 공격력의 1200% 가 됐다 (사용자 "데미지는 공격력의 400% 정도") */ step: 34, scale: 1.5, seek: 420,
+  var ULT2 = { shadow: { name: '투룡', icon: 41, unit: 47, cd: q('dragoncd', 36), charge: q('dragoncharge', 0.8), slash: 0.22, pose: [1, 3],   /* 사용자 "무사의 모션은 가로베기 모션. 처음엔 느리게 기를 모은 후 칼을 슬래시하면 용이 나간다": charge 초 동안 칼을 치켜든 자세(pose[0])로 붉은 기운을 모으고(제자리·무적), 가로로 베는 순간(pose[1] 부터, 붉은 칼자국 slash 초) 용이 나간다 */ speed: q('dragonspd', 250),   /* 400 → 250 (369번, 사용자 "너무 빨라서 안 보임"). 같은 때 용 머리만 캔버스로 그려 봤으나 "너무 조악해" — 370번에 원작 드래곤 그림으로 되돌리고 속도만 남겼다 */ range: 640, half: q('dragonhalf', 75), mul: q('dragonmul', 4), floorUnit: 54, floor: q('dragonfloor', 0),   /* 사용자 "데미지는 공격력의 400% 정도" — 흑기사 체력 바닥값은 쓰지 않는다 (0) */ burn: q('dragonburn', 0.533),   /* 401번(2026-11-26 사용자 "투룡의 불타는 데미지가 약해서 투룡 데미지의 불타는 동안 40%까지로"): 맞은 적이 3초 동안 타며 받는 합계 = 투룡 피해(mul 400%)의 40% = 공격력의 160%. 불탐은 0.5초마다 burn × 0.5 를 여섯 번 → 합계 = burn × 3 이므로 burn = 4 × 0.4 ÷ 3. 전에는 0.1(합계 30% = 투룡 피해의 7.5%). 바닥에 남는 불길(fireMul)은 그대로 */ fireSec: 2.6, fireTick: 0.4, fireMul: 0.1,   /* 불길·불탐은 약하게 — 처음 0.5·0.3 은 합치면 공격력의 1200% 가 됐다 (사용자 "데미지는 공격력의 400% 정도") */ step: 34, scale: 1.5, seek: 420,
     art: function (ctx, x, y, w, h) {   /* 버튼 그림 (367번, 사용자가 준 붉은 용 아이콘의 구도대로): 거울전쟁 드래곤의 옆모습(서 있기 3번째 방향)에서 머리·날개 쪽을 잘라 불빛 바탕 위에 — 그림을 아직 못 받았으면 불길만 */
       var cx = x + w / 2, cy = y + h / 2, D0 = this._D, t = D0 && D0.types[this.unit], im = D0 && D0.assets.img['u' + this.unit], f = t && t.frames[t.anim.idle[2]];
       ctx.save(); ctx.fillStyle = '#1a0606'; ctx.fillRect(x, y, w, h); var bg = ctx.createRadialGradient(cx + w * 0.1, cy + h * 0.15, 1, cx, cy, w * 0.8); bg.addColorStop(0, 'rgba(255,150,40,.75)'); bg.addColorStop(0.5, 'rgba(200,40,15,.5)'); bg.addColorStop(1, 'rgba(40,6,4,0)'); ctx.fillStyle = bg; ctx.fillRect(x, y, w, h); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
@@ -1072,7 +1085,7 @@
   P._drop = function (u) { if (u.rush || u.noDrop) return;   // 돌진하는 떼는 경험치·아이템을 주지 않는다 (줄지어 와서 범위 스킬에 쓸리면 경험치 덩어리가 됐다 — README 282)
     this._loot(u); if (this.gems.length > 400) this.gems.shift(); this.gems.push({ x: u.x, y: u.y, v: u.boss ? (u.mini ? CFG.MINI.gem : CFG.BOSS.gem) : Math.max(1, Math.round(u.t.hp / 60)) }); };
   P._gain = function (v) {
-    this.exp += v;
+    var pkl = this._lvOf('pick'); this.exp += v * (pkl ? 1 + SK.pick.xp(pkl) : 1);   /* 소매치기: 얻는 경험치 + */
     var gh = this.hero, gR = this.D.rules, gdef = function () { var L = gh.level, v = 0; try { gh.level = Math.floor(L * CFG.DEF.lvk); v = gR.defenseValue(gh); } catch (e) {} gh.level = L; return v; }, ga0 = gR.attackValue(gh), gd0 = gdef(), gm0 = gh.maxHp, gl0 = this.lv;
     while (this.exp >= this.expNeed) { this.exp -= this.expNeed; this.lv++; this.expNeed = GROW.need(this.lv); if (this.lv % GROW.cardLv === 0) this.pend++;   /* 382번(2026-11-26 사용자 "스킬 레벨업을 레벨 2당 1업으로"): 카드는 cardLv 레벨마다 한 장(짝수 레벨). 체력은 레벨마다 그대로 오른다 */ var h = this.hero, hl = this.cls && CLS[this.cls] && CLS[this.cls].hpLv ? CLS[this.cls].hpLv : GROW.hpLv; h.level = this.lv; h.maxHp += hl; h.hp = Math.min(h.maxHp, h.hp + hl + Math.round(h.maxHp * GROW.lvHeal)); }   /* 390번(사용자 "렙업하면 체력 50% 채워 줘"): 레벨이 오를 때마다 최대 체력의 lvHeal 만큼 회복 */
     if (this.lv > gl0) {   /* 레벨이 오를 때마다 오른 능력치를 보여 준다 (382번, 사용자 "레벨업당 스탯이 오르게 하고 렙업 때 스탯이 올랐다는 표시 — 스탯은 모든 렙업마다"): 체력·공격·방어는 원래 레벨마다 오른다(카드만 두 레벨에 한 장) — 주인공 머리 위에 1.6초, 카드가 뜨는 레벨에는 카드 제목 아래에도 */
@@ -1284,7 +1297,7 @@
   /* 베기 한 대: 피의 칼날(출혈·즉사) · 쓰러뜨리면 체력 회복 */
   P._bladeHit = function (u, dmg) {
     if (u.state === 'dead') return; var T = this.D.time, l = this.sk.blood, mul = 1;
-    if (l) { u.bleedUntil = T + 3; u.bleed = this._base() * SK.blood.bleed(l); if (!u.boss && this.D.rng.next() < SK.blood.kill(l)) { this._text(u.x, u.y - u.headY - 4, '절명', '#ff7a9a'); mul = 1e6; } }
+    if (l) { u.bleedUntil = T + 3; u.bleed = this._base() * SK.blood.bleed(l); if (!u.boss && this.D.rng.next() < SK.blood.kill(l)) { this._text(u.x, u.y - u.headY - 4, '즉사', '#ff7a9a');   /* 401번(사용자): '절명' → '즉사' */ mul = 1e6; } }
     this._hitFoe(u, dmg * mul, this.hero.act.arm);
     if (u.state === 'dead' && !u.healed) { u.healed = 1; var h = this.hero, sec = Math.floor(T); if (this.healSec !== sec) { this.healSec = sec; this.healGot = 0; }   // 처치 회복은 초당 최대 체력의 healCap 까지
       var hv = Math.min(CFG.BLADE.killHeal + (l ? SK.blood.heal(l) * (this._awk('blood') ? 2.5 : 1) : 0), h.maxHp * CFG.BLADE.healCap - this.healGot); if (hv > 0) { this.healGot += hv; h.hp = Math.min(h.maxHp, h.hp + hv); } }
@@ -1296,7 +1309,7 @@
     var self = this, nsk = {}, nord = [];
     this.order.forEach(function (k) { var t = BLADE_MAP[k];
       if (!t || nsk[t]) t = BLADE_LIST.filter(function (b) { return !nsk[b] && !self.order.some(function (o) { return o !== k && BLADE_MAP[o] === b && !nsk[b]; }); })[0] || t;   // 짝이 없거나 이미 찼으면 아직 아무도 안 가는 검술 스킬로, 그것도 없으면 짝에 합친다(높은 단계)
-      if (t) { nsk[t] = Math.max(nsk[t] || 0, self.sk[k]); if (nord.indexOf(t) < 0) nord.push(t); } delete self.sk[k]; });
+      if (t) { nsk[t] = Math.max(nsk[t] || 0, self.sk[k]); if (nord.indexOf(t) < 0 && SK[t].slot) nord.push(t);   /* 395번(2026-11-26 사용자 "피의 칼날 패시브인데 왜 액티브 칸에 동시에 들어가 있지"): 스킬 칸 목록에는 칸을 차지하는 것만 — 피의 칼날은 382번에서 패시브가 됐는데 전직 때(암살·독 단도 → 피의 칼날) 여전히 스킬 칸에도 넣고 있었다 */ } delete self.sk[k]; });
     if (!nsk.slash) { nsk.slash = 1; nord.unshift('slash'); }
     Object.keys(nsk).forEach(function (k) { self.sk[k] = Math.min(5, nsk[k]); self.tm[k] = 0.6; }); this.order = nord; this.stealthUntil = 0; this.hide = null; this.traps = []; this.zones = [];
   };
@@ -1409,7 +1422,7 @@
         if (bl.w <= 0) { if (bl.left <= 0 || !bl.tgt) { bl.ph = 'fade'; bl.w = 0.18; } else { bl.ph = 'seek'; } } }
       else if (bl.ph === 'seek') { if (!bl.tgt || bl.tgt.state === 'dead') { bl.tgt = pick(bl); if (!bl.tgt) { bl.ph = 'fade'; bl.w = 0.18; continue; } }
         var sx4 = bl.tgt.x - bl.x, sy4 = bl.tgt.y - bl.y, sl4 = Math.hypot(sx4, sy4) || 1; bl.vx = sx4 / sl4; bl.vy = sy4 / sl4;
-        if (sl4 <= bst + 10) { bl.x = bl.tgt.x; bl.y = bl.tgt.y; this._bladeHit(bl.tgt, this._base() * bl.mul); bl.hit[bl.tgt.uid] = 1; if (!bl.tgt.boss && bl.tgt.state !== 'dead') { bl.tgt.x += bl.vx * ZB.push; bl.tgt.y += bl.vy * ZB.push; } bl.last = bl.tgt; bl.left--; bl.tgt = null; bl.ph = 'over'; bl.go = 0; bl.stop = ZB.stop;
+        if (sl4 <= bst + 10) { bl.x = bl.tgt.x; bl.y = bl.tgt.y; var zdm = this._base() * bl.mul; this._bladeHit(bl.tgt, zdm); if (ZB.leech && h.hp > 0) h.hp = Math.min(h.maxHp, h.hp + zdm * ZB.leech);   /* 환영검의 피흡 */ bl.hit[bl.tgt.uid] = 1; if (!bl.tgt.boss && bl.tgt.state !== 'dead') { bl.tgt.x += bl.vx * ZB.push; bl.tgt.y += bl.vy * ZB.push; } bl.last = bl.tgt; bl.left--; bl.tgt = null; bl.ph = 'over'; bl.go = 0; bl.stop = ZB.stop;
           this.stabs.push({ x: bl.x, y: bl.y - 14, vx: bl.vx, vy: bl.vy, t0: T }); if (T - (this.snowT || -9) > 0.02) { this.snowT = T; this.bursts.push({ x: bl.x, y: bl.y - 14, t0: T, a: Math.atan2(bl.vy, bl.vx), k: 'p', life: 0.26, sc: 1.5 }); } }
         else { bl.x += bl.vx * bst; bl.y += bl.vy * bst; } }
       else if (bl.ph === 'over' && bl.stop > 0) { bl.stop -= dt; }   /* 박힌 채 잠깐 멈춤 */
@@ -1483,7 +1496,7 @@
     var pr = GROW.pickup * ((l = this._lvOf('pick')) ? SK.pick.v(l) : 1);
     this.gems = this.gems.filter(function (g) { var dx = h.x - g.x, dy = h.y - 12 - g.y, d = Math.hypot(dx, dy) || 1; if (g.pull || d <= pr) { g.pull = true; var st = GROW.gemSpeed * dt; if (d <= st + 8) { self._gain(g.v); return false; } g.x += dx / d * st; g.y += dy / d * st; } return true; });
     // 필드 아이템: 닿으면 바로 쓴다 — 고기(체력 30%) · 자석(화면의 경험치 전부) · 폭탄(둘레의 적 모두에게 큰 피해)
-    var IT = GROW.item, I0 = this.items; this.items = []; I0 = I0.filter(function (it) {   /* 줍는 동안 생긴 아이템(폭탄에 쓰러진 적의 드롭 — 우두머리 상자 포함)은 새 배열에 쌓였다가 아래에서 합친다. 전에는 걸러 낸 배열로 덮어써 사라졌다 */ if (T - it.t0 > IT.life && it.k !== 'chest') return false; if (Math.hypot(h.x - it.x, h.y - 10 - it.y) > IT.pick) return true;
+    var IT = GROW.item, I0 = this.items; this.items = []; I0 = I0.filter(function (it) {   /* 줍는 동안 생긴 아이템(폭탄에 쓰러진 적의 드롭 — 우두머리 상자 포함)은 새 배열에 쌓였다가 아래에서 합친다. 전에는 걸러 낸 배열로 덮어써 사라졌다 */ if (T - it.t0 > IT.life && it.k !== 'chest') return false; if (Math.hypot(h.x - it.x, h.y - 10 - it.y) > IT.pick * ((self._lvOf('pick') ? SK.pick.v(self._lvOf('pick')) : 1))) return true;   /* 소매치기: 아이템 줍는 범위도 */
       if (it.k === 'meat') { var hv = Math.round(h.maxHp * IT.heal); h.hp = Math.min(h.maxHp, h.hp + hv); self._text(h.x, h.y - h.headY - 16, '+' + hv, '#9fe08a'); }
       else if (it.k === 'chest') self._chest();
       else if (it.k === 'magnet') { self.gems.forEach(function (g) { g.pull = true; }); self._text(h.x, h.y - h.headY - 16, '경험치 흡수', '#7fe0ff'); }
