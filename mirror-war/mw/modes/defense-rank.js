@@ -34,7 +34,7 @@
 
   /* 순위 창을 연다. won = 이긴 화면에서 열었다(이번 기록을 올릴 수 있다).
      sv = 서바이벌에서 열었다 (README 350): { stage: 0 대도의 길 | 1 무사의 길, res: 올릴 기록 또는 null } — 서바이벌 판은 오래 버틴 순이고 줄에는 레벨·처치·스킬이 나온다 */
-  var SURV = { name: '서바이벌', stages: [{ name: '대도의 길' }, { name: '무사의 길' }, { name: '성전사' }] };
+  var SURV = { name: '서바이벌', stages: [{ name: '대도의 길' }, { name: '무사의 길' }, { name: '성전사', soon: true }] };   /* soon = 탭을 숨긴다 (README 384, 2026-11-26 사용자 "명예의 전당의 성전사 탭도 가려 줘" — 성전사는 아직 개발 중). 서버의 판(stage 2)과 올리는 길은 그대로 */
   P._rankShow = function (won, sv) {
     var g = this; if (g.rankOpen) return;
     var F = {}; if (DG.RANK.surv) F.surv = SURV; Object.keys(DG.FACTIONS).forEach(function (k) { F[k] = DG.FACTIONS[k]; });
@@ -96,7 +96,7 @@
           var k = byName[u[0]], s = k && SK[k], lv = u[1] | 0, ev = !!(s && s.evo && s.evo.cls === CK), name = s ? (ev ? s.evo.name : s.name) : u[0];
           var cell = el('div', 'position:relative;width:38px;height:42px;cursor:pointer;touch-action:none;' + NOSEL);
           if (s && (s.art || (IC && icons))) { var cv = doc.createElement('canvas'); cv.width = 72; cv.height = 80; cv.style.cssText = 'width:36px;height:40px;display:block;pointer-events:none;'; var cx = cv.getContext('2d'); cx.scale(2, 2);
-            try { var fi = s.icon * 2; if (s.art) s.art(cx, 0, 1, 34, 34); else cx.drawImage(icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, 0, 0, 34, 37); } catch (e) {} cell.appendChild(cv); }
+            try { var fi = s.icon * 2; if (s.art) s.art(cx, 0, 1, 34, 34); else cx.drawImage(s.tree === 'pas' && MWE.SurvivalGame.greenSheet ? MWE.SurvivalGame.greenSheet(icons) : icons, (fi % IC.cols) * IC.w, Math.floor(fi / IC.cols) * IC.h, IC.w, IC.h, 0, 0, 34, 37); } catch (e) {} cell.appendChild(cv); }
           else { cell.style.cssText += 'width:auto;height:auto;padding:4px 6px;border-radius:5px;border:1px solid #3a4152;color:#9aa3b8;font-size:11px;'; cell.appendChild(el('span', 'pointer-events:none;', u[0])); }
           cell.appendChild(el('span', 'position:absolute;right:0;bottom:0;font:bold 10px sans-serif;color:' + (ev ? '#ffd36e' : '#fff') + ';text-shadow:0 0 2px #000,0 0 2px #000,1px 1px 0 #000;pointer-events:none;', String(lv)));
           var tmr = 0, stop = function () { if (tmr) { root.clearTimeout(tmr); tmr = 0; } };
