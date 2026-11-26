@@ -693,14 +693,14 @@
         if (this.aim2) { ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText('조준', U2.x + U2.w / 2, U2.y - 8); ctx.fillStyle = '#fff2b0'; ctx.fillText('조준', U2.x + U2.w / 2, U2.y - 8); } } }
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
   };
-  P._menuRows = function () { return [['resume', '계속하기'], ['sound', '소리: ' + (this.D.soundOn ? '켬' : '끔')], ['retry', '다시 하기'], ['exit', '모드 선택으로']]; };
+  P._menuRows = function () { var D = this.D, rk = D._rankShow && D.constructor.RANK && D.constructor.RANK.surv; return [['resume', '계속하기'], ['sound', '소리: ' + (D.soundOn ? '켬' : '끔')]].concat(rk ? [['rank', '명예의 전당 보기']] : []).concat([['retry', '다시 하기'], ['exit', '모드 선택으로']]); };   // 명예의 전당 보기 (377번, 2026-11-26 사용자 "서바이벌 메뉴에 명예의 전당 보기 기능") — 보기만(기록 올리기는 결과 화면에서), 지금 갈래의 판이 먼저 열린다
   P._drawMenu = function () {
     var D = this.D, ctx = D.ctx, W = D.W, H = D.H, rows = this._menuRows(), pw = Math.min(250, W - 40), rh = 44, ph = 52 + rows.length * (rh + 8) + 6, px = Math.round((W - pw) / 2), py = Math.round(Math.max(60, (H - ph) / 2 - 40)), i;
     ctx.fillStyle = 'rgba(4,6,10,.72)'; ctx.fillRect(0, 0, W, H); D._plate(px, py, pw, ph, 8, false);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('일시정지', W / 2, py + 26);
     this.menuBox = { x: px, y: py, w: pw, h: ph }; this.menuRowBoxes = [];
     for (i = 0; i < rows.length; i++) { var b = { x: px + 14, y: py + 52 + i * (rh + 8), w: pw - 28, h: rh, act: rows[i][0] }; this.menuRowBoxes.push(b);
-      D._plate(b.x, b.y, b.w, b.h, 5, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = b.act === 'exit' || b.act === 'retry' ? '#ffb4a8' : '#dfe6f5'; ctx.fillText(rows[i][1], b.x + b.w / 2, b.y + b.h / 2); }
+      D._plate(b.x, b.y, b.w, b.h, 5, false); ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = b.act === 'exit' || b.act === 'retry' ? '#ffb4a8' : b.act === 'rank' ? '#ffd36e' : '#dfe6f5'; ctx.fillText(rows[i][1], b.x + b.w / 2, b.y + b.h / 2); }
     ctx.textAlign = 'left';
   };
   P._menuTap = function (x, y) {
@@ -708,6 +708,7 @@
     var B = this.menuRowBoxes || [], hit = null, i; for (i = 0; i < B.length; i++) if (inBox(B[i], x, y)) { hit = B[i].act; break; }
     if (!hit) { if (!inBox(this.menuBox, x, y)) this.menu = false; return; }
     if (hit === 'sound') { this.D.toggleSound(); return; }
+    if (hit === 'rank') { this.D._rankShow(false, { stage: this.cls === 'shadow' ? 1 : this.cls === 'paladin' ? 2 : 0, res: null }); return; }   // 메뉴는 열어 둔다 — 순위 창을 닫으면 일시정지 메뉴로 돌아온다
     this.menu = false;
     if (hit === 'retry') this.reset(); else if (hit === 'exit') this.exit();
   };
@@ -1146,7 +1147,7 @@
   };
   P._nearest = function (n, range, skip) { var h = this.hero, L = [], F = this.foes, i; for (i = 0; i < F.length; i++) { var u = F[i]; if (u.state === 'dead' || u === skip) continue; var d = Math.hypot(u.x - h.x, u.y - h.y); if (d <= range) L.push([d, u]); } L.sort(function (a, b) { return a[0] - b[0]; }); return L.slice(0, n).map(function (e) { return e[1]; }); };
   P._blink = function (dx, dy) {
-    var D = this.D, h = this.hero, l = this._lvOf('blink'); if (!l || this.tm.blink > 0 || this.over || this.cards) return;
+    var D = this.D, h = this.hero, l = this._lvOf('blink'); if (!l || this.tm.blink > 0 || this.over || this.cards || this._casting()) return;   /* 궁극기 시전 중(이동 불가)에는 축지법도 안 된다 (378번) */
     var d = Math.hypot(dx, dy); if (d < 0.01) { dx = this.lastDir[0]; dy = this.lastDir[1]; d = 1; }
     this._fx(h.x, h.y - 8, 3); h.x += dx / d * SK.blink.dist(l); h.y += dy / d * SK.blink.dist(l); this._fx(h.x, h.y - 8, 3);
     this.invUntil = Math.max(this.invUntil, D.time + 0.4); this.tm.blink = SK.blink.cd(l); D._faceVec(h, dx, dy, true); D._play(5012, 0.5);
@@ -1164,7 +1165,7 @@
       L.sort(function (p, q2) { return p[0] - q2[0]; }); L.slice(0, SK.mace.n(l)).forEach(function (e) { var u = e[1], kx = u.x - h.x, ky = u.y - h.y, kl = Math.hypot(kx, ky) || 1; if (!u.boss) { u.x += kx / kl * M.push; u.y += ky / kl * M.push; } self._hitFoe(u, b, -5, 1.3); self.bursts.push({ x: u.x, y: u.y - u.headY * 0.5, t0: self.D.time, a: Math.atan2(ky, kx), k: 'n', life: 0.2, sc: 1.3 }); }); } });
   };
   P._bladeAtk = function () {
-    var D = this.D, h = this.hero, T = D.time, l = this.sk.slash || 1; if (this.atkCd > 0) return;
+    var D = this.D, h = this.hero, T = D.time, l = this.sk.slash || 1; if (this.atkCd > 0 || this._casting()) return;   /* 궁극기 시전 중에는 베지 않는다 (378번) */
     var near = this._nearest(1, CFG.BLADE.melee, null)[0]; if (!near) return;
     this.atkCd = Math.max(CFG.ATK.min, CFG.ATK.sec - CFG.ATK.lv * (this.lv - 1)) * SK.slash.sec(l) * (1 - this._pv('haste')) * CFG.BLADE.spd;
     var tx = near.x - h.x, ty = near.y - h.y; D._faceVec(h, tx, ty, true); this.aimUntil = T + h.t.anim.atk.n / (D.rules.tps * CFG.ATK.anim) + 0.05; h.state = 'attack'; h.at = 0;
@@ -1283,9 +1284,13 @@
       ctx.restore(); }
   };
   /* 매 프레임: 스킬 타이머 · 덫 · 독 구름 · 경험치 (update 가 부른다. G = 적 격자, near = 사거리 안 가장 가까운 적) */
+  /* 궁극기 시전 중 (378번, 2026-11-26 사용자 "무사의 궁극기 시전 시 타 스킬(기습)이 발동되던데 막아주고 이런 류 버그 있으면 찾아봐줘"): 제자리에 묶여 자세를 잡는 궁극기 — 천지파열무(rift, 끝날 때까지)·투룡의 기 모으기(dragCast).
+     그동안 자동 스킬(due)·그림자 숨기·기본 베기·축지법·다른 궁극기를 막는다. 대도의 무차별 난사는 묶이지 않는 궁극기라 넣지 않았다 */
+  P._casting = function () { return !!(this.rift || this.dragCast); };
   P._growStep = function (dt, G, near) {
     var self = this, D = this.D, T = D.time, h = this.hero, F = this.foes, tm = this.tm, l, k, i, ev;
     var due = function (key) { if (!self.sk[key]) return false; tm[key] = (tm[key] == null ? 0.6 : tm[key]) - dt * (self.D.time < self.buff.magic ? CFG.SHRINE.kinds.magic.cd : 1); if (tm[key] > 0) return false;   /* 마력의 성소: 쿨타임이 빨리 돈다 */
+      if (self._casting()) { tm[key] = 0; return false; }   // 궁극기 시전 중에는 다른 스킬이 나가지 않는다 — 준비된 채로 기다렸다가 끝나면 나간다 (378번)
       if (self.ult === key) { if (!self.fire[key]) { tm[key] = 0; return false; } self.fire[key] = false; }   // 궁극기 칸에 올린 스킬: 준비된 채로 누르기를 기다린다
       return true; };
     if (tm.blink > 0) tm.blink -= dt; if (tm.ult > 0) tm.ult -= dt; if (tm.ult2 > 0) tm.ult2 -= dt; this._dragonStep(dt);
@@ -1372,7 +1377,7 @@
           if (ev) for (var si = 0; si < F.length; si++) if (F[si].state !== 'dead' && Math.hypot(F[si].x - best.x, F[si].y - best.y) <= 55 * RC) F[si].stunUntil = T + 2;
           self._hitFoe(best, sdm, -1); }); } else tm.surprise = 0.4; }
     if (due('shadow') && !this._nearest(1, 260, null).length) tm.shadow = 0.5;   // 둘레에 누를 적이 없으면 미룬다 (숨으면 적을 눌러야 풀린다)
-    else if (tm.shadow <= 0 && this.sk.shadow) { l = this.sk.shadow; tm.shadow = CD('shadow', l); this.hideK = (this.hideK || 0) + 1; this.hideX = h.x; this.hideY = h.y; this.stealthUntil = T + SK.shadow.dur(l) * LS; this.hide = { t0: T }; this._text(h.x, h.y - h.headY - 22, this._name('shadow'), '#c9a8ff'); D._play(5011, 0.5); }
+    else if (tm.shadow <= 0 && this.sk.shadow && !this._casting()) { l = this.sk.shadow; tm.shadow = CD('shadow', l); this.hideK = (this.hideK || 0) + 1; this.hideX = h.x; this.hideY = h.y; this.stealthUntil = T + SK.shadow.dur(l) * LS; this.hide = { t0: T }; this._text(h.x, h.y - h.headY - 22, this._name('shadow'), '#c9a8ff'); D._play(5011, 0.5); }
     // 치명타 확률: 기본 + 그림자 숨기(숨은 동안) + 더블 드로잉(대도의 길)
     this.crit = Math.min(GROW.critMax, CFG.CRIT.p + this._mv('crit') +(T < this.stealthUntil ? SK.shadow.crit(this.sk.shadow || 1) : 0) + (this.sk.double && this._evo('double') ? SK.double.evo.crit(this.sk.double) : 0) + (this.cls === 'shadow' ? SK.slash.crit(this.sk.slash || 1) : 0)); this.crit2 = CFG.CRIT.p2 + (this.sk.double && this._evo('double') ? SK.double.evo.crit2(this.sk.double) : 0);
     // 경험치 보석: 범위 안이면 끌려온다
@@ -1431,7 +1436,7 @@
     if (this.fires.length) this.fires = this.fires.filter(function (q5) { return T < q5.until; });
   };
   P._ultFire = function () {
-    var self = this, D = this.D, T = D.time, h = this.hero, F = this.foes, U = ULT[this.cls], k; if (!U || this.tm.ult > 0 || this.over || this.cards || this.info) return;
+    var self = this, D = this.D, T = D.time, h = this.hero, F = this.foes, U = ULT[this.cls], k; if (!U || this.tm.ult > 0 || this.over || this.cards || this.info || this._casting()) return;   /* 투룡의 기를 모으는 중에 첫째 궁극기를 겹쳐 쓰지 못한다 (378번) */
     this.tm.ult = ULT.cd * (1 - this._pv('haste')); this._text(h.x, h.y - h.headY - 24, U.name, CLS[this.cls].col); this.flashT = T - 0.18; D._play(5064, 0.7);
     if (this.cls === 'paladin') {   /* 심판의 날: 화면의 적을 하나씩 골라(안 맞은 적부터, 없으면 아무나) gap 초마다 빛 기둥 — 둘레 r 안의 적에게 피해 */
       var struck = {}, kfp = D.types[U.floorUnit]; for (k = 0; k < U.n; k++) (function (k) { self.queue.push({ at: T + 0.25 + k * U.gap, fn: function () { if (self.over) return; var T4 = self.D.time, hh = self.hero, C = self.foes.filter(function (u) { return u.state !== 'dead' && Math.hypot(u.x - hh.x, u.y - hh.y) < 420; }), N = C.filter(function (u) { return !struck[u.uid]; }), P4 = N.length ? N : C, tg = P4[Math.floor(self.D.rng.next() * P4.length)], px, py;
