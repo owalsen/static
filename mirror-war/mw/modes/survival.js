@@ -199,7 +199,7 @@
      종류는 완급(PACE)에서: hot = 조이는 웨이브(붉은 빛, 비스트 버서커의 포효 5047) · cool = 숨 고르기(푸른 빛, 힐링 5002) · plain = 그 밖(금빛, 천리안 5009). 끄기 ?wavefx=0 */
   var WAVEFX = { on: q('wavefx', 1), sec: 2.6, y: 0.27,
     /* tips = 그 웨이브에 일어나는 일 한 줄 (README 415, 2026-11-27 사용자 "웨이브 타이틀 나올 때 그 웨이브의 특징을 설명 — 5 때 마법사 등장해서 파이어볼 이런 것처럼" → "그냥 명사로 끝나면 좋을 듯" — 글은 모두 명사로 끝낸다). 웨이브 표·포격(BARRAGE.list)·포위(SIEGE)·성소(SHRINE)의 시점을 바꾸면 이 글도 함께 고칠 것 */
-    tips: ['해골전사와 좀비 무리', '늑대와 박쥐 — 빠른 적, 돌진 떼', '궁수 부대의 화살 세례 · 우두머리 듀라한', '적의 포위망 · 성소 등장', '마술사 부대의 화염 포격 · 우두머리 드래곤', '장로 부대의 장풍 포격', '우두머리 다크로드 — 마지막 고비'], hot: { col: '#ff8a6a', rgb: '255,70,40', snd: 5047, vol: 0.6 }, cool: { col: '#9fd8ff', rgb: '70,160,255', snd: 5002, vol: 0.6 }, plain: { col: '#ffe9b0', rgb: '255,205,110', snd: 5009, vol: 0.45 } };
+    tips: ['해골전사와 좀비 무리', '늑대와 박쥐 — 빠른 적, 돌진 떼', '궁수 부대의 화살 세례 · 우두머리 듀라한', '포위된 밤 · 성소의 빛', '마술사 부대의 화염 포격 · 우두머리 드래곤', '장로 부대의 장풍 포격', '우두머리 다크로드 — 마지막 고비'], hot: { col: '#ff8a6a', rgb: '255,70,40', snd: 5047, vol: 0.6 }, cool: { col: '#9fd8ff', rgb: '70,160,255', snd: 5002, vol: 0.6 }, plain: { col: '#ffe9b0', rgb: '255,205,110', snd: 5009, vol: 0.45 } };
   P._drawWaveFx = function () {
     var F = this.waveFx, D = this.D; if (!F || !WAVEFX.on) return; var a = D.time - F.t0, S = WAVEFX.sec; if (a < 0 || a >= S) return;
     var ctx = D.ctx, W = D.W, H = D.H, K = WAVEFX[F.k], k = Math.min(1, a / 0.1) * Math.min(1, (S - a) / 0.45), cy = Math.round(H * WAVEFX.y), sc = 1 + 1.1 * Math.max(0, 1 - a / 0.2), ga = Math.max(0, 1 - a / 1.1);
