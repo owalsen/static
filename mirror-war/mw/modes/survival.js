@@ -401,6 +401,7 @@
       if (u.boss) { u.stunUntil = 0; u.rootUntil = 0; u.slowUntil = 0; }   // 우두머리는 멈춤·묶임·감속이 안 걸린다
       if (u.stunUntil > T || u.rootUntil > T) { u.state = 'idle'; continue; }   // 멈춤(교란)·묶임(발목 함정)
       if (u.rush) { u.x += u.rush.vx * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.y += u.rush.vy * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.state = 'move'; u.walkT += dt * 1.6;   // 돌진하는 떼: 도둑을 쫓지 않고 곧게 지나간다 (숨어 있어도 지나가다 닿으면 맞는다)
+        if (u.bug) { if (d < u.bug.r && !this.over && !(u.bug.armAt > T)) { this._fx(u.x, u.y - 8, SK.explo.boom); D._play(5064, 0.3); this.bursts.push({ x: u.x, y: u.y - 6, t0: T, k: 'b', life: 0.35, r: u.bug.r + 14 }); if (this.bossF) this.bossF.src = 'bugs'; this._hitHero(1); u.state = 'dead'; u.deadT = 9; u.fade = 1; } else if (T > u.rush.until) { u.state = 'dead'; u.deadT = 9; u.fade = 1; } continue; }   /* 보스전의 곤충 (README 418): 닿으면 터진다 — 좀비처럼 */
         if (d < CFG.RUSH.touch && !this.over) { var RH = CFG.RUSH; if (!(T < this.rushSlowUntil)) this._text(h.x, h.y - h.headY - 30, '감속', '#ff9a8a'); this.rushSlowUntil = T + RH.slowSec;
           if (T >= (this.rushTick || 0) && !(this.invUntil - T > 0.3)) { this.rushTick = T + RH.tick; var rdm = Math.max(1, Math.round(h.maxHp * RH.dot * RH.tick)); this.stat.taken += Math.min(rdm, h.hp); h.hp -= rdm; h.hitT = T; this.hurtT = T;
             if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); } } }
@@ -1743,8 +1744,10 @@
     eye: q('bosseye', 78), near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 },
     intro: 2.6, shift: 2.4, half: 0.5, rage: 0.2, tiers: [0.85, 0.7, 0.6], rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
     pad: { l: 10, r: 10, top: 112, bot: 6 }, home: 104, chest: 52, only: q('bosspat', 0),   /* only = 그 번호의 패턴만 되풀이 (1부 1~7, 2부 11~14) */
-    seq1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb'], seq2: ['tele', 'dash', 'turret', 'summon'],
-    dur: { fan: 7, ring: 8, bolt: 8, spiral: 9, wall: 9, quake: 7, orb: 7, turret: 7.5, summon: 5.5 },
+    seq1: ['fan', 'ring', 'bolt', 'bugs', 'spiral', 'wall', 'quake', 'orb'], seq2: ['tele', 'dash', 'bugs', 'turret', 'summon'], only1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb', 'bugs'], only2: ['tele', 'dash', 'turret', 'summon', 'bugs'],
+    /* 곤충 사출 (README 418, 2026-11-27 사용자 "거울전쟁의 곤충류(개미 등)를 패턴으로 — 닿으면 폭발(좀비)" · "걔네들은 무적이어서 투사체와 같은 취급" · "탄막과 안 겹치도록, 난이도는 너무 어렵지 않게" · "사출되면 주인공을 따라가진 않고 퇴장"): 보스가 곤충을 부채꼴로 내보낸다 — 곧게 기어가 전장 밖으로 나가고, 맞지도 겨눠지지도 않는다. 이 패턴 동안에는 탄이 없다. kinds = [유닛, 걸음, 터지는 거리], every·n = 단계(1부 0~3 / 2부는 광폭이면 3, 아니면 1)별 값 */
+    bugs: { kinds: [[68, 120, 20], [69, 150, 18], [70, 88, 26]], every: [1.5, 1.35, 1.2, 1.1], n: [4, 5, 5, 6], spread: 0.36, arm: 56 },
+    dur: { fan: 7, ring: 8, bolt: 8, spiral: 9, wall: 9, quake: 7, orb: 7, turret: 7.5, summon: 5.5, bugs: 6.5 },
     cols: ['#ff5a48', '#ff9a3a', '#ffd23e', '#9fe08a', '#5fd0c0', '#5fb0ff', '#9c8cff', '#d07cff'] };
 
   /* 시험 진입 (?boss=1): 갈래를 정하고(없으면 대도) 레벨을 올려 카드를 무작위로 채운다 — 봇·손 시험이 10분을 기다리지 않게 */
@@ -1756,7 +1759,7 @@
     this.hero.hp = this.hero.maxHp; this.texts = []; this.banner = null; this.cards = null; this.lvGain = null; this.guide = false; this.t = CFG.TIME - 0.01;
   };
   P._bossEnter = function () {
-    var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y; this._layout(); bossType(D); this._need([BOSS_ID, 49, 50]);
+    var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y; this._layout(); bossType(D); this._need([BOSS_ID, 49, 50, 68, 69, 70]);
     [5, 26, 27, 33, 35, 84].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var B = this.bossF = { st: 'intro', t0: T, in0: T, c: { x: h.x, y: h.y }, l: h.x + (C.pad.l - D.W / 2) / Z, r: h.x + (D.W / 2 - C.pad.r) / Z, top: h.y + (C.pad.top - hy) / Z, bot: h.y + (this.hudBot - C.pad.bot - hy) / Z,
       u: null, seq: 0, pat: null, next: 0, rings: [], line: null, hits: {}, n: 0, farT: 0, sh: { on: false, at: 0 }, log: [], logT: 0, cast: 0, near: 0, far: 0 };
@@ -1765,7 +1768,7 @@
     this.marks = []; this.barr = null; this.shrine = null; this.rushWarn = null; this.siegeWarn = null; this.storm = null; this.cleared = true; this.wave = CFG.WAVE.list.length - 1; this.waveOn = true;
     this.banner = { s: '— 대마술사 강림 —', t0: T, col: '#ff6a5a' }; this.flashT = T; D._play(5064, 0.9);
   };
-  P._bossClear = function () { var B = this.bossF; if (!B) return; this.shots = this.shots.filter(function (s) { return !s.foe; }); this.marks = []; B.rings = []; B.n = 0; };   /* 화면의 탄을 지운다 — 전환·궁극기(슈팅게임의 폭탄) */
+  P._bossClear = function () { var B = this.bossF; if (!B) return; this.shots = this.shots.filter(function (s) { return !s.foe; }); this.marks = []; B.rings = []; B.n = 0; var self = this; this.foes.forEach(function (x) { if (x.bug && x.state !== 'dead') { self._fx(x.x, x.y - 8, 3); x.state = 'dead'; x.deadT = 9; x.fade = 1; } }); };   /* 화면의 탄을 지운다 — 전환·궁극기(슈팅게임의 폭탄) */
   P._bShot = function (x, y, a, v, bk, o) {
     var B = this.bossF, T = this.D.time; if (B.n >= CFG.BOSSF.cap) return null; B.n++;
     var s = { x: x, y: y, x0: x, y0: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, dmg: 1, arm: -1, foe: true, t0: T, life: 30, bk: bk, pat: B.pat ? B.pat.k : 'x', armAt: T + CFG.BOSSF.eye / Math.max(40, v) }, k;
@@ -1781,9 +1784,15 @@
     if (B.sh.on && !near) { dmg *= C.shield.k; if (this.D.time - (B.shTx || -9) > 1.2) { B.shTx = this.D.time; this._text(u.x, u.y - u.headY - 6, '실드 — 멀리서는 절반', '#9fd8ff'); } }
     if (near) B.near += dmg; else B.far += dmg; return dmg;
   };
+  P._bossBugs = function (p, dt, k) {
+    var B = this.bossF, G = CFG.BOSSF.bugs, D = this.D, T = D.time, h = this.hero, u = B.u, n = this._bEvery(p, 'a', G.every[k], dt), i;
+    while (n-- > 0) { var kd = G.kinds[(p.w = (p.w || 0) + 1) % G.kinds.length], cnt = G.n[k] - (kd[0] === 70 ? 1 : 0), a0 = Math.atan2(h.y - u.y, h.x - u.x) + (D.rng.next() - 0.5) * 0.2; if (!this._has(kd[0])) continue; this._bCast(0.45, 5018);
+      for (i = 0; i < cnt; i++) { var a = a0 + (i - (cnt - 1) / 2) * G.spread, ca = Math.cos(a), sa = Math.sin(a), b = this._unit(kd[0], 1, u.x + ca * 18, u.y + sa * 12); b.life = b.life0 = 1; b.boom = null; b.act = null; b.noDrop = true; b.rush = { vx: ca * kd[1], vy: sa * kd[1], until: T + 12 }; b.bug = { r: kd[2], armAt: T + G.arm / kd[1] }; b.state = 'move'; b.cd = 0; D._faceVec(b, ca, sa, true); this.foes.push(b); } }
+  };
   /* 1부 패턴 — p = { k, t0, tm, … }, t = 패턴이 시작된 뒤 흐른 시간, k = 단계 0~3 (체력 85·70·60% 에서 오른다) */
   P._bossP1 = function (p, t, dt, k) {
     var B = this.bossF, C = CFG.BOSSF, D = this.D, rng = D.rng, h = this.hero, u = B.u, ox = u.x, oy = u.y - C.chest, aim = Math.atan2(h.y - h.headY * 0.5 - oy, h.x - ox), n, i, j, self = this;
+    if (p.k === 'bugs') { this._bossBugs(p, dt, k); return; }   /* 곤충 사출: 탄 없이 (겹치는 고리탄도 쉰다) */
     if (p.k === 'fan') { n = this._bEvery(p, 'a', [0.6, 0.5, 0.45, 0.4][k], dt); while (n-- > 0) { var fn = [5, 7, 9, 9][k]; this._bCast(0.35, 5049); for (i = 0; i < fn; i++) this._bShot(ox, oy, aim + (i - (fn - 1) / 2) * 0.22, 135, 'fire'); }
       n = this._bEvery(p, 'b', [1.3, 1.1, 1, 0.9][k], dt); while (n-- > 0) for (i = 0; i < 12; i++) this._bShot(ox, oy, aim + 0.26 + i * 6.2832 / 12, 88, 'dark'); }   /* 조준 부채꼴 (파이어 볼) */
     else if (p.k === 'spiral') { if (p.a == null) { p.a = aim; p.dir = 1; } if (!p.flip && t > C.dur.spiral / 2) { p.flip = 1; p.dir = -1; } n = this._bEvery(p, 'a', 0.09, dt); var arms = [3, 4, 5, 6][k];   /* 회전 나선 (플레임 윈드) — 도중에 회전 방향이 바뀐다 */
@@ -1807,6 +1816,7 @@
   /* 2부 패턴 — e = 광폭(체력 20% 이하)이면 1 */
   P._bossP2 = function (p, t, dt, e) {
     var B = this.bossF, C = CFG.BOSSF, D = this.D, T = D.time, rng = D.rng, h = this.hero, u = B.u, ox = u.x, oy = u.y - C.chest, aim = Math.atan2(h.y - h.headY * 0.5 - oy, h.x - ox), n, i, cl = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+    if (p.k === 'bugs') { this._bossBugs(p, dt, e ? 3 : 1); if (t >= C.dur.bugs) p.done = true; return; }   /* 곤충 사출: 이 동안에는 광폭의 낙뢰도 쉰다 */
     if (p.k === 'tele') {   /* 순간이동 강타 (텔레포테이션 + 어쓰 퀘이크): 사라짐 → 주인공 자리에 예고 원 → 나타나며 터지고 둘레로 탄 */
       if (!p.ph) { p.ph = 'out'; p.at = T + 0.35; p.i = 0; D._play(5018, 0.5); }
       if (p.ph === 'out') { u.ghostA = Math.max(0, (p.at - T) / 0.35); if (T >= p.at) { p.ph = 'wait'; p.x = cl(h.x, B.l + 30, B.r - 30); p.y = cl(h.y, B.top + 50, B.bot - 10); p.at = T + 0.85; this._bMark(p.x, p.y, 62, 0.85, 33, 'tele'); u.x = -9999; } }
@@ -1842,6 +1852,7 @@
       if (s.x < B.l - 30 || s.x > B.r + 30 || s.y < B.top - 60 || s.y > B.bot + 40) { s.dead = true; continue; }
       if (s.split && Math.hypot(s.x - s.x0, s.y - s.y0) >= s.split.d) { var a0 = Math.atan2(s.vy, s.vx), sv = Math.hypot(s.vx, s.vy), j; s.dead = true; for (j = 0; j < s.split.n; j++) add.push([s.x, s.y, a0 + (j - (s.split.n - 1) / 2) * 2 * s.split.da, sv, s.bk, s.pat]); } }
     for (i = 0; i < add.length; i++) this._bShot(add[i][0], add[i][1], add[i][2], add[i][3], add[i][4], { pat: add[i][5], armAt: 0 });
+    for (i = 0; i < this.foes.length; i++) { var bg = this.foes[i]; if (bg.bug && bg.state !== 'dead' && (bg.x < B.l - 30 || bg.x > B.r + 30 || bg.y < B.top - 50 || bg.y > B.bot + 40)) { bg.state = 'dead'; bg.deadT = 9; bg.fade = 1; } }   /* 곤충: 전장 밖으로 나가면 퇴장 */
     /* 충격파 고리 */
     for (i = B.rings.length - 1; i >= 0; i--) { var rg = B.rings[i]; rg.r += rg.v * dt; if (rg.r > rg.max) { B.rings.splice(i, 1); continue; }
       if (!rg.hit) { var rx = h.x - rg.x, ry = (h.y - rg.y) / 0.62, rr = Math.hypot(rx, ry), ra = Math.atan2(ry, rx), open = rg.g.some(function (g) { return Math.abs(Math.atan2(Math.sin(ra - g), Math.cos(ra - g))) < rg.gw; }); if (Math.abs(rr - rg.r) < 9 && !open) { rg.hit = true; B.src = 'quake'; this._hitHero(1); } } }
@@ -1859,11 +1870,11 @@
     /* 토네이도 실드: 켜졌다 꺼졌다 */
     if (T >= B.sh.at) { B.sh.on = !B.sh.on; B.sh.at = T + (B.sh.on ? C.shield.on : C.shield.off); if (B.sh.on) { D._play(5059, 0.5); this._text(u.x, u.y - u.headY - 16, '토네이도 실드', '#9fd8ff'); } }
     /* 저격 낙뢰 (1부): 멀리 숨어 있으면 */
-    if (B.st === 'p1') { if (d > C.far) { B.farT += dt; if (B.farT >= C.farSec) { B.farT = C.farSec - 1.5; this._bMark(h.x, h.y, 40, 0.7, 84, 'snipe'); } } else B.farT = Math.max(0, B.farT - dt); }
+    if (B.st === 'p1' && !(B.pat && B.pat.k === 'bugs')) { if (d > C.far) { B.farT += dt; if (B.farT >= C.farSec) { B.farT = C.farSec - 1.5; this._bMark(h.x, h.y, 40, 0.7, 84, 'snipe'); } } else B.farT = Math.max(0, B.farT - dt); }
     /* 패턴 차례 */
     var p = B.pat, k = hpk > C.tiers[0] ? 0 : hpk > C.tiers[1] ? 1 : hpk > C.tiers[2] ? 2 : 3, e = hpk <= C.rage ? 1 : 0;
     if (e && !B.raged) { B.raged = true; this.banner = { s: '대마술사 광폭', t0: T, col: '#ff4a3a' }; D._play(5064, 0.8); }
-    if (!p && T >= B.next) { var seq = B.st === 'p1' ? C.seq1 : C.seq2, on = C.only, key = on ? (on > 10 ? C.seq2[(on - 11) % C.seq2.length] : C.seq1[(on - 1) % C.seq1.length]) : seq[B.seq % seq.length]; if (on && (on > 10) !== (B.st === 'p2')) key = seq[B.seq % seq.length]; B.seq++; p = B.pat = { k: key, t0: T, tm: {} }; }
+    if (!p && T >= B.next) { var seq = B.st === 'p1' ? C.seq1 : C.seq2, on = C.only, key = on ? (on > 10 ? C.only2[(on - 11) % C.only2.length] : C.only1[(on - 1) % C.only1.length]) : seq[B.seq % seq.length]; if (on && (on > 10) !== (B.st === 'p2')) key = seq[B.seq % seq.length]; B.seq++; p = B.pat = { k: key, t0: T, tm: {} }; }
     if (p) { var pt = T - p.t0; if (B.st === 'p1') { this._bossP1(p, pt, dt, k); if (pt >= C.dur[p.k]) p.done = true; } else this._bossP2(p, pt, dt, e);
       if (p.done) { B.pat = null; B.line = null; u.ghostA = null; B.next = T + (B.st === 'p1' ? C.rest[k] : C.rest2[e]); } }
     if (B.st === 'p1') { u.x += (B.hx - u.x) * Math.min(1, dt * 3); u.y += (B.hy + Math.sin(T * 1.3) * 5 - u.y) * Math.min(1, dt * 3); }   /* 1부: 제자리에서 조금 떠다닌다 */
@@ -1877,6 +1888,7 @@
     ctx.save(); var edge = function (x0, y0, x1, y1, gx0, gy0, gx1, gy1) { var g = ctx.createLinearGradient(gx0, gy0, gx1, gy1); g.addColorStop(0, 'rgba(255,90,30,' + (0.5 * fl).toFixed(3) + ')'); g.addColorStop(0.35, 'rgba(180,30,10,.22)'); g.addColorStop(1, 'rgba(120,10,0,0)'); ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); };
     edge(B.l - 20, B.top - 80, B.l + 26, B.bot + 60, B.l - 4, 0, B.l + 26, 0); edge(B.r - 26, B.top - 80, B.r + 20, B.bot + 60, B.r + 4, 0, B.r - 26, 0); edge(B.l - 20, B.bot - 20, B.r + 20, B.bot + 60, 0, B.bot + 8, 0, B.bot - 20); ctx.restore();
     if (u && u.state !== 'dead' && u.x > -9000 && (B.st === 'p1' || B.st === 'p2')) { ctx.save(); ctx.translate(u.x, u.y); ctx.scale(1, 0.62); ctx.strokeStyle = 'rgba(160,210,255,' + (B.sh.on ? 0.5 : 0.2) + ')'; ctx.lineWidth = B.sh.on ? 2 : 1; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.arc(0, 0, C.near, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }   /* 근접 구역: 이 안에서 준 피해는 실드에 깎이지 않는다 */
+    for (i = 0; i < this.foes.length; i++) { var bq = this.foes[i]; if (!bq.bug || bq.state === 'dead') continue; var ba = bq.bug.armAt > T; ctx.strokeStyle = ba ? 'rgba(255,214,110,.45)' : Math.floor(T * 10) % 2 ? 'rgba(255,90,50,.95)' : 'rgba(255,200,90,.9)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(bq.x, bq.y, bq.bug.r * 0.7, bq.bug.r * 0.35, 0, 0, 6.2832); ctx.stroke(); }   /* 곤충의 발밑 고리: 터지는 놈이라는 표시 (폭탄 개미와 같은 모양) — 아직 판정이 없으면 옅게 */
     var L = B.line; if (L) { var lk = Math.max(0, Math.min(1, (T - L.t0) / (L.at - L.t0))); ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,60,40,' + (0.14 + 0.2 * lk).toFixed(3) + ')'; ctx.lineWidth = 44; ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke(); ctx.strokeStyle = 'rgba(255,120,90,' + (0.5 + 0.4 * lk).toFixed(3) + ')'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -T * 60; ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke(); ctx.restore(); }
     for (i = 0; i < B.rings.length; i++) { var rg = B.rings[i], ra = Math.max(0, 1 - rg.r / rg.max), a0 = rg.g[0] + rg.gw, a1 = rg.g[1] - rg.gw, a2 = rg.g[1] + rg.gw, a3 = rg.g[0] + 6.2832 - rg.gw; ctx.save(); ctx.translate(rg.x, rg.y); ctx.scale(1, 0.62); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       ctx.strokeStyle = 'rgba(255,140,50,' + (0.35 + 0.4 * ra).toFixed(3) + ')'; ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(0, 0, rg.r, a0, a1); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, rg.r, a2, a3); ctx.stroke();
