@@ -17,7 +17,7 @@
   function did() { var d = lsGet(LS.did); if (!/^[A-Za-z0-9_-]{8,40}$/.test(d)) { d = ''; var A = 'abcdefghijklmnopqrstuvwxyz0123456789'; for (var i = 0; i < 20; i++) d += A[Math.floor(Math.random() * A.length)]; lsSet(LS.did, d); } return d; }
   function mmss(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   /* 서바이벌 기록의 표시 (README 417): time 1~600 = 버틴 시간 · 601 = 보스전에서 쓰러짐(base = 보스에게 준 피해) · 2001~ = 보스 처치(3000 − 걸린 초) */
-  function svTime(t, base) { t = Math.round(t); return t >= 2000 ? '보스 처치 ' + mmss(3000 - t) : t > 600 ? (base != null ? '보스 피해 ' + Number(base).toLocaleString() : '보스전') : mmss(t); }
+  function svTime(t, base) { t = Math.round(t); return t >= 2000 ? '보스전 클리어 ' + mmss(3000 - t) : t > 600 ? (base != null ? '보스전 ' + Number(base).toLocaleString() : '보스전') : mmss(t); }
   function el(tag, css, txt) { var e = doc.createElement(tag); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; }
   function call(method, path, body) {
     return root.fetch(DG.RANK.api + path, { method: method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined }).then(function (r) { return r.json(); });
@@ -70,7 +70,7 @@
       nm.appendChild(el('div', 'font:bold 18px sans-serif;color:#ffd36e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;', r.nick));
       nm.appendChild(el('div', 'font-size:11px;color:#9aa3b8;margin-top:2px;', '서바이벌 · ' + SURV.stages[view.stage].name + ' · ' + (rank + 1) + '위'));
       var cl = el('button', BTN, '닫기'); hd.appendChild(nm); hd.appendChild(cl); cb.appendChild(hd);
-      var rows = [r.time > 600 ? ['보스전', svTime(r.time, r.base)] : ['생존 시간', mmss(r.time) + (r.time >= 600 ? '  (완주)' : '')], ['처치', String(r.kills)], ['레벨', String(r.lost)]];
+      var rows = [r.time > 600 ? ['보스전', r.time >= 2000 ? '클리어 ' + mmss(3000 - r.time) : '피해 ' + Number(r.base).toLocaleString()] : ['생존 시간', mmss(r.time) + (r.time >= 600 ? '  (완주)' : '')], ['처치', String(r.kills)], ['레벨', String(r.lost)]];
       (r.cards || []).slice(0, 3).forEach(function (c) { var m2 = /^(적 레벨)\s*(.+)$/.exec(c); if (m2) rows.push([m2[1], m2[2]]); });
       if (r.ver) rows.push(['버전', (/\./.test(r.ver) ? 'v' : '') + r.ver]);
       var tb = el('div', 'display:flex;flex-direction:column;gap:5px;padding:8px 4px;border-top:1px solid rgba(168,130,58,.5);border-bottom:1px solid rgba(168,130,58,.5);');

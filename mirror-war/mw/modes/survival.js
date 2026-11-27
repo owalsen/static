@@ -552,7 +552,7 @@
     this._drawStick(); this._drawHud();
     if (this.hide && !this.over) this._drawHide();
     if (this.over) this._drawOver();
-    this._drawWaveFx();
+    this._drawWaveFx(); if (this.bossF && !this.over) this._bossWarn();
     if (this.cards) this._drawCards();
     if (this.info) this._drawInfo();
     if (D.time - this.rageT < CFG.RAGE.show) this._drawRage();
@@ -624,7 +624,7 @@
     if (!win && !this._rage()) return { stage: stage, res: null, msg: '최후의 3분(' + mmss(CFG.RAGE.at) + ')까지 버티면 기록을 올릴 수 있습니다' };
     var units = this._skList().map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
     var BR = this.bossF, bdmg = BR && BR.u ? Math.round(Math.max(0, Math.min(1e6, BR.u.life0 - Math.max(0, BR.u.life)))) : 0;   /* 보스전 순위 (README 417, 2026-11-27 사용자 "준 피해량으로 가자"): 서버는 time 큰 순 → base 큰 순으로 줄을 세운다. 10분 전 사망 = 버틴 초(1~599) · 보스전 없이 완주 = 600 · 보스전에서 쓰러짐 = 601 + base 에 보스에게 준 피해 · 보스 처치 = 3000 − 걸린 초(빨리 잡을수록 크다) */
-    return { stage: stage, res: { fac: 'surv', stage: stage, time: this.bossKill ? 3000 - Math.max(1, Math.min(999, BR.sec || 999)) : this.cleared && BR ? 601 : win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.cleared && BR && !this.bossKill ? bdmg : this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: win ? (this.bossKill ? ['완주', '보스 처치'] : ['완주']) : [] } };
+    return { stage: stage, res: { fac: 'surv', stage: stage, time: this.bossKill ? 3000 - Math.max(1, Math.min(999, BR.sec || 999)) : this.cleared && BR ? 601 : win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.cleared && BR && !this.bossKill ? bdmg : this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: win ? (this.bossKill ? ['완주', '보스전 클리어'] : ['완주']) : [] } };
   };
   /* 친구 초대 · 공유 (379번, 2026-11-26 사용자 "쓰러지거나 클리어 시 나오는 카드 화면에 공유하기 — 카카오톡에 보낼 수 있게(썸네일도), 그 링크를 타고 들어오면 서바이벌이 시작되고 시작 전에 '이름없는 대도(또는 무사)가 당신을 초대했습니다' 토스트. 명예의 전당에 입력한 이름이 '이름없는'을 대체"):
      보내는 주소 = 초대 페이지 defense/i/<갈래>.html?by=<이름> (갈래 t 대도 · m 무사 · d 전직 전 도둑). 그 페이지는 카카오톡 미리보기용 제목·그림(og)만 갖고 바로 게임(?mode=survival&inv=&by=)으로 넘긴다 — tools/dist.js 가 만든다.
@@ -708,8 +708,8 @@
     var all = this._skList(), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 216, py = Math.max(24, Math.round((H - ph) / 2));
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(this.bossKill ? '대마술사를 쓰러뜨렸습니다' : win ? '10분을 버텼습니다' : this.cleared ? '대마술사에게 쓰러졌습니다' : '쓰러졌습니다', W / 2, py + 34);
-    var BO = this.bossF, rows = [BO && BO.u ? (this.bossKill ? ['보스 처치', mmss(BO.sec || 0)] : ['보스에게 준 피해', Math.round(BO.u.life0 - Math.max(0, BO.u.life)).toLocaleString() + '  (' + Math.round((1 - Math.max(0, BO.u.life) / BO.u.life0) * 100) + '%)']) : ['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN],   /* 410번(2026-11-26 사용자 "쓰러졌습니다에서 웨이브 다음 '적 레벨 85%' 의미가 뭐야? 빼면 안 됨?"): 결과 카드에서 적 레벨 계수 표시를 뺐다 */ ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
+    ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(this.bossKill ? '보스전 클리어' : win ? '10분을 버텼습니다' : this.cleared ? '보스전에서 쓰러졌습니다' : '쓰러졌습니다', W / 2, py + 34);
+    var BO = this.bossF, rows = [BO && BO.u ? (this.bossKill ? ['보스전 클리어', mmss(BO.sec || 0)] : ['보스전 피해', Math.round(BO.u.life0 - Math.max(0, BO.u.life)).toLocaleString() + '  (' + Math.round((1 - Math.max(0, BO.u.life) / BO.u.life0) * 100) + '%)']) : ['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN],   /* 410번(2026-11-26 사용자 "쓰러졌습니다에서 웨이브 다음 '적 레벨 85%' 의미가 뭐야? 빼면 안 됨?"): 결과 카드에서 적 레벨 계수 표시를 뺐다 */ ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
       ['준 피해', Math.round(ST.dealt).toLocaleString()], ['최고 한 방', ST.maxHit.toLocaleString()], ['치명타 / 더블', ST.crit + ' / ' + ST.dbl], ['받은 피해', Math.round(ST.taken).toLocaleString()]];
     ctx.font = '13px sans-serif';
     for (i = 0; i < rows.length; i++) { var ry = py + 68 + i * 24; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(rows[i][0], px + 24, ry); ctx.textAlign = 'right'; ctx.fillStyle = i < 4 ? '#ffe9b0' : '#dfe6f5'; ctx.fillText(rows[i][1], px + pw - 24, ry);
@@ -1739,10 +1739,10 @@
      들어가는 길: 지금은 ?boss=1 로만(레벨 bosslv·카드 무작위로 채운 채 바로 보스전). 10:00 에 저절로 이어지게 하려면 ?bossf=1 — 수치가 잡히면 기본값을 1 로 */
   var BOSS_ID = 91, BOSSQ = q('boss', 0);
   var BOSSFR = [[0,0,150,120,70,120],[151,0,138,126,64,128],[290,0,102,138,56,140],[393,0,98,142,58,142],[492,0,102,148,54,138],[595,0,142,142,76,126],[738,0,152,136,82,120],[0,149,134,134,72,120],[135,149,102,126,44,120],[238,149,104,118,46,120],[343,149,116,120,54,120],[460,149,150,120,70,120],[611,149,120,140,58,134],[732,149,124,146,70,142],[857,149,122,146,70,142],[0,296,116,148,66,134],[117,296,128,138,80,120],[246,296,126,138,80,120],[373,296,120,132,60,120],[494,296,108,124,38,120],[603,296,108,124,40,120],[712,296,114,124,40,120],[827,296,116,126,36,120],[0,445,118,132,42,126],[119,445,116,148,58,142],[236,445,108,150,56,140],[345,445,122,144,76,128],[468,445,122,138,80,122],[591,445,116,140,74,124],[708,445,104,132,46,124],[813,445,78,128,20,124],[892,445,82,126,22,122],[0,596,102,126,22,122],[103,596,104,128,24,122],[208,596,112,140,46,134],[321,596,116,148,58,142],[438,596,120,148,62,134],[559,596,132,138,80,122],[692,596,130,138,80,122],[823,596,116,134,64,122],[0,745,128,126,70,124],[129,745,126,122,68,124],[256,745,122,122,50,124],[379,745,120,122,38,124],[500,745,116,124,38,124],[617,745,116,138,54,138],[734,745,128,144,58,142],[863,745,126,148,58,140],[0,894,150,136,80,120],[151,894,142,138,76,122],[294,894,104,130,48,122],[399,894,96,118,38,122],[496,894,106,114,50,122],[603,894,146,114,68,122],[750,894,152,114,70,122],[0,1033,128,124,60,132],[129,1033,104,134,58,142],[234,1033,106,144,60,142],[341,1033,112,148,60,136],[454,1033,148,140,80,122],[603,1033,114,116,60,120],[718,1033,98,128,52,126],[817,1033,90,136,64,130],[908,1033,104,134,54,126],[0,1182,114,126,54,122],[115,1182,104,122,64,126],[220,1182,118,124,84,128],[339,1182,90,134,56,120],[430,1182,94,148,50,132],[525,1182,118,130,34,132],[644,1182,104,128,36,132],[749,1182,110,126,34,136],[860,1182,108,118,42,134],[0,1331,102,126,50,142],[103,1331,110,126,70,132],[214,1331,120,110,80,114],[335,1331,96,106,46,116],[432,1331,106,106,50,118],[539,1331,114,116,58,120],[654,1331,112,130,76,128],[767,1331,94,132,58,122],[862,1331,90,136,48,120],[0,1468,122,138,36,136],[123,1468,122,140,42,138],[246,1468,120,140,52,138],[367,1468,126,138,60,140],[494,1468,104,132,66,142],[599,1468,100,128,68,134],[700,1468,116,110,82,114],[817,1468,110,106,62,114],[0,1609,112,106,60,116],[113,1609,124,114,60,118],[238,1609,110,124,58,122],[349,1609,96,130,58,124],[446,1609,106,138,48,124],[553,1609,128,130,44,124],[682,1609,116,136,30,130],[799,1609,98,144,36,138],[898,1609,110,146,50,140],[0,1756,88,144,62,140],[89,1756,96,136,68,136],[186,1756,110,116,82,120],[297,1756,114,112,70,120],[412,1756,114,112,64,120],[527,1756,130,118,60,120],[658,1756,112,126,48,122],[771,1756,94,136,64,130],[866,1756,114,132,50,122],[0,1901,112,132,36,124],[113,1901,134,132,46,124],[248,1901,88,132,38,124],[337,1901,98,140,44,132],[436,1901,106,146,72,138],[543,1901,88,144,56,136],[632,1901,112,130,82,124],[745,1901,114,126,70,124],[860,1901,118,122,68,124],[0,2048,134,126,62,124],[135,2048,128,128,56,122],[264,2048,98,142,56,134],[363,2048,102,138,62,130],[466,2048,106,126,40,122],[573,2048,118,126,34,122],[692,2048,86,126,34,122],[779,2048,90,126,40,122],[870,2048,116,134,82,130],[0,2191,104,138,68,134],[105,2191,110,132,76,124],[216,2191,114,134,70,124],[331,2191,102,132,52,124],[434,2191,112,132,40,124],[547,2191,118,132,40,124],[666,2191,94,146,50,136],[761,2191,108,142,56,134],[870,2191,114,126,54,122],[0,2338,108,130,62,120],[109,2338,106,136,58,122],[216,2338,104,146,56,126],[321,2338,106,154,56,128],[428,2338,102,162,52,132],[531,2338,108,130,54,92],[640,2338,110,122,54,84],[751,2338,110,112,54,74],[862,2338,112,100,54,62],[0,2501,110,86,54,48],[111,2501,108,72,54,34]];
-  var bossType = function (D) { if (D.types[BOSS_ID]) return D.types[BOSS_ID]; var B = D.types[51], T = Object.create(Object.getPrototypeOf(B)); Object.keys(B).forEach(function (k) { T[k] = B[k]; }); T.id = BOSS_ID; T.img = 'u/' + BOSS_ID + '.png'; T.frames = BOSSFR; T.fr = BOSSFR; if (T.h) T.h = T.h * 2; if (T.alt) T.alt = T.alt * 2; D.types[BOSS_ID] = T; return T; };
+  var bossType = function (D) { if (D.types[BOSS_ID]) return D.types[BOSS_ID]; var B = D.types[51], T = Object.create(Object.getPrototypeOf(B)); Object.keys(B).forEach(function (k) { T[k] = B[k]; }); T.id = BOSS_ID; T.name = '보스'; T.img = 'u/' + BOSS_ID + '.png'; T.frames = BOSSFR; T.fr = BOSSFR; if (T.h) T.h = T.h * 2; if (T.alt) T.alt = T.alt * 2; D.types[BOSS_ID] = T; return T; };
   CFG.BOSSF = { on: q('bossf', 0), lv: q('bosslv', 55), hp: q('bosshp', 60000), bars: 12, hit: q('bosshit', 0.11), inv: q('bossinv', 0.8), cap: q('bosscap', 320), maxHit: 0.03,
     eye: q('bosseye', 78), near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 },
-    intro: 2.6, shift: 2.4, half: 0.5, rage: 0.2, tiers: [0.85, 0.7, 0.6], rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
+    warn: 2.8, intro: 2.6, shift: 2.4, half: 0.5, rage: 0.2, tiers: [0.85, 0.7, 0.6], rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
     pad: { l: 10, r: 10, top: 112, bot: 6 }, home: 104, chest: 52, only: q('bosspat', 0),   /* only = 그 번호의 패턴만 되풀이 (1부 1~7, 2부 11~14) */
     seq1: ['fan', 'ring', 'bolt', 'bugs', 'spiral', 'wall', 'quake', 'orb'], seq2: ['tele', 'dash', 'bugs', 'turret', 'summon'], only1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb', 'bugs'], only2: ['tele', 'dash', 'turret', 'summon', 'bugs'],
     /* 곤충 사출 (README 418, 2026-11-27 사용자 "거울전쟁의 곤충류(개미 등)를 패턴으로 — 닿으면 폭발(좀비)" · "걔네들은 무적이어서 투사체와 같은 취급" · "탄막과 안 겹치도록, 난이도는 너무 어렵지 않게" · "사출되면 주인공을 따라가진 않고 퇴장"): 보스가 곤충을 부채꼴로 내보낸다 — 곧게 기어가 전장 밖으로 나가고, 맞지도 겨눠지지도 않는다. 이 패턴 동안에는 탄이 없다. kinds = [유닛, 걸음, 터지는 거리], every·n = 단계(1부 0~3 / 2부는 광폭이면 3, 아니면 1)별 값 */
@@ -1766,7 +1766,7 @@
     B.hx = h.x; B.hy = B.top + C.home;
     this.foes.forEach(function (u) { if (u.state !== 'dead') { u.state = 'dead'; u.deadT = 0; u.fade = 0; } }); this.shots = this.shots.filter(function (s) { return !s.foe; });
     this.marks = []; this.barr = null; this.shrine = null; this.rushWarn = null; this.siegeWarn = null; this.storm = null; this.cleared = true; this.wave = CFG.WAVE.list.length - 1; this.waveOn = true;
-    this.banner = { s: '— 대마술사 강림 —', t0: T, col: '#ff6a5a' }; this.flashT = T; D._play(5064, 0.9);
+    B.warn0 = T; B.t0 = T + C.warn; this.banner = null; D._play(5064, 0.9);   /* WARNING 연출이 끝난 뒤에 보스가 나타난다 */
   };
   P._bossClear = function () { var B = this.bossF; if (!B) return; this.shots = this.shots.filter(function (s) { return !s.foe; }); this.marks = []; B.rings = []; B.n = 0; var self = this; this.foes.forEach(function (x) { if (x.bug && x.state !== 'dead') { self._fx(x.x, x.y - 8, 3); x.state = 'dead'; x.deadT = 9; x.fade = 1; } }); };   /* 화면의 탄을 지운다 — 전환·궁극기(슈팅게임의 폭탄) */
   P._bShot = function (x, y, a, v, bk, o) {
@@ -1866,14 +1866,14 @@
     var hpk = u.life / u.life0, dx = h.x - u.x, dy = h.y - u.y, d = Math.hypot(dx, (dy) / 0.62);
     u.hp = u.maxHp; if (u.x > -9000) D._faceVec(u, dx, dy);
     if (B.st === 'shift') { var sk = Math.min(1, (T - B.t0) / (C.shift * 0.6)); u.x = B.sx + (B.c.x - B.sx) * sk; u.y = B.sy + (B.top + (B.bot - B.top) * 0.42 - B.sy) * sk; u.state = 'idle'; if (T - B.t0 >= C.shift) { B.st = 'p2'; B.seq = 0; B.pat = null; B.next = T + 0.6; } return; }
-    if (B.st === 'p1' && hpk <= C.half) { B.st = 'shift'; B.t0 = T; B.sx = u.x; B.sy = u.y; B.pat = null; B.line = null; this._bossClear(); this.banner = { s: '대마술사가 움직인다', t0: T, col: '#ff6a5a' }; this.flashT = T; D._play(5059, 0.8); this.items.push({ k: 'meat', x: B.c.x, y: B.bot - 60, t0: T }); return; }
+    if (B.st === 'p1' && hpk <= C.half) { B.st = 'shift'; B.t0 = T; B.sx = u.x; B.sy = u.y; B.pat = null; B.line = null; this._bossClear(); this.banner = { s: '보스가 움직인다', t0: T, col: '#ff6a5a' }; this.flashT = T; D._play(5059, 0.8); this.items.push({ k: 'meat', x: B.c.x, y: B.bot - 60, t0: T }); return; }
     /* 토네이도 실드: 켜졌다 꺼졌다 */
     if (T >= B.sh.at) { B.sh.on = !B.sh.on; B.sh.at = T + (B.sh.on ? C.shield.on : C.shield.off); if (B.sh.on) { D._play(5059, 0.5); this._text(u.x, u.y - u.headY - 16, '토네이도 실드', '#9fd8ff'); } }
     /* 저격 낙뢰 (1부): 멀리 숨어 있으면 */
     if (B.st === 'p1' && !(B.pat && B.pat.k === 'bugs')) { if (d > C.far) { B.farT += dt; if (B.farT >= C.farSec) { B.farT = C.farSec - 1.5; this._bMark(h.x, h.y, 40, 0.7, 84, 'snipe'); } } else B.farT = Math.max(0, B.farT - dt); }
     /* 패턴 차례 */
     var p = B.pat, k = hpk > C.tiers[0] ? 0 : hpk > C.tiers[1] ? 1 : hpk > C.tiers[2] ? 2 : 3, e = hpk <= C.rage ? 1 : 0;
-    if (e && !B.raged) { B.raged = true; this.banner = { s: '대마술사 광폭', t0: T, col: '#ff4a3a' }; D._play(5064, 0.8); }
+    if (e && !B.raged) { B.raged = true; this.banner = { s: '보스 광폭', t0: T, col: '#ff4a3a' }; D._play(5064, 0.8); }
     if (!p && T >= B.next) { var seq = B.st === 'p1' ? C.seq1 : C.seq2, on = C.only, key = on ? (on > 10 ? C.only2[(on - 11) % C.only2.length] : C.only1[(on - 1) % C.only1.length]) : seq[B.seq % seq.length]; if (on && (on > 10) !== (B.st === 'p2')) key = seq[B.seq % seq.length]; B.seq++; p = B.pat = { k: key, t0: T, tm: {} }; }
     if (p) { var pt = T - p.t0; if (B.st === 'p1') { this._bossP1(p, pt, dt, k); if (pt >= C.dur[p.k]) p.done = true; } else this._bossP2(p, pt, dt, e);
       if (p.done) { B.pat = null; B.line = null; u.ghostA = null; B.next = T + (B.st === 'p1' ? C.rest[k] : C.rest2[e]); } }
@@ -1915,6 +1915,17 @@
     else { ctx.rotate(Math.atan2(s.vy, s.vx)); ctx.globalAlpha = armed ? 1 : 0.4; ctx.drawImage(c, -38, -16); }   /* 아직 판정이 없는 탄(태풍의 눈)은 옅게 */
     ctx.restore();
   };
+  /* 보스전 직전의 경고 (README 419, 2026-11-27 사용자 "보스전 직전 'WARNING' 경고 연출 — 메가맨과 비슷하게" + 참고 화면 둘, "굳이 소리까진 안 해 줘도 됨"): 화면이 붉게 어두워지고 두 줄의 붉은 띠 사이에서 붉은 WARNING 이 깜빡인다. warn 초 뒤에 보스가 나타난다 */
+  P._bossWarn = function () {
+    var B = this.bossF, C = CFG.BOSSF, D = this.D, ctx = D.ctx, W = D.W, H = D.H, a = D.time - B.warn0; if (!(a >= 0 && a < C.warn)) return;
+    var k = Math.min(1, a / 0.2) * Math.min(1, (C.warn - a) / 0.35), bl = Math.floor(a / 0.22) % 2 ? 0.45 : 1, cy = Math.round(H * 0.36), fs = Math.round(Math.min(64, W * 0.17)), bh = Math.round(fs * 0.62), sl = Math.min(1, a / 0.3);
+    ctx.save(); ctx.globalAlpha = k; ctx.fillStyle = 'rgba(40,0,0,' + (0.38 + 0.12 * Math.sin(a * 14)).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, cy - bh - 8, W, bh * 2 + 16);
+    ctx.fillStyle = '#e8140c'; ctx.fillRect(0, cy - bh - 8, W * sl, 5); ctx.fillRect(W * (1 - sl), cy + bh + 3, W * sl, 5);   /* 위아래 붉은 띠: 양쪽에서 그어진다 */
+    ctx.globalAlpha = k * bl; ctx.font = '900 ' + fs + 'px "Arial Black", Impact, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.transform(1, 0, -0.12, 1, 0, 0);
+    var tx = W / 2 + cy * 0.12, tw = ctx.measureText('WARNING').width, sc = Math.min(1, W * 0.86 / tw); ctx.translate(tx, cy); ctx.scale(sc, 1.25); ctx.shadowColor = 'rgba(255,40,20,.8)'; ctx.shadowBlur = 14; ctx.fillStyle = '#e8140c'; ctx.fillText('WARNING', 0, 0); ctx.shadowBlur = 0;
+    ctx.restore(); ctx.textAlign = 'left';
+  };
   /* 긴 체력 줄: 여러 겹 — 한 줄이 다 닳으면 아래 색 줄이 드러난다 (메탈슬러그·1945 식). 위쪽 표시 아래, 전장 위 */
   P._bossHud = function () {
     var B = this.bossF, C = CFG.BOSSF, D = this.D, ctx = D.ctx, W = D.W, u = B.u, X = this.xpBox; if (!u || B.st === 'intro' && u.ghostA != null && u.ghostA < 0.3) return;
@@ -1924,7 +1935,7 @@
     ctx.fillStyle = cols[idx % cols.length]; ctx.fillRect(x, y, Math.round(w * fr), hgt); ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x, y, Math.round(w * fr), 3);
     ctx.strokeStyle = '#a8823a'; ctx.lineWidth = 1; ctx.strokeRect(x - 0.5, y - 0.5, w + 1, hgt + 1);
     ctx.font = 'bold 11px sans-serif'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000';
-    ctx.textAlign = 'left'; ctx.strokeText('대마술사' + (B.sh.on ? '  ◈ 실드' : ''), x + 2, y + hgt + 9); ctx.fillStyle = B.raged ? '#ff6a5a' : '#ffe9b0'; ctx.fillText('대마술사' + (B.sh.on ? '  ◈ 실드' : ''), x + 2, y + hgt + 9);
+    ctx.textAlign = 'left'; ctx.strokeText('보스' + (B.sh.on ? '  ◈ 실드' : ''), x + 2, y + hgt + 9); ctx.fillStyle = B.raged ? '#ff6a5a' : '#ffe9b0'; ctx.fillText('보스' + (B.sh.on ? '  ◈ 실드' : ''), x + 2, y + hgt + 9);
     ctx.textAlign = 'right'; ctx.strokeText('×' + (idx + 1), x + w - 2, y + hgt + 9); ctx.fillStyle = cols[idx % cols.length]; ctx.fillText('×' + (idx + 1), x + w - 2, y + hgt + 9); ctx.textAlign = 'left';
   };
 
