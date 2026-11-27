@@ -194,6 +194,21 @@
      적 레벨 비율로는 굴곡이 안 생겼다(봇 — 레벨이 1분에 8~10씩 올라 비율을 낮춰도 적 체력이 안 내려간다). 시험 주소 ?pacer=1,1,1,1,1,1,1,1 · ?paced=… (전부 1 = 완급 끔) */
   var PACE = (function () { var f = function (k) { var m = new RegExp('[?&]' + k + '=([0-9.,]+)').exec(root.location.search); return m ? m[1].split(',').map(Number) : null; }; return { rate: f('pacer') || [1, 1, 1.25, 0.55, 1.15, 0.6, 1.15, 1], dmg: f('paced') || [1, 1, 1.2, 0.6, 1.1, 0.6, 1.1, 1] }; })();
   P._pace = function (k) { var B = PACE[k]; if (!B) return 1; var v = this._rage() ? B[B.length - 1] : B[Math.min(B.length - 1, this._shown() - 1)]; return v > 0 ? v : 1; };
+  /* 웨이브 넘어가는 연출 (README 414, 2026-11-27 사용자 "웨이브 넘어갈 때 표시나 느낌이 없어서 좀 더 임팩트 있게"): 보이는 웨이브가 바뀌면 sec 초 동안 큰 글자 "웨이브 n"(쾅 하고 들어와 줄어든다) + 화면 가장자리 빛 + 소리. 게임은 멈추지 않는다.
+     종류는 완급(PACE)에서: hot = 조이는 웨이브(붉은 빛, 비스트 버서커의 포효 5047) · cool = 숨 고르기(푸른 빛, 힐링 5002) · plain = 그 밖(금빛, 천리안 5009). 끄기 ?wavefx=0 */
+  var WAVEFX = { on: q('wavefx', 1), sec: 1.7, y: 0.27, hot: { col: '#ff8a6a', rgb: '255,70,40', snd: 5047, vol: 0.6 }, cool: { col: '#9fd8ff', rgb: '70,160,255', snd: 5002, vol: 0.6 }, plain: { col: '#ffe9b0', rgb: '255,205,110', snd: 5009, vol: 0.45 } };
+  P._drawWaveFx = function () {
+    var F = this.waveFx, D = this.D; if (!F || !WAVEFX.on) return; var a = D.time - F.t0, S = WAVEFX.sec; if (a < 0 || a >= S) return;
+    var ctx = D.ctx, W = D.W, H = D.H, K = WAVEFX[F.k], k = Math.min(1, a / 0.1) * Math.min(1, (S - a) / 0.45), cy = Math.round(H * WAVEFX.y), sc = 1 + 1.1 * Math.max(0, 1 - a / 0.2), ga = Math.max(0, 1 - a / 1.1);
+    ctx.save();
+    if (ga > 0) { var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.34, W / 2, H / 2, Math.max(W, H) * 0.72); vg.addColorStop(0, 'rgba(' + K.rgb + ',0)'); vg.addColorStop(1, 'rgba(' + K.rgb + ',' + (0.5 * ga).toFixed(3) + ')'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
+    ctx.globalAlpha = Math.max(0, k);
+    var bg = ctx.createLinearGradient(0, cy - 46, 0, cy + 46); bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(0.5, 'rgba(0,0,0,.6)'); bg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = bg; ctx.fillRect(0, cy - 46, W, 92);
+    var lw = W * Math.min(1, a / 0.25); ctx.fillStyle = 'rgba(' + K.rgb + ',.85)'; ctx.fillRect((W - lw) / 2, cy - 30, lw, 2); ctx.fillRect((W - lw) / 2, cy + 30, lw, 2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.translate(W / 2, cy - (F.name ? 7 : 0)); ctx.scale(sc, sc);
+    ctx.font = 'bold 30px sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText('웨이브 ' + F.n, 0, 0); ctx.fillStyle = K.col; ctx.fillText('웨이브 ' + F.n, 0, 0);
+    if (F.name) { ctx.font = 'bold 13px sans-serif'; ctx.lineWidth = 3; ctx.strokeText(F.name, 0, 23); ctx.fillStyle = '#fff'; ctx.fillText(F.name, 0, 23); }
+    ctx.restore(); };
   P._paceName = function () { var v = this._pace('rate'); return this._rage() ? '' : v >= 1.1 ? '적이 몰려옵니다' : v <= 0.8 ? '숨 고르기' : ''; };
   P._foeLv = function () { return 1 + (this.lv - 1) * this.scaleK; };   // 적 레벨 (레벨 스케일링)
   P._hpK = function (w) { var S = CFG.SCALE, W = CFG.WAVE.list[w == null ? this.wave : w]; return (this._rage() ? CFG.RAGE.hpS[this._rageSt()] : 1) * (this.scaleK > 0 ? (1 + S.hp * (this._foeLv() - 1)) * Math.pow(W.hp, S.wave) : W.hp); };   // 적 체력 배수
@@ -321,7 +336,7 @@
       F.forEach(function (x) { if (x.state === 'dead' || x.rush) return; x.life = Math.round(x.life * rk); x.life0 = Math.round(x.life0 * rk); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.flashT = T; D._play(5064, first ? 0.9 : 0.6); if (first) this.rageT = T; else this.banner = { s: RGC.names[rst], t0: T, col: '#ff6a5a' }; }
     this._rescue(T, v); this._shrine(T); if (this.rageOn) this._storm(T, v);
     if (!this.rageOn && !this.rageSoon && this.t >= CFG.RAGE.at - 10) { this.rageSoon = true; this.banner = { s: '경고 — 10초 뒤 최후의 3분', t0: T, col: '#ff6a5a' }; }
-    var sh = this._shown(); if (sh !== this.shownWave && !this._rage()) { this.shownWave = sh; this.banner = { s: '웨이브 ' + sh + (this._paceName() ? ' · ' + this._paceName() : ''), t0: T, col: '#ffe9b0' }; }   /* 412번: 보이는 웨이브가 바뀌는 그 순간에 알린다 — 전에는 안쪽 난이도 칸(42초)이 바뀔 때만 살펴 최대 36초 늦었다 */
+    var sh = this._shown(); if (sh !== this.shownWave && !this._rage()) { this.shownWave = sh; var pv = this._pace('rate'), wk = pv >= 1.1 ? 'hot' : pv <= 0.8 ? 'cool' : 'plain'; this.waveFx = { t0: T, n: sh, name: this._paceName(), k: wk }; D._play(WAVEFX[wk].snd, WAVEFX[wk].vol); }   /* 412번: 보이는 웨이브가 바뀌는 그 순간에 알린다 — 전에는 안쪽 난이도 칸(42초)이 바뀔 때만 살펴 최대 36초 늦었다. 414번: 작은 알림 줄 대신 큰 글자 + 가장자리 빛 + 소리(_drawWaveFx) */
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
       if (WV.boss) this.banner = { s: D.types[WV.boss[0]].name + ' 등장', t0: T, col: '#ff8a7a' };   /* 알림은 보이는 웨이브가 바뀔 때와 우두머리가 나올 때만 (안쪽 난이도 칸은 10개) */
       if (WV.boss) { this._need([WV.boss[0]]); this.bossWait = WV.boss; } if (WV.mini) this._need([WV.mini[0]]); }
@@ -529,6 +544,7 @@
     this._drawStick(); this._drawHud();
     if (this.hide && !this.over) this._drawHide();
     if (this.over) this._drawOver();
+    this._drawWaveFx();
     if (this.cards) this._drawCards();
     if (this.info) this._drawInfo();
     if (D.time - this.rageT < CFG.RAGE.show) this._drawRage();
