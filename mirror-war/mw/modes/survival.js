@@ -145,7 +145,7 @@
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
     this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageSt = -1; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.shrine = null; this.shrineNext = CFG.SHRINE.from; this.shrineLast = null; this.buff = { war: 0, magic: 0, guard: 0 }; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
-    this._growReset();
+    this.bossF = null; this.cleared = false; this.bossKill = false; this._growReset(); if (BOSSQ) this._bossPrep();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
 
@@ -229,7 +229,7 @@
   };
   P._fx = function (x, y, arm) { var d = this.D.data.fx.arms[arm], f = d && (d.hit.length ? d.hit : d.fly.length ? d.fly : d.seq); if (f && f.length) this.effects.push({ x: x, y: y, f: f, t0: this.D.time, add: !d.dir }); };
   P._hitFoe = function (u, dmg, arm, big, cb) {   // cb = 이 한 방에만 더하는 치명타 확률 (크레이지 샷 — 상한 ULT.venom.critCap)
-    if (u.state === 'dead' || u.rush) return;   /* 돌진 떼는 맞지 않는다 (407번) */ var D = this.D; u.hitT = D.time;
+    if (u.state === 'dead' || u.rush) return;   /* 돌진 떼는 맞지 않는다 (407번) */ var D = this.D; if (u.bf) { dmg = this._bossDmgIn(u, dmg); if (!(dmg > 0)) return; } u.hitT = D.time;
     if (u.vulnUntil > D.time) dmg *= 1 + (u.vuln || 0);      // 독 단도·유독가스: 받는 피해 증가
     if (dmg < 1e5 && this.buff && D.time < this.buff.war) dmg *= CFG.SHRINE.kinds.war.dmg;   /* 전투의 성소 */
     if (this.cls === 'shadow') { var lr = u.life / (u.maxHp * CFG.FOE.hp); if (lr <= 0.2) dmg *= 1.6; else if (lr <= 0.5) dmg *= 1.3; }   // 섀도우 인필트레이터: 마무리 일격
@@ -311,12 +311,14 @@
         this.foes.forEach(function (u) { if (u.state === 'dead' || Math.hypot(u.x - h.x, (u.y - h.y) / 0.62) > FS.r) return; if (!u.boss) u.stunUntil = Math.max(u.stunUntil || 0, D.time + FS.v(fl2)); self2._hitFoe(u, fb2, -1); }); }
       return; }
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
+    if (this.bossF) { var bd = Math.max(1, Math.ceil(h.maxHp * CFG.BOSSF.hit)), bsrc = this.bossF.src || '?'; this.bossF.src = null; this.bossF.hits[bsrc] = (this.bossF.hits[bsrc] || 0) + 1; this.stat.taken += Math.min(bd, h.hp); h.hp -= bd; h.hitT = D.time; this.hurtT = D.time; this.invUntil = Math.max(this.invUntil, D.time + CFG.BOSSF.inv);   /* 보스전: 무엇에 맞든 최대 체력의 hit, 맞은 뒤 inv 초 무적 */
+      if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); } return; }
     dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * this._pace('dmg') * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minS[this._rageSt()])); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
     var D = this.D, R = D.rules, rng = D.rng, h = this.hero, v = this._moveVec(), F = this.foes, T = D.time, self = this, i, j, u;
-    this.t += dt; if (this.t >= CFG.TIME) { this.t = CFG.TIME; this.over = 'win'; this.overT = 0; this.stick = null; return; }
+    if (this.bossF) this.t = CFG.TIME; else { this.t += dt; if (this.t >= CFG.TIME) { this.t = CFG.TIME; if (CFG.BOSSF.on || BOSSQ) this._bossEnter(); else { this.over = 'win'; this.overT = 0; this.stick = null; return; } } }   /* 보스전(README 416): 10:00 에 승리 대신 보스전으로 — 지금은 ?boss=1·?bossf=1 일 때만 */
     if (this.cls && h.t.id !== (CLS[this.cls].unit || GROW.clsUnit) && this._has(CLS[this.cls].unit || GROW.clsUnit)) this._promote(this.cls);   // 전직했는데 아직 그 모습(대도·마법전사) 그림을 못 받았던 경우 (시험용 ?cls= 로 시작할 때)
     // 도둑: 걷기
     if (this.zrun) { this._zStep(dt); v = [0, 0]; }   /* 처형으로 달리는 동안은 조작이 안 먹는다 */
@@ -334,6 +336,7 @@
     // 스폰
     // 웨이브: 1분마다 다음 단계. 단계가 바뀌면 알림 한 줄 + 우두머리 + 다음 단계 유닛 그림을 미리 받는다
     var WL = CFG.WAVE.list, wv = Math.min(WL.length - 1, Math.floor(this.t / CFG.WAVE.sec)), RG = this._rage() ? CFG.RAGE.spdS[this._rageSt()] : 1;
+    if (this.bossF) { RG = 1; this._bossStep(dt); } else {   /* 보스전에는 웨이브·포격·성소·돌진·포위가 모두 쉰다 */
     var rst = this._rageSt(); if (rst >= 0 && rst !== this.rageSt) { var RGC = CFG.RAGE, rk = RGC.hpS[rst] / (this.rageSt >= 0 ? RGC.hpS[this.rageSt] : 1), first = !this.rageOn; this.rageOn = true; this.rageSt = rst;   /* 단계가 바뀌는 순간: 살아 있는 적의 체력도 그 비율만큼 */
       F.forEach(function (x) { if (x.state === 'dead' || x.rush) return; x.life = Math.round(x.life * rk); x.life0 = Math.round(x.life0 * rk); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.flashT = T; D._play(5064, first ? 0.9 : 0.6); if (first) this.rageT = T; else this.banner = { s: RGC.names[rst], t0: T, col: '#ff6a5a' }; }
     this._rescue(T, v); this._shrine(T); if (this.rageOn) this._storm(T, v);
@@ -380,16 +383,18 @@
       if (this.magicIn <= 0) { var cs = T < this.stealthUntil ? [] : F.filter(function (x) { return x.state !== 'dead' && !x.rush && !x.sup && MG.ids.indexOf(x.t.id) >= 0 && !(x.stunUntil > T) && Math.hypot(x.x - h.x, x.y - h.y) <= MG.near; });
         if (cs.length) { var mk2 = (wv - MG.from) / Math.max(1, WL.length - 1 - MG.from), kd = MG.kinds.filter(function (e) { return wv >= e[0]; }); this.magicIn = MG.every[0] + (MG.every[1] - MG.every[0]) * mk2; this._foeCast(cs[Math.floor(rng.next() * cs.length)], kd[Math.floor(rng.next() * kd.length)][1], mk2); }
         else this.magicIn = 0.8; } }
-    for (i = this.marks.length - 1; i >= 0; i--) { var mq = this.marks[i]; if (T >= mq.at) { this.marks.splice(i, 1); this._fx(mq.x, mq.y - 8, SK.explo.boom); if (mq.storm) { var se = this.effects[this.effects.length - 1]; if (se) { se.sc = 0.42; se.al = 0.8; se.y = mq.y - 4; } } if (mq.storm && T - (this.stormSndT || -9) > 0.5) { this.stormSndT = T; D._play(5012, 0.45); } if (Math.hypot(h.x - mq.x, (h.y - mq.y) / 0.62) <= mq.r) this._hitHero(mq.dmg); } }   // 예고가 끝난 자리: 폭발 (그 안에 있으면 맞는다)
+    }
+    for (i = this.marks.length - 1; i >= 0; i--) { var mq = this.marks[i]; if (T >= mq.at) { this.marks.splice(i, 1); this._fx(mq.x, mq.y - 8, mq.arm != null ? mq.arm : SK.explo.boom); if (this.bossF) this.bossF.src = mq.pat || 'mark'; if (mq.storm) { var se = this.effects[this.effects.length - 1]; if (se) { se.sc = 0.42; se.al = 0.8; se.y = mq.y - 4; } } if (mq.storm && T - (this.stormSndT || -9) > 0.5) { this.stormSndT = T; D._play(5012, 0.45); } if (Math.hypot(h.x - mq.x, (h.y - mq.y) / 0.62) <= mq.r) this._hitHero(mq.dmg); } }   // 예고가 끝난 자리: 폭발 (그 안에 있으면 맞는다)
     // 적: 도둑에게 다가가 친다. 격자(칸 32px)로 가까운 적끼리만 서로 밀어낸다
     var G = {}, CS = 32, SEP = CFG.FOE.sep, key, near = null, nd = CFG.ATK.range;
     for (i = 0; i < F.length; i++) { u = F[i]; if (u.state === 'dead') continue; key = Math.floor(u.x / CS) + ',' + Math.floor(u.y / CS); (G[key] || (G[key] = [])).push(u); }
     for (i = 0; i < F.length; i++) { u = F[i];
       if (u.state === 'dead') { u.deadT += dt; var dn = u.t.anim.die ? u.t.anim.die.n / R.tps : 0; if (u.deadT > dn) u.fade = Math.min(1, (u.deadT - dn) / 0.4); continue; }
       var dx = h.x - u.x, dy = h.y - u.y, d = Math.hypot(dx, dy) || 1;
-      if (d > CFG.FOE.far && !u.rush) { var p = this._edgePoint(); u.x = p[0]; u.y = p[1]; continue; }   // 너무 멀리 떨어진 적은 화면 둘레로 다시 온다
+      if (d > CFG.FOE.far && !u.rush && !u.bf) { var p = this._edgePoint(); u.x = p[0]; u.y = p[1]; continue; }   // 너무 멀리 떨어진 적은 화면 둘레로 다시 온다
       if (d < nd && !u.rush) { nd = d; near = u; }   /* 돌진 떼는 자동 공격이 겨누지 않는다 */
       if (u.bleedUntil > T) { u.dotT = (u.dotT || 0) + dt; if (u.dotT >= 0.5) { u.dotT = 0; this._hitFoe(u, u.bleed * 0.5, -1); if (u.state === 'dead') continue; } }   // 출혈 (베놈 쓰로워)
+      if (u.bf) continue;   /* 보스전의 보스: 움직임·공격은 _bossStep 이 한다 (멈춤·묶임·궁극기의 정지도 안 걸린다) */
       if (T < this.freezeUntil) { if (u.state === 'move') u.state = 'idle'; continue; }
       if (u.barr && this.barr) { var BQ = this.barr.c, sxq = h.x + Math.cos(u.barrA) * BQ.rx, syq = h.y + Math.sin(u.barrA) * BQ.ry; if (Math.hypot(u.x - sxq, u.y - syq) > BQ.lag) { u.x = sxq; u.y = syq; u.shotT = Math.max(u.shotT, 0.35); }   /* 도둑이 걸어가 제 자리에서 벗어났다 — 지금 화면의 가장자리 제 자리에 다시 나타난다 */
         var bdx = h.x - u.x, bdy = h.y - u.y; D._faceVec(u, bdx, bdy); u.state = u.castUntil > T ? 'attack' : 'idle'; if (u.state === 'attack') u.at = Math.min((u.t.anim.atk ? u.t.anim.atk.n : 6) - 1, (u.at || 0) + dt * R.tps); u.shotT -= dt; if (u.shotT <= 0 && !(u.stunUntil > T)) { u.shotT = BQ.aim * (0.85 + rng.next() * 0.3); this._fireball(u, 1); } continue; }   /* 화염 포격의 술사: 제자리에서 쏜다 */   // 크레이지 샷: 기 모으기부터 피해가 들어갈 때까지 모든 적이 그 자리에 멈춘다 (우두머리·돌진 떼도)
@@ -453,7 +458,7 @@
         if (got && s.vol) { if (s.vol.left > 0) { s.vol.left--; s.vol.hit[got.uid] = 1; this._hitFoe(got, s.dmg * (1 - (1 - s.far) * Math.min(1, Math.hypot(got.x - s.x0, got.y - s.y0) / CFG.ATK.range)) * this._onDagger(got), s.arm); this.bursts.push({ x: got.x, y: got.y - got.headY * 0.5, t0: T, a: Math.atan2(s.vy, s.vx), k: 'p', life: 0.2 }); if (s.spl) this._dagMark(got, s.spl); } else { s.dead = true; continue; } }   // 꿰뚫고 계속 난다 — 먼 적일수록 약하게(far), 한 번에 n명까지
         else if (got) { if (s.bomb) this._bombHit(s, got); if (s.spl) this._dagMark(got, s.spl); this._hitFoe(got, s.dmg * (s.dg ? this._onDagger(got) : 1), s.arm, 0, s.cb); this._extra(s, got); if (s.spl) this._dagMark(got, s.spl); s.dead = true; continue; } }
       if (s.mg === 'orb') { var oa = Math.atan2(s.vy, s.vx), ta = Math.atan2(h.y - h.headY * 0.5 - s.y, h.x - s.x), od = Math.atan2(Math.sin(ta - oa), Math.cos(ta - oa)), ot = CFG.MAGIC.orb.turn * dt; oa += Math.max(-ot, Math.min(ot, od)); s.vx = Math.cos(oa) * CFG.MAGIC.orb.speed; s.vy = Math.sin(oa) * CFG.MAGIC.orb.speed; }   // 따라오는 구체: 천천히 방향을 튼다 (끝까지 따라오지는 못한다)
-      if (s.foe && Math.hypot(h.x - s.x, h.y - h.headY * 0.5 - s.y) < (s.mg === 'orb' ? 17 : 13)) { if (s.arm >= 0) this._fx(s.x, s.y, s.arm); var hp0 = h.hp; this._hitHero(s.dmg); if (s.mg === 'frost' && h.hp < hp0) { this.chillUntil = T + CFG.MAGIC.frost.sec; this._text(h.x, h.y - h.headY - 30, '감속', '#9fd8ff'); } s.dead = true; }
+      if (s.foe && !(s.armAt > T) && Math.hypot(h.x - s.x, h.y - h.headY * 0.5 - s.y) < (s.mg === 'orb' ? 17 : 13)) { if (this.bossF) this.bossF.src = s.pat || 'shot'; if (s.arm >= 0) this._fx(s.x, s.y, s.arm); var hp0 = h.hp; this._hitHero(s.dmg); if (s.mg === 'frost' && h.hp < hp0) { this.chillUntil = T + CFG.MAGIC.frost.sec; this._text(h.x, h.y - h.headY - 30, '감속', '#9fd8ff'); } s.dead = true; }
       else if (T - s.t0 > s.life) s.dead = true; }
     this.shots = this.shots.filter(function (s) { return !s.dead; });
     this.effects = this.effects.filter(function (e) { return (T - e.t0) * 15 < e.f.length; });
@@ -462,7 +467,7 @@
     this.slashes = this.slashes.filter(function (e) { return T - e.t0 < 0.3; }); this.arcs = this.arcs.filter(function (e) { return T - e.t0 < CFG.BLADE.arcLife; }); this.ghosts = this.ghosts.filter(function (e) { return T < e.until; }); this.puffs = this.puffs.filter(function (e) { return T - e.t0 < 0.45; }); if (this.puffs.length > 40) this.puffs.splice(0, this.puffs.length - 40);
     this.bursts = this.bursts.filter(function (e) { return T - e.t0 < e.life; }); if (this.bursts.length > 120) this.bursts.splice(0, this.bursts.length - 120);
     // 카메라: 도둑을 부드럽게 따라간다 (끊기지 않을 만큼만 — 늦으면 멀미가 난다)
-    var k = Math.min(1, dt * 12); if (!this.zrun) { this.cam.x += (h.x - this.cam.x) * k; this.cam.y += (h.y - this.cam.y) * k; }   /* 처형으로 화면을 가로지르는 동안은 화면을 세워 둔다 (제자리로 돌아온다) */
+    if (this.bossF && !this.zrun) this._bossClamp(); var k = Math.min(1, dt * 12), ct = this.bossF ? this.bossF.c : h; if (!this.zrun) { this.cam.x += (ct.x - this.cam.x) * k; this.cam.y += (ct.y - this.cam.y) * k; }   /* 보스전: 화면이 멈추고 주인공은 그 안에 갇힌다 */   /* 처형으로 화면을 가로지르는 동안은 화면을 세워 둔다 (제자리로 돌아온다) */
   };
 
   /* ───────── 그리기 ───────── */
@@ -478,10 +483,10 @@
     var gx0 = Math.floor(ox / GW) * GW, gy0 = Math.floor(oy / GH) * GH, gx, gy;
     for (gx = gx0; gx < ox + vw; gx += GW) for (gy = gy0; gy < oy + vh; gy += GH) ctx.drawImage(D.ground, gx, gy);
     var L = this.foes.filter(function (u) { return u.x > ox - 80 && u.x < ox + vw + 80 && u.y > oy - 40 && u.y < oy + vh + 120; }).sort(function (a, b) { return a.y - b.y; });
-    this._drawGround();
+    this._drawGround(); if (this.bossF) this._bossGround();
     var h = this.hero, hd = false;
-    for (i = 0; i < L.length; i++) { if (!hd && L[i].y > h.y) { hd = true; this._drawHero(); } if (L[i].boss) { var bu = L[i], bs = bu.mini ? CFG.MINI.scale : CFG.BOSS.scale; ctx.save(); ctx.translate(bu.x, bu.y); ctx.scale(bs, bs); ctx.translate(-bu.x, -bu.y); D._drawUnit(bu); ctx.restore(); } else D._drawUnit(L[i]); }
-    if (!hd) this._drawHero();
+    for (i = 0; i < L.length; i++) { if (!hd && L[i].y > h.y) { hd = true; this._drawHero(); } if (L[i].boss) { var bu = L[i], bs = bu.bf ? 1 : bu.mini ? CFG.MINI.scale : CFG.BOSS.scale; ctx.save(); ctx.translate(bu.x, bu.y); ctx.scale(bs, bs); ctx.translate(-bu.x, -bu.y); D._drawUnit(bu); ctx.restore(); } else D._drawUnit(L[i]); }
+    if (!hd) this._drawHero(); if (this.bossF) this._bossOver();
     for (i = 0; i < this.ants.length; i++) { var an2 = this.ants[i], au2 = an2.u, sc2 = ULT.trapper.scale, left2 = an2.at - D.time, bl = left2 < 0.8 ? Math.floor(D.time * 16) % 2 : 0;   // 폭탄 개미: 작게(적 개미와 구별 — 발밑 노란 고리), 터지기 0.8초 전부터 붉게 깜빡인다
       ctx.strokeStyle = bl ? 'rgba(255,90,50,.95)' : 'rgba(255,214,110,.85)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(au2.x, au2.y, 9, 4.5, 0, 0, 6.2832); ctx.stroke();
       ctx.save(); ctx.translate(au2.x, au2.y); ctx.scale(sc2, sc2); ctx.translate(-au2.x, -au2.y); D._drawUnit(au2); ctx.restore();
@@ -489,7 +494,7 @@
     for (i = 0; i < this.lobs.length; i++) { var lb = this.lobs[i], lk = (D.time - lb.t0) / lb.dur; if (lk < 0) continue; lk = Math.min(1, lk); var lx = lb.x0 + (lb.x1 - lb.x0) * lk, ly = lb.y0 + (lb.y1 - lb.y0) * lk, lh = Math.sin(lk * 3.1416) * 46;   // 폭탄 다발: 포물선으로 나는 검은 공 + 떨어질 자리의 옅은 주황 점
       ctx.fillStyle = 'rgba(255,150,60,' + (0.18 + 0.25 * lk).toFixed(2) + ')'; ctx.beginPath(); ctx.ellipse(lb.x1, lb.y1, 7, 3.5, 0, 0, 6.2832); ctx.fill();
       ctx.fillStyle = '#1b1d26'; ctx.strokeStyle = '#8a8f9f'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(lx, ly - lh, 4.5, 0, 6.2832); ctx.fill(); ctx.stroke(); ctx.fillStyle = Math.floor(D.time * 20) % 2 ? '#fff3a0' : '#ff9a3a'; ctx.fillRect(lx + 2, ly - lh - 7, 2.5, 2.5); }
-    for (i = 0; i < this.shots.length; i++) { var s = this.shots[i], fl = s.def && !s.def.dir && s.def.fly;
+    for (i = 0; i < this.shots.length; i++) { var s = this.shots[i], fl = s.def && !s.def.dir && s.def.fly; if (s.bk) { this._bossShot(s); continue; }
       if (s.fb === 'wind') { var wa3 = Math.atan2(s.vy, s.vx), wq3, wt3 = D.time * 9 + s.t0 * 5;   // 장풍: 날아가는 쪽으로 볼록한 흰 바람결 셋 + 가운데 옅은 빛 — 화염구와 색·모양으로 구별
         ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(wa3); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
         var wg3 = ctx.createRadialGradient(0, 0, 0, 0, 0, 15); wg3.addColorStop(0, 'rgba(225,245,255,.85)'); wg3.addColorStop(0.45, 'rgba(130,200,255,.4)'); wg3.addColorStop(1, 'rgba(90,160,255,0)'); ctx.fillStyle = wg3; ctx.beginPath(); ctx.arc(0, 0, 15, 0, 6.2832); ctx.fill();
@@ -613,11 +618,11 @@
     return act.concat(own.filter(function (k) { return SK[k].tree === 'pas'; }));
   };
   P._rankRes = function () {
-    var self = this, stage = this.cls === 'shadow' ? 1 : this.cls === 'paladin' ? 2 : 0, win = this.over === 'win', test = (root.location.search || '').replace(/^\?/, '').split('&').some(function (kv) { var k = kv.split('=')[0]; return k && ['mode', 'tut', 'mute', 'game', 'chk', 'bgmvol', 'cls', 'inv', 'by'].indexOf(k) < 0   /* cls = 갈래로 바로 시작하는 주소 — 올릴 수 있다 (2026-11-23 사용자 "해당 클래스로 시작해도 작성할 수 있게") */; });
+    var self = this, stage = this.cls === 'shadow' ? 1 : this.cls === 'paladin' ? 2 : 0, win = this.over === 'win' || this.cleared   /* 보스전에서 쓰러져도 10분 완주는 완주다 (README 416) */, test = (root.location.search || '').replace(/^\?/, '').split('&').some(function (kv) { var k = kv.split('=')[0]; return k && ['mode', 'tut', 'mute', 'game', 'chk', 'bgmvol', 'cls', 'inv', 'by'].indexOf(k) < 0   /* cls = 갈래로 바로 시작하는 주소 — 올릴 수 있다 (2026-11-23 사용자 "해당 클래스로 시작해도 작성할 수 있게") */; });
     if (!this.over) return null; if (test) return { stage: stage, res: null, msg: '시험용 주소로 시작한 판은 기록을 올릴 수 없습니다' };
     if (!win && !this._rage()) return { stage: stage, res: null, msg: '최후의 3분(' + mmss(CFG.RAGE.at) + ')까지 버티면 기록을 올릴 수 있습니다' };
     var units = this._skList().map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
-    return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: win ? ['완주'] : [] } };
+    return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: win ? (this.bossKill ? ['완주', '보스 처치'] : ['완주']) : [] } };
   };
   /* 친구 초대 · 공유 (379번, 2026-11-26 사용자 "쓰러지거나 클리어 시 나오는 카드 화면에 공유하기 — 카카오톡에 보낼 수 있게(썸네일도), 그 링크를 타고 들어오면 서바이벌이 시작되고 시작 전에 '이름없는 대도(또는 무사)가 당신을 초대했습니다' 토스트. 명예의 전당에 입력한 이름이 '이름없는'을 대체"):
      보내는 주소 = 초대 페이지 defense/i/<갈래>.html?by=<이름> (갈래 t 대도 · m 무사 · d 전직 전 도둑). 그 페이지는 카카오톡 미리보기용 제목·그림(og)만 갖고 바로 게임(?mode=survival&inv=&by=)으로 넘긴다 — tools/dist.js 가 만든다.
@@ -701,7 +706,7 @@
     var all = this._skList(), per = Math.floor((pw - 28) / 40), srows = Math.ceil(all.length / per), ph = 280 + srows * 46 + 216, py = Math.max(24, Math.round((H - ph) / 2));
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(win ? '10분을 버텼습니다' : '쓰러졌습니다', W / 2, py + 34);
+    ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(this.bossKill ? '대마술사를 쓰러뜨렸습니다' : win ? '10분을 버텼습니다' : this.cleared ? '대마술사에게 쓰러졌습니다' : '쓰러졌습니다', W / 2, py + 34);
     var rows = [['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN],   /* 410번(2026-11-26 사용자 "쓰러졌습니다에서 웨이브 다음 '적 레벨 85%' 의미가 뭐야? 빼면 안 됨?"): 결과 카드에서 적 레벨 계수 표시를 뺐다 */ ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
       ['준 피해', Math.round(ST.dealt).toLocaleString()], ['최고 한 방', ST.maxHit.toLocaleString()], ['치명타 / 더블', ST.crit + ' / ' + ST.dbl], ['받은 피해', Math.round(ST.taken).toLocaleString()]];
     ctx.font = '13px sans-serif';
@@ -763,8 +768,8 @@
     ctx.strokeStyle = '#a8823a'; ctx.lineWidth = 1; ctx.strokeRect(X.x + 0.5, X.y + 0.5, X.w - 1, X.h - 1);
     ctx.textBaseline = 'middle'; ctx.font = 'bold 15px sans-serif';
     var ty = X.y + 26, txt = function (s, x, al, col) { ctx.textAlign = al; ctx.fillStyle = '#000'; ctx.fillText(s, x + 1, ty + 1); ctx.fillStyle = col; ctx.fillText(s, x, ty); };
-    txt(mmss(CFG.TIME - this.t), 10, 'left', '#ffe9b0'); txt('처치 ' + this.kills, W / 2, 'center', '#dfe6f5');
-    ctx.font = 'bold 11px sans-serif'; txt((this._rage() ? '최후 3분' : '웨이브 ' + this._shown() + '/' + CFG.SHOWN) + (this.scaleK > 0 ? '  적 Lv ' + Math.round(this._foeLv()) : ''), 66, 'left', '#c9b48a');
+    txt(this.bossF ? mmss(Math.floor(D.time - this.bossF.in0)) : mmss(CFG.TIME - this.t), 10, 'left', '#ffe9b0'); txt('처치 ' + this.kills, W / 2, 'center', '#dfe6f5');
+    ctx.font = 'bold 11px sans-serif'; txt((this.bossF ? '보스전' : this._rage() ? '최후 3분' : '웨이브 ' + this._shown() + '/' + CFG.SHOWN) + (this.scaleK > 0 && !this.bossF ? '  적 Lv ' + Math.round(this._foeLv()) : ''), 66, 'left', '#c9b48a');
     // 알림 한 줄 (웨이브·우두머리): 위쪽 띠 바로 아래에 작고 짧게
     var BN = this.banner, bt = BN ? D.time - BN.t0 : 9; if (BN && bt < 2.2) { ctx.globalAlpha = Math.min(1, bt / 0.2, (2.2 - bt) / 0.5); ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(BN.s, W / 2, X.y + 54); ctx.fillStyle = BN.col; ctx.fillText(BN.s, W / 2, X.y + 54); ctx.globalAlpha = 1; }
     // 화면 밖 우두머리: 가장자리에 붉은 화살표
@@ -806,7 +811,7 @@
       if (!u2rdy) { var u2r = Math.min(1, this.tm.ult2 / u2cd); ctx.fillStyle = 'rgba(0,0,0,.62)'; ctx.fillRect(U2.x + 3, U2.y + 3 + (U2.h - 6) * (1 - u2r), U2.w - 6, (U2.h - 6) * u2r); ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(Math.ceil(this.tm.ult2), U2.x + U2.w / 2, U2.y + U2.h / 2); ctx.fillStyle = '#fff'; ctx.fillText(Math.ceil(this.tm.ult2), U2.x + U2.w / 2, U2.y + U2.h / 2); }
       else { ctx.strokeStyle = this.aim2 ? '#fff2b0' : 'rgba(255,150,90,' + (0.55 + 0.45 * Math.sin(D.time * 9 + 1.5)).toFixed(3) + ')'; ctx.lineWidth = this.aim2 ? 4 : 2.5; ctx.strokeRect(U2.x + 1, U2.y + 1, U2.w - 2, U2.h - 2);
         if (this.aim2) { ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText('조준', U2.x + U2.w / 2, U2.y - 8); ctx.fillStyle = '#fff2b0'; ctx.fillText('조준', U2.x + U2.w / 2, U2.y - 8); } } }
-    ctx.globalAlpha = 1; ctx.textAlign = 'left';
+    ctx.globalAlpha = 1; ctx.textAlign = 'left'; if (this.bossF) this._bossHud();
   };
   P._menuRows = function () { var D = this.D, rk = D._rankShow && D.constructor.RANK && D.constructor.RANK.surv; return [['resume', '계속하기'], ['sound', '소리: ' + (D.soundOn ? '켬' : '끔')]].concat(rk ? [['rank', '명예의 전당 보기']] : []).concat([['retry', '다시 하기'], ['exit', '모드 선택으로']]); };   // 명예의 전당 보기 (377번, 2026-11-26 사용자 "서바이벌 메뉴에 명예의 전당 보기 기능") — 보기만(기록 올리기는 결과 화면에서), 지금 갈래의 판이 먼저 열린다
   P._drawMenu = function () {
@@ -1583,7 +1588,7 @@
   };
   P._ultFire = function () {
     var self = this, D = this.D, T = D.time, h = this.hero, F = this.foes, U = ULT[this.cls], k; if (!U || this.tm.ult > 0 || this.over || this.cards || this.info || this._casting()) return;   /* 투룡의 기를 모으는 중에 첫째 궁극기를 겹쳐 쓰지 못한다 (378번) */
-    this.tm.ult = ULT.cd * (1 - this._pv('haste')); this._text(h.x, h.y - h.headY - 24, U.name, CLS[this.cls].col); this.flashT = T - 0.18; D._play(5064, 0.7);
+    this.tm.ult = ULT.cd * (1 - this._pv('haste')); if (this.bossF) this._bossClear();   /* 보스전: 궁극기는 화면의 탄을 지운다 */ this._text(h.x, h.y - h.headY - 24, U.name, CLS[this.cls].col); this.flashT = T - 0.18; D._play(5064, 0.7);
     if (this.cls === 'paladin') {   /* 심판의 날: 화면의 적을 하나씩 골라(안 맞은 적부터, 없으면 아무나) gap 초마다 빛 기둥 — 둘레 r 안의 적에게 피해 */
       var struck = {}, kfp = D.types[U.floorUnit]; for (k = 0; k < U.n; k++) (function (k) { self.queue.push({ at: T + 0.25 + k * U.gap, fn: function () { if (self.over) return; var T4 = self.D.time, hh = self.hero, C = self.foes.filter(function (u) { return u.state !== 'dead' && Math.hypot(u.x - hh.x, u.y - hh.y) < 420; }), N = C.filter(function (u) { return !struck[u.uid]; }), P4 = N.length ? N : C, tg = P4[Math.floor(self.D.rng.next() * P4.length)], px, py;
         if (tg) { px = tg.x; py = tg.y; struck[tg.uid] = 1; } else { var ra = self.D.rng.next() * 6.2832, rr = 60 + self.D.rng.next() * 200; px = hh.x + Math.cos(ra) * rr; py = hh.y + Math.sin(ra) * rr * 0.7; }
@@ -1721,6 +1726,193 @@
     var SF = this.shrineFx; if (SF) { var fq = (T - SF.t0) / 0.6; if (fq >= 1) this.shrineFx = null; else { ctx.save(); ctx.globalCompositeOperation = 'lighter'; var hh = this.hero, fg = ctx.createRadialGradient(hh.x, hh.y - 14, 2, hh.x, hh.y - 14, 20 + 46 * fq); fg.addColorStop(0, 'rgba(' + SF.rgb + ',' + (0.75 * (1 - fq)).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(' + SF.rgb + ',0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(hh.x, hh.y - 14, 20 + 46 * fq, 0, 6.3); ctx.fill(); ctx.restore(); } }
     var BF = this.buff, bks = ['war', 'magic', 'guard'].filter(function (k) { return T < BF[k]; }); for (i = 0; i < bks.length; i++) { var bh = this.hero, brem = BF[bks[i]] - T, bal = (brem < 3 ? 0.35 + 0.3 * Math.sin(T * 12) : 0.5) ; ctx.strokeStyle = 'rgba(' + SC.kinds[bks[i]].rgb + ',' + bal.toFixed(3) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(bh.x, bh.y + 2, 17 + i * 4, 7 + i * 1.6, 0, 0, 6.3); ctx.stroke(); }   /* 성소 강화 중: 발밑에 종류 색 고리 (끝나기 3초 전부터 깜빡임) */
     if (T < this.stealthUntil) { var h = this.hero; ctx.fillStyle = 'rgba(120,80,200,' + (0.35 + 0.15 * Math.sin(T * 8)).toFixed(3) + ')'; ctx.beginPath(); ctx.ellipse(h.x, h.y + 2, 22, 9, 0, 0, 6.3); ctx.fill(); }
+  };
+
+  /* ───────── 보스전 (README 416, 2026-11-27 사용자 "최후의 3분 이후 보스전" → "보스는 대마술사. 체력 게이지가 엄청 길다 — 메탈슬러그나 1945 의 보스처럼. 고유 패턴: 초반부 고정 투사체 발사 → 후반부 움직임 타격. 다양한 투사체와 맵을 거의 가득 채워서 유저를 어렵게") ─────────
+     흐름: 10:00 → 남은 적이 쓰러지고 화면 한 장짜리 고정 전장(카메라 멈춤, 가장자리 밖으로 못 나감) → 대마술사 등장 → 1부(위쪽에 떠서 탄막) → 체력 절반에서 전환 → 2부(직접 움직이며 덮침) → 쓰러지면 승리.
+     보스 = this.foes 안의 유닛 하나(u.bf) — 자동 공격·스킬·피해 숫자는 여느 적과 같은 길로 들어간다. 움직임과 공격만 여기서 따로 한다(update 의 적 루프는 u.bf 를 건너뛴다).
+     그림: 원작 대마술사(51)의 146프레임을 옷 색만 진홍으로 바꾸고 2배로 키운 시트 sim-assets/u/91.png (tools/boss_sheet.py 51 2 crimson — 사용자 "크기를 크게 스케일링해서 깨지지 않을 정도만" "보스답게 리터칭"). 이펙트·소리는 대마술사의 원작 스킬 것.
+     피해 규칙: 보스전에서는 무엇에 맞든 최대 체력의 hit 만큼, 맞은 뒤 inv 초 무적(겹친 탄에 한 번에 죽지 않게). 탄 판정은 그림보다 작다(13).
+     거리 장치(사용자 "근접이 힘드니까 원거리에서 공격하면 더 어렵게 하는 패턴"): 태풍의 눈(갓 생긴 탄은 eye 만큼 날아간 뒤에야 판정이 생긴다 — 붙어 있으면 지나쳐 나간다) · 분열탄(멀리 갈수록 빽빽) · 저격 낙뢰(far 밖에 farSec 초 머물면) · 토네이도 실드(켜진 동안 near 밖에서 준 피해 × shield.k).
+     들어가는 길: 지금은 ?boss=1 로만(레벨 bosslv·카드 무작위로 채운 채 바로 보스전). 10:00 에 저절로 이어지게 하려면 ?bossf=1 — 수치가 잡히면 기본값을 1 로 */
+  var BOSS_ID = 91, BOSSQ = q('boss', 0);
+  var BOSSFR = [[0,0,150,120,70,120],[151,0,138,126,64,128],[290,0,102,138,56,140],[393,0,98,142,58,142],[492,0,102,148,54,138],[595,0,142,142,76,126],[738,0,152,136,82,120],[0,149,134,134,72,120],[135,149,102,126,44,120],[238,149,104,118,46,120],[343,149,116,120,54,120],[460,149,150,120,70,120],[611,149,120,140,58,134],[732,149,124,146,70,142],[857,149,122,146,70,142],[0,296,116,148,66,134],[117,296,128,138,80,120],[246,296,126,138,80,120],[373,296,120,132,60,120],[494,296,108,124,38,120],[603,296,108,124,40,120],[712,296,114,124,40,120],[827,296,116,126,36,120],[0,445,118,132,42,126],[119,445,116,148,58,142],[236,445,108,150,56,140],[345,445,122,144,76,128],[468,445,122,138,80,122],[591,445,116,140,74,124],[708,445,104,132,46,124],[813,445,78,128,20,124],[892,445,82,126,22,122],[0,596,102,126,22,122],[103,596,104,128,24,122],[208,596,112,140,46,134],[321,596,116,148,58,142],[438,596,120,148,62,134],[559,596,132,138,80,122],[692,596,130,138,80,122],[823,596,116,134,64,122],[0,745,128,126,70,124],[129,745,126,122,68,124],[256,745,122,122,50,124],[379,745,120,122,38,124],[500,745,116,124,38,124],[617,745,116,138,54,138],[734,745,128,144,58,142],[863,745,126,148,58,140],[0,894,150,136,80,120],[151,894,142,138,76,122],[294,894,104,130,48,122],[399,894,96,118,38,122],[496,894,106,114,50,122],[603,894,146,114,68,122],[750,894,152,114,70,122],[0,1033,128,124,60,132],[129,1033,104,134,58,142],[234,1033,106,144,60,142],[341,1033,112,148,60,136],[454,1033,148,140,80,122],[603,1033,114,116,60,120],[718,1033,98,128,52,126],[817,1033,90,136,64,130],[908,1033,104,134,54,126],[0,1182,114,126,54,122],[115,1182,104,122,64,126],[220,1182,118,124,84,128],[339,1182,90,134,56,120],[430,1182,94,148,50,132],[525,1182,118,130,34,132],[644,1182,104,128,36,132],[749,1182,110,126,34,136],[860,1182,108,118,42,134],[0,1331,102,126,50,142],[103,1331,110,126,70,132],[214,1331,120,110,80,114],[335,1331,96,106,46,116],[432,1331,106,106,50,118],[539,1331,114,116,58,120],[654,1331,112,130,76,128],[767,1331,94,132,58,122],[862,1331,90,136,48,120],[0,1468,122,138,36,136],[123,1468,122,140,42,138],[246,1468,120,140,52,138],[367,1468,126,138,60,140],[494,1468,104,132,66,142],[599,1468,100,128,68,134],[700,1468,116,110,82,114],[817,1468,110,106,62,114],[0,1609,112,106,60,116],[113,1609,124,114,60,118],[238,1609,110,124,58,122],[349,1609,96,130,58,124],[446,1609,106,138,48,124],[553,1609,128,130,44,124],[682,1609,116,136,30,130],[799,1609,98,144,36,138],[898,1609,110,146,50,140],[0,1756,88,144,62,140],[89,1756,96,136,68,136],[186,1756,110,116,82,120],[297,1756,114,112,70,120],[412,1756,114,112,64,120],[527,1756,130,118,60,120],[658,1756,112,126,48,122],[771,1756,94,136,64,130],[866,1756,114,132,50,122],[0,1901,112,132,36,124],[113,1901,134,132,46,124],[248,1901,88,132,38,124],[337,1901,98,140,44,132],[436,1901,106,146,72,138],[543,1901,88,144,56,136],[632,1901,112,130,82,124],[745,1901,114,126,70,124],[860,1901,118,122,68,124],[0,2048,134,126,62,124],[135,2048,128,128,56,122],[264,2048,98,142,56,134],[363,2048,102,138,62,130],[466,2048,106,126,40,122],[573,2048,118,126,34,122],[692,2048,86,126,34,122],[779,2048,90,126,40,122],[870,2048,116,134,82,130],[0,2191,104,138,68,134],[105,2191,110,132,76,124],[216,2191,114,134,70,124],[331,2191,102,132,52,124],[434,2191,112,132,40,124],[547,2191,118,132,40,124],[666,2191,94,146,50,136],[761,2191,108,142,56,134],[870,2191,114,126,54,122],[0,2338,108,130,62,120],[109,2338,106,136,58,122],[216,2338,104,146,56,126],[321,2338,106,154,56,128],[428,2338,102,162,52,132],[531,2338,108,130,54,92],[640,2338,110,122,54,84],[751,2338,110,112,54,74],[862,2338,112,100,54,62],[0,2501,110,86,54,48],[111,2501,108,72,54,34]];
+  var bossType = function (D) { if (D.types[BOSS_ID]) return D.types[BOSS_ID]; var B = D.types[51], T = Object.create(Object.getPrototypeOf(B)); Object.keys(B).forEach(function (k) { T[k] = B[k]; }); T.id = BOSS_ID; T.img = 'u/' + BOSS_ID + '.png'; T.frames = BOSSFR; T.fr = BOSSFR; if (T.h) T.h = T.h * 2; if (T.alt) T.alt = T.alt * 2; D.types[BOSS_ID] = T; return T; };
+  CFG.BOSSF = { on: q('bossf', 0), lv: q('bosslv', 55), hp: q('bosshp', 60000), bars: 12, hit: q('bosshit', 0.11), inv: q('bossinv', 0.8), cap: q('bosscap', 320), maxHit: 0.03,
+    eye: q('bosseye', 78), near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 },
+    intro: 2.6, shift: 2.4, half: 0.5, rage: 0.2, tiers: [0.85, 0.7, 0.6], rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
+    pad: { l: 10, r: 10, top: 112, bot: 6 }, home: 104, chest: 52, only: q('bosspat', 0),   /* only = 그 번호의 패턴만 되풀이 (1부 1~7, 2부 11~14) */
+    seq1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb'], seq2: ['tele', 'dash', 'turret', 'summon'],
+    dur: { fan: 7, ring: 8, bolt: 8, spiral: 9, wall: 9, quake: 7, orb: 7, turret: 7.5, summon: 5.5 },
+    cols: ['#ff5a48', '#ff9a3a', '#ffd23e', '#9fe08a', '#5fd0c0', '#5fb0ff', '#9c8cff', '#d07cff'] };
+
+  /* 시험 진입 (?boss=1): 갈래를 정하고(없으면 대도) 레벨을 올려 카드를 무작위로 채운다 — 봇·손 시험이 10분을 기다리지 않게 */
+  P._bossPrep = function () {
+    var D = this.D, C = CFG.BOSSF, rng = D.rng, g = 0;
+    if (!this.cls) { var k = 'venom', un = CLS[k].unit || GROW.clsUnit; if (this._has(un)) this._promote(k); else this.cls = k; }
+    while (this.lv < C.lv && g++ < 400) { this.exp = this.expNeed; this._gain(0); }
+    g = 0; while (this.pend > 0 && g++ < 400) { var c = this._roll(), wantCls = this.cls, pk = c[0].cls ? (c.filter(function (x) { return x.cls === wantCls; })[0] || c[0]) : c[Math.floor(rng.next() * c.length)]; this._pick(pk); }
+    this.hero.hp = this.hero.maxHp; this.texts = []; this.banner = null; this.cards = null; this.lvGain = null; this.guide = false; this.t = CFG.TIME - 0.01;
+  };
+  P._bossEnter = function () {
+    var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y; this._layout(); bossType(D); this._need([BOSS_ID, 49, 50]);
+    [5, 26, 27, 33, 35, 84].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
+    var B = this.bossF = { st: 'intro', t0: T, in0: T, c: { x: h.x, y: h.y }, l: h.x + (C.pad.l - D.W / 2) / Z, r: h.x + (D.W / 2 - C.pad.r) / Z, top: h.y + (C.pad.top - hy) / Z, bot: h.y + (this.hudBot - C.pad.bot - hy) / Z,
+      u: null, seq: 0, pat: null, next: 0, rings: [], line: null, hits: {}, n: 0, farT: 0, sh: { on: false, at: 0 }, log: [], logT: 0, cast: 0, near: 0, far: 0 };
+    B.hx = h.x; B.hy = B.top + C.home;
+    this.foes.forEach(function (u) { if (u.state !== 'dead') { u.state = 'dead'; u.deadT = 0; u.fade = 0; } }); this.shots = this.shots.filter(function (s) { return !s.foe; });
+    this.marks = []; this.barr = null; this.shrine = null; this.rushWarn = null; this.siegeWarn = null; this.storm = null; this.cleared = true; this.wave = CFG.WAVE.list.length - 1; this.waveOn = true;
+    this.banner = { s: '— 대마술사 강림 —', t0: T, col: '#ff6a5a' }; this.flashT = T; D._play(5064, 0.9);
+  };
+  P._bossClear = function () { var B = this.bossF; if (!B) return; this.shots = this.shots.filter(function (s) { return !s.foe; }); this.marks = []; B.rings = []; B.n = 0; };   /* 화면의 탄을 지운다 — 전환·궁극기(슈팅게임의 폭탄) */
+  P._bShot = function (x, y, a, v, bk, o) {
+    var B = this.bossF, T = this.D.time; if (B.n >= CFG.BOSSF.cap) return null; B.n++;
+    var s = { x: x, y: y, x0: x, y0: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, dmg: 1, arm: -1, foe: true, t0: T, life: 30, bk: bk, pat: B.pat ? B.pat.k : 'x', armAt: T + CFG.BOSSF.eye / Math.max(40, v) }, k;
+    if (o) for (k in o) s[k] = o[k]; this.shots.push(s); return s;
+  };
+  P._bEvery = function (p, key, sec, dt) { var n = 0; p.tm[key] = (p.tm[key] == null ? 0 : p.tm[key]) - dt; while (p.tm[key] <= 0 && n < 8) { p.tm[key] += sec; n++; } return n; };
+  P._bMark = function (x, y, r, warn, arm, pat) { var T = this.D.time; this.marks.push({ x: x, y: y, r: r, t0: T, at: T + warn, dmg: 1, arm: arm, pat: pat, bf: 1 }); };
+  P._bCast = function (sec, snd) { var B = this.bossF, T = this.D.time; B.cast0 = T; B.cast = T + (sec || 0.6); if (snd) this.D._play(snd, 0.5); };
+  /* 보스가 받는 피해 (_hitFoe 가 부른다): 등장·전환·쓰러지는 동안은 0, 한 방의 상한, 토네이도 실드 */
+  P._bossDmgIn = function (u, dmg) {
+    var B = this.bossF, C = CFG.BOSSF, h = this.hero; if (!B || B.st === 'intro' || B.st === 'shift' || B.st === 'dead') return 0;
+    var d = Math.hypot(h.x - u.x, (h.y - u.y) / 0.62), near = d <= C.near; dmg = Math.min(dmg, u.life0 * C.maxHit);
+    if (B.sh.on && !near) { dmg *= C.shield.k; if (this.D.time - (B.shTx || -9) > 1.2) { B.shTx = this.D.time; this._text(u.x, u.y - u.headY - 6, '실드 — 멀리서는 절반', '#9fd8ff'); } }
+    if (near) B.near += dmg; else B.far += dmg; return dmg;
+  };
+  /* 1부 패턴 — p = { k, t0, tm, … }, t = 패턴이 시작된 뒤 흐른 시간, k = 단계 0~3 (체력 85·70·60% 에서 오른다) */
+  P._bossP1 = function (p, t, dt, k) {
+    var B = this.bossF, C = CFG.BOSSF, D = this.D, rng = D.rng, h = this.hero, u = B.u, ox = u.x, oy = u.y - C.chest, aim = Math.atan2(h.y - h.headY * 0.5 - oy, h.x - ox), n, i, j, self = this;
+    if (p.k === 'fan') { n = this._bEvery(p, 'a', [0.6, 0.5, 0.45, 0.4][k], dt); while (n-- > 0) { var fn = [5, 7, 9, 9][k]; this._bCast(0.35, 5049); for (i = 0; i < fn; i++) this._bShot(ox, oy, aim + (i - (fn - 1) / 2) * 0.22, 135, 'fire'); }
+      n = this._bEvery(p, 'b', [1.3, 1.1, 1, 0.9][k], dt); while (n-- > 0) for (i = 0; i < 12; i++) this._bShot(ox, oy, aim + 0.26 + i * 6.2832 / 12, 88, 'dark'); }   /* 조준 부채꼴 (파이어 볼) */
+    else if (p.k === 'spiral') { if (p.a == null) { p.a = aim; p.dir = 1; } if (!p.flip && t > C.dur.spiral / 2) { p.flip = 1; p.dir = -1; } n = this._bEvery(p, 'a', 0.09, dt); var arms = [3, 4, 5, 6][k];   /* 회전 나선 (플레임 윈드) — 도중에 회전 방향이 바뀐다 */
+      while (n-- > 0) { for (j = 0; j < arms; j++) this._bShot(ox, oy, p.a + j * 6.2832 / arms, 86, 'dark'); p.a += 0.19 * p.dir; } if (!(D.time < B.cast)) this._bCast(0.7); }
+    else if (p.k === 'ring') { if (p.g == null) p.g = aim; n = this._bEvery(p, 'a', [1.3, 1.15, 1, 0.9][k], dt);   /* 전방위 고리탄 — 틈 하나, 겹마다 틈이 어긋난다. 1단계부터는 멀리 가서 둘로 갈라진다(분열탄) */
+      while (n-- > 0) { var rn = [26, 30, 34, 38][k]; this._bCast(0.4, 5049); for (i = 0; i < rn; i++) { var ra = i * 6.2832 / rn + p.g; if (Math.abs(Math.atan2(Math.sin(ra - p.g), Math.cos(ra - p.g))) < 0.3) continue; this._bShot(ox, oy, ra, 82, 'ice', k >= 1 ? { split: { d: 210, n: 2, da: 0.13 } } : null); } p.g += 0.8 * (p.w = -(p.w || -1)); } }
+    else if (p.k === 'bolt') { n = this._bEvery(p, 'a', [1.6, 1.4, 1.25, 1.1][k], dt);   /* 낙뢰 격자 (썬더 스톰): 화면의 칸 대부분에 예고 원 — 안전지대는 주인공 근처 어딘가, 매번 바뀐다 */
+      while (n-- > 0) { var cw = 64, ch = 40, sx = Math.max(B.l + 50, Math.min(B.r - 50, h.x + (rng.next() - 0.5) * 220)), sy = Math.max(B.top + 40, Math.min(B.bot - 30, h.y + (rng.next() - 0.5) * 160)), pr = [0.6, 0.7, 0.78, 0.82][k], bx, by; this._bCast(0.5, 5105);
+        for (bx = B.l + cw / 2; bx < B.r; bx += cw) for (by = B.top + ch / 2; by < B.bot; by += ch) { if (Math.hypot(bx - sx, (by - sy) / 0.62) < 78 || rng.next() > pr) continue; this._bMark(bx, by, 30, 0.95, 84, 'bolt'); } } }
+    else if (p.k === 'wall') { if (p.gx == null) { p.gx = h.x; p.row = 0; } n = this._bEvery(p, 'a', 0.42, dt);   /* 불기둥 벽 (플레임 헬의 불길): 가로줄이 위에서 아래로 차례로 터지며 쓸고 내려온다 — 줄마다 한 군데 틈, 틈은 조금씩 옮겨 간다 */
+      while (n-- > 0) { var wy = B.top + 26 + p.row * 44, gw = [74, 66, 60, 54][k], wx; if (wy > B.bot - 6) { p.row = 0; wy = B.top + 26; p.gx = Math.max(B.l + 50, Math.min(B.r - 50, h.x + (rng.next() - 0.5) * 120)); this._bCast(0.5, 5050); }
+        for (wx = B.l + 14; wx < B.r; wx += 40) if (Math.abs(wx - p.gx) > gw / 2 + 12) this._bMark(wx, wy, 24, 0.85, 26, 'wall'); p.row++; p.gx = Math.max(B.l + 50, Math.min(B.r - 50, p.gx + (rng.next() - 0.5) * 68)); }
+      n = this._bEvery(p, 'b', [1.1, 0.9, 0.8, 0.7][k], dt); while (n-- > 0) for (i = -1; i <= 1; i++) this._bShot(ox, oy, aim + i * 0.5, 100, 'fire'); }
+    else if (p.k === 'quake') { n = this._bEvery(p, 'a', [1.6, 1.4, 1.2, 1][k], dt); while (n-- > 0) { var qg = rng.next() * 6.2832; this._bCast(0.6, 5057); this._fx(u.x, u.y - 6, 33); B.rings.push({ x: u.x, y: u.y, r: 24, v: 150, max: 560, g: [qg, qg + 3.1416], gw: 0.5 }); }   /* 충격파 고리 (어쓰 퀘이크): 퍼져 나가는 고리 — 틈 둘, 축지법으로 넘을 수도 있다 */
+      n = this._bEvery(p, 'b', 0.8, dt); while (n-- > 0) for (i = -2; i <= 2; i++) this._bShot(ox, oy, aim + i * 0.3, 130, 'fire'); }
+    else if (p.k === 'orb') { n = this._bEvery(p, 'a', 3, dt); while (n-- > 0) { this._bCast(0.5, 5049); for (i = 0; i < 2 + (k >= 2 ? 1 : 0); i++) { if (B.n >= C.cap) break; B.n++; var oa = aim + (i - 1) * 0.9; this.shots.push({ x: ox, y: oy, vx: Math.cos(oa) * CFG.MAGIC.orb.speed, vy: Math.sin(oa) * CFG.MAGIC.orb.speed, dmg: 1, arm: -1, foe: true, t0: D.time, life: 5.5, mg: 'orb', pat: 'orb', bfx: 1 }); } }   /* 느린 유도 구슬 + 냉기탄(맞으면 감속) */
+      n = this._bEvery(p, 'c', 1.4, dt); while (n-- > 0) for (i = 0; i < 16; i++) this._bShot(ox, oy, i * 6.2832 / 16 + t * 0.7, 70, 'ice');
+      n = this._bEvery(p, 'b', [0.45, 0.4, 0.35, 0.3][k], dt); while (n-- > 0) { if (B.n >= C.cap) break; B.n++; this.shots.push({ x: ox, y: oy, vx: Math.cos(aim) * 150, vy: Math.sin(aim) * 150, dmg: 1, arm: -1, foe: true, t0: D.time, life: 6, mg: 'frost', pat: 'orb', bfx: 1, armAt: D.time + C.eye / 150 }); } }
+    if (k >= 1 && p.k !== 'ring' && p.k !== 'spiral') { n = this._bEvery(p, 'z', 2.2, dt); while (n-- > 0) for (i = 0; i < 18; i++) this._bShot(ox, oy, i * 6.2832 / 18 + t, 58, 'dark', { pat: 'over' }); }   /* 1단계부터: 느린 고리탄이 겹친다 */
+  };
+  /* 2부 패턴 — e = 광폭(체력 20% 이하)이면 1 */
+  P._bossP2 = function (p, t, dt, e) {
+    var B = this.bossF, C = CFG.BOSSF, D = this.D, T = D.time, rng = D.rng, h = this.hero, u = B.u, ox = u.x, oy = u.y - C.chest, aim = Math.atan2(h.y - h.headY * 0.5 - oy, h.x - ox), n, i, cl = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+    if (p.k === 'tele') {   /* 순간이동 강타 (텔레포테이션 + 어쓰 퀘이크): 사라짐 → 주인공 자리에 예고 원 → 나타나며 터지고 둘레로 탄 */
+      if (!p.ph) { p.ph = 'out'; p.at = T + 0.35; p.i = 0; D._play(5018, 0.5); }
+      if (p.ph === 'out') { u.ghostA = Math.max(0, (p.at - T) / 0.35); if (T >= p.at) { p.ph = 'wait'; p.x = cl(h.x, B.l + 30, B.r - 30); p.y = cl(h.y, B.top + 50, B.bot - 10); p.at = T + 0.85; this._bMark(p.x, p.y, 62, 0.85, 33, 'tele'); u.x = -9999; } }
+      else if (p.ph === 'wait') { if (T >= p.at) { p.ph = 'rest'; p.at = T + 0.7; u.x = p.x; u.y = p.y; u.ghostA = null; this._bCast(0.5, 5057); var tn = e ? 24 : 18; for (i = 0; i < tn; i++) { this._bShot(u.x, u.y - C.chest, i * 6.2832 / tn, 120, 'fire', { armAt: T + 0.3 }); this._bShot(u.x, u.y - C.chest, (i + 0.5) * 6.2832 / tn, 70, 'dark', { armAt: T + 0.45 }); } } }
+      else if (T >= p.at) { if (++p.i >= 4 + e) p.done = true; else { p.ph = 'out'; p.at = T + 0.35; D._play(5018, 0.4); } } }
+    else if (p.k === 'dash') {   /* 관통 돌진: 예고선 → 화면을 가로지른다(닿으면 맞는다) → 지나간 자리에 불길이 남는다 */
+      if (!p.ph) { p.ph = 'aim'; p.i = 0; p.at = 0; }
+      if (p.ph === 'aim') { if (!p.at) { var dx = h.x - u.x, dy = h.y - u.y, dd = Math.hypot(dx, dy) || 1, ux = dx / dd, uy = dy / dd, len = 900; if (ux > 0.001) len = Math.min(len, (B.r - 24 - u.x) / ux); else if (ux < -0.001) len = Math.min(len, (B.l + 24 - u.x) / ux); if (uy > 0.001) len = Math.min(len, (B.bot - 8 - u.y) / uy); else if (uy < -0.001) len = Math.min(len, (B.top + 44 - u.y) / uy); len = Math.max(40, len);
+          p.x0 = u.x; p.y0 = u.y; p.x1 = u.x + ux * len; p.y1 = u.y + uy * len; p.at = T + (e ? 0.6 : 0.75); B.line = { x0: p.x0, y0: p.y0, x1: p.x1, y1: p.y1, t0: T, at: p.at }; D._faceVec(u, dx, dy, true); }
+        if (T >= p.at) { p.ph = 'go'; p.hit = false; p.drop = 0; B.line = null; D._play(5049, 0.5); } }
+      else if (p.ph === 'go') { var gx = p.x1 - u.x, gy = p.y1 - u.y, gd = Math.hypot(gx, gy), st = 560 * dt; u.state = 'move'; u.walkT += dt * 2;
+        if (gd <= st) { u.x = p.x1; u.y = p.y1; p.ph = 'rest'; p.at = T + 0.45; } else { u.x += gx / gd * st; u.y += gy / gd * st; p.drop += st; if (p.drop >= 22) { p.drop = 0; this._bShot(u.x, u.y - 6, 0, 0, 'flame', { life: 3.4, armAt: T + 0.3 }); } }
+        if (!p.hit && Math.hypot(h.x - u.x, (h.y - u.y) / 0.62) < 36) { p.hit = true; B.src = 'dash'; this._hitHero(1); } }
+      else if (T >= p.at) { if (++p.i >= 4 + e) p.done = true; else { p.ph = 'aim'; p.at = 0; } } }
+    else if (p.k === 'turret') {   /* 움직이는 포대: 전장 둘레를 돌며 안쪽으로 쏜다 */
+      if (p.wp == null) { p.pts = [[B.l + 46, B.top + 60], [B.r - 46, B.top + 60], [B.r - 46, B.bot - 30], [B.l + 46, B.bot - 30]]; var bi = 0, bd = 1e9; for (i = 0; i < 4; i++) { var pd = Math.hypot(p.pts[i][0] - u.x, p.pts[i][1] - u.y); if (pd < bd) { bd = pd; bi = i; } } p.wp = bi; }
+      var tx = p.pts[p.wp][0] - u.x, ty = p.pts[p.wp][1] - u.y, td = Math.hypot(tx, ty), ts = (e ? 150 : 120) * dt; if (td <= ts) p.wp = (p.wp + 1) % 4; else { u.x += tx / td * ts; u.y += ty / td * ts; } u.state = 'move'; u.walkT += dt;
+      n = this._bEvery(p, 'a', e ? 0.4 : 0.5, dt); while (n-- > 0) for (i = -1; i <= 1; i++) this._bShot(ox, oy, aim + i * 0.26, 140, 'fire');
+      n = this._bEvery(p, 'b', 0.1, dt); while (n-- > 0) this._bShot(ox, oy, rng.next() * 6.2832, 80, 'dark');
+      if (t >= C.dur.turret) p.done = true; }
+    else if (p.k === 'summon') {   /* 포대 소환: 구석에 흑마술사·요마술사 — 보스는 그동안 고리탄 */
+      if (!p.ph) { p.ph = 1; var alive = this.foes.filter(function (x) { return x.bfMin && x.state !== 'dead'; }).length, want = Math.min(4 - alive, 2 + e), cs = [[B.l + 30, B.top + 50], [B.r - 30, B.top + 50], [B.l + 30, B.bot - 20], [B.r - 30, B.bot - 20]], sid = this._has(50) && e ? 50 : 49; this._bCast(0.8, 5018);
+        for (i = 0; i < want && this._has(sid); i++) { var su = this._spawn(sid, 0.3, cs[(i + Math.floor(rng.next() * 4)) % 4], true); if (su) { su.bfMin = true; su.noDrop = true; su.boom = null; this._fx(su.x, su.y - 8, 3); } } p.g = aim; }
+      n = this._bEvery(p, 'a', e ? 1 : 1.2, dt); while (n-- > 0) { this._bCast(0.4, 5049); for (i = 0; i < 24; i++) { var sa = i * 6.2832 / 24 + p.g; if (Math.abs(Math.atan2(Math.sin(sa - p.g), Math.cos(sa - p.g))) < 0.34) continue; this._bShot(ox, oy, sa, 90, 'ice'); } p.g += 0.9; }
+      if (t >= C.dur.summon) p.done = true; }
+    if (e) { n = this._bEvery(p, 'z', 2.2, dt); while (n-- > 0) this._bMark(h.x, h.y, 38, 0.8, 84, 'rage'); }   /* 광폭: 주인공 자리에 낙뢰가 계속 떨어진다 */
+  };
+  P._bossStep = function (dt) {
+    var B = this.bossF, C = CFG.BOSSF, D = this.D, T = D.time, R = D.rules, h = this.hero, u = B.u, i, s, self = this;
+    /* 탄: 전장 밖으로 나가면 사라진다 · 분열 · 개수 세기 */
+    B.n = 0; var add = [];
+    for (i = 0; i < this.shots.length; i++) { s = this.shots[i]; if (!s.foe || s.dead) continue; B.n++; if (!s.bk && !s.bfx) continue;
+      if (s.x < B.l - 30 || s.x > B.r + 30 || s.y < B.top - 60 || s.y > B.bot + 40) { s.dead = true; continue; }
+      if (s.split && Math.hypot(s.x - s.x0, s.y - s.y0) >= s.split.d) { var a0 = Math.atan2(s.vy, s.vx), sv = Math.hypot(s.vx, s.vy), j; s.dead = true; for (j = 0; j < s.split.n; j++) add.push([s.x, s.y, a0 + (j - (s.split.n - 1) / 2) * 2 * s.split.da, sv, s.bk, s.pat]); } }
+    for (i = 0; i < add.length; i++) this._bShot(add[i][0], add[i][1], add[i][2], add[i][3], add[i][4], { pat: add[i][5], armAt: 0 });
+    /* 충격파 고리 */
+    for (i = B.rings.length - 1; i >= 0; i--) { var rg = B.rings[i]; rg.r += rg.v * dt; if (rg.r > rg.max) { B.rings.splice(i, 1); continue; }
+      if (!rg.hit) { var rx = h.x - rg.x, ry = (h.y - rg.y) / 0.62, rr = Math.hypot(rx, ry), ra = Math.atan2(ry, rx), open = rg.g.some(function (g) { return Math.abs(Math.atan2(Math.sin(ra - g), Math.cos(ra - g))) < rg.gw; }); if (Math.abs(rr - rg.r) < 9 && !open) { rg.hit = true; B.src = 'quake'; this._hitHero(1); } } }
+    if (T - B.logT >= 10 && u) { B.logT = T; B.log.push({ t: Math.round(T - B.in0), st: B.st, hp: Math.round(u.life / u.life0 * 1000) / 10, hero: Math.round(h.hp / h.maxHp * 100), shots: B.n, lv: this.lv }); }
+    if (B.st === 'intro') {
+      if (!u && T - B.t0 >= 0.9 && this._has(BOSS_ID)) { u = B.u = this._unit(BOSS_ID, 1, B.hx, B.hy); u.life = u.life0 = C.hp; u.maxHp = C.hp; u.hp = C.hp; u.boss = true; u.bf = true; u.born = T; u.boom = null; u.act = null; u.ranged = false; u.reach = 0; u.cd = 0; u.state = 'idle'; D._faceVec(u, 0, 1, true); this.foes.push(u); this._fx(u.x, u.y - 30, 3); D._play(5018, 0.7); B.t0 = T - 0.9; }
+      if (u) { u.ghostA = Math.min(1, (T - B.t0 - 0.9) / 0.8); if (T - B.t0 >= C.intro) { u.ghostA = null; B.st = 'p1'; B.next = T + 0.5; B.in0 = T; B.sh.at = T + C.shield.first; } }
+      if (u) u.hp = u.maxHp; return; }
+    if (B.st === 'dead') { if (T - B.t0 >= 2.6 && !this.over) { this.over = 'win'; this.overT = 0; this.stick = null; this.bossKill = true; } return; }
+    if (u.state === 'dead') { B.st = 'dead'; B.t0 = T; B.sec = Math.round(T - B.in0); this._bossClear(); this.foes.forEach(function (x) { if (x.bfMin && x.state !== 'dead') { x.state = 'dead'; x.deadT = 0; x.fade = 0; } }); this.flashT = T; D._play(5064, 0.9); this.shakeUntil = T + 0.8; this.shakeLen = 0.8; this.shakeAmp = 6; return; }
+    var hpk = u.life / u.life0, dx = h.x - u.x, dy = h.y - u.y, d = Math.hypot(dx, (dy) / 0.62);
+    u.hp = u.maxHp; if (u.x > -9000) D._faceVec(u, dx, dy);
+    if (B.st === 'shift') { var sk = Math.min(1, (T - B.t0) / (C.shift * 0.6)); u.x = B.sx + (B.c.x - B.sx) * sk; u.y = B.sy + (B.top + (B.bot - B.top) * 0.42 - B.sy) * sk; u.state = 'idle'; if (T - B.t0 >= C.shift) { B.st = 'p2'; B.seq = 0; B.pat = null; B.next = T + 0.6; } return; }
+    if (B.st === 'p1' && hpk <= C.half) { B.st = 'shift'; B.t0 = T; B.sx = u.x; B.sy = u.y; B.pat = null; B.line = null; this._bossClear(); this.banner = { s: '대마술사가 움직인다', t0: T, col: '#ff6a5a' }; this.flashT = T; D._play(5059, 0.8); this.items.push({ k: 'meat', x: B.c.x, y: B.bot - 60, t0: T }); return; }
+    /* 토네이도 실드: 켜졌다 꺼졌다 */
+    if (T >= B.sh.at) { B.sh.on = !B.sh.on; B.sh.at = T + (B.sh.on ? C.shield.on : C.shield.off); if (B.sh.on) { D._play(5059, 0.5); this._text(u.x, u.y - u.headY - 16, '토네이도 실드', '#9fd8ff'); } }
+    /* 저격 낙뢰 (1부): 멀리 숨어 있으면 */
+    if (B.st === 'p1') { if (d > C.far) { B.farT += dt; if (B.farT >= C.farSec) { B.farT = C.farSec - 1.5; this._bMark(h.x, h.y, 40, 0.7, 84, 'snipe'); } } else B.farT = Math.max(0, B.farT - dt); }
+    /* 패턴 차례 */
+    var p = B.pat, k = hpk > C.tiers[0] ? 0 : hpk > C.tiers[1] ? 1 : hpk > C.tiers[2] ? 2 : 3, e = hpk <= C.rage ? 1 : 0;
+    if (e && !B.raged) { B.raged = true; this.banner = { s: '대마술사 광폭', t0: T, col: '#ff4a3a' }; D._play(5064, 0.8); }
+    if (!p && T >= B.next) { var seq = B.st === 'p1' ? C.seq1 : C.seq2, on = C.only, key = on ? (on > 10 ? C.seq2[(on - 11) % C.seq2.length] : C.seq1[(on - 1) % C.seq1.length]) : seq[B.seq % seq.length]; if (on && (on > 10) !== (B.st === 'p2')) key = seq[B.seq % seq.length]; B.seq++; p = B.pat = { k: key, t0: T, tm: {} }; }
+    if (p) { var pt = T - p.t0; if (B.st === 'p1') { this._bossP1(p, pt, dt, k); if (pt >= C.dur[p.k]) p.done = true; } else this._bossP2(p, pt, dt, e);
+      if (p.done) { B.pat = null; B.line = null; u.ghostA = null; B.next = T + (B.st === 'p1' ? C.rest[k] : C.rest2[e]); } }
+    if (B.st === 'p1') { u.x += (B.hx - u.x) * Math.min(1, dt * 3); u.y += (B.hy + Math.sin(T * 1.3) * 5 - u.y) * Math.min(1, dt * 3); }   /* 1부: 제자리에서 조금 떠다닌다 */
+    if (u.x > -9000) { u.x = Math.max(B.l + 20, Math.min(B.r - 20, u.x)); u.y = Math.max(B.top + 40, Math.min(B.bot - 4, u.y)); }
+    if (T < B.cast) { var AN = u.t.anim.atk, an = AN ? AN.n : 6; u.state = 'attack'; u.at = Math.min(an - 1, (T - B.cast0) * R.tps); } else if (!(p && (p.ph === 'go' || p.k === 'turret'))) u.state = 'idle';
+  };
+  P._bossClamp = function () { var B = this.bossF, h = this.hero; h.x = Math.max(B.l + 8, Math.min(B.r - 8, h.x)); h.y = Math.max(B.top + 8, Math.min(B.bot - 2, h.y)); };
+  /* 그리기: 바닥(전장 가장자리의 불길 · 근접 구역 고리 · 돌진 예고선 · 충격파 고리) */
+  P._bossGround = function () {
+    var B = this.bossF, C = CFG.BOSSF, D = this.D, ctx = D.ctx, T = D.time, u = B.u, i, fl = 0.75 + 0.25 * Math.sin(T * 9);
+    ctx.save(); var edge = function (x0, y0, x1, y1, gx0, gy0, gx1, gy1) { var g = ctx.createLinearGradient(gx0, gy0, gx1, gy1); g.addColorStop(0, 'rgba(255,90,30,' + (0.5 * fl).toFixed(3) + ')'); g.addColorStop(0.35, 'rgba(180,30,10,.22)'); g.addColorStop(1, 'rgba(120,10,0,0)'); ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); };
+    edge(B.l - 20, B.top - 80, B.l + 26, B.bot + 60, B.l - 4, 0, B.l + 26, 0); edge(B.r - 26, B.top - 80, B.r + 20, B.bot + 60, B.r + 4, 0, B.r - 26, 0); edge(B.l - 20, B.bot - 20, B.r + 20, B.bot + 60, 0, B.bot + 8, 0, B.bot - 20); ctx.restore();
+    if (u && u.state !== 'dead' && u.x > -9000 && (B.st === 'p1' || B.st === 'p2')) { ctx.save(); ctx.translate(u.x, u.y); ctx.scale(1, 0.62); ctx.strokeStyle = 'rgba(160,210,255,' + (B.sh.on ? 0.5 : 0.2) + ')'; ctx.lineWidth = B.sh.on ? 2 : 1; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.arc(0, 0, C.near, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }   /* 근접 구역: 이 안에서 준 피해는 실드에 깎이지 않는다 */
+    var L = B.line; if (L) { var lk = Math.max(0, Math.min(1, (T - L.t0) / (L.at - L.t0))); ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,60,40,' + (0.14 + 0.2 * lk).toFixed(3) + ')'; ctx.lineWidth = 44; ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke(); ctx.strokeStyle = 'rgba(255,120,90,' + (0.5 + 0.4 * lk).toFixed(3) + ')'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -T * 60; ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke(); ctx.restore(); }
+    for (i = 0; i < B.rings.length; i++) { var rg = B.rings[i], ra = Math.max(0, 1 - rg.r / rg.max), a0 = rg.g[0] + rg.gw, a1 = rg.g[1] - rg.gw, a2 = rg.g[1] + rg.gw, a3 = rg.g[0] + 6.2832 - rg.gw; ctx.save(); ctx.translate(rg.x, rg.y); ctx.scale(1, 0.62); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,140,50,' + (0.35 + 0.4 * ra).toFixed(3) + ')'; ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(0, 0, rg.r, a0, a1); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, rg.r, a2, a3); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,240,200,' + (0.6 + 0.3 * ra).toFixed(3) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, rg.r, a0, a1); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, rg.r, a2, a3); ctx.stroke(); ctx.restore(); }
+  };
+  /* 보스 위에 겹쳐 그리는 것: 토네이도 실드의 바람 */
+  P._bossOver = function () {
+    var B = this.bossF, D = this.D, ctx = D.ctx, T = D.time, u = B.u; if (!u || !B.sh.on || u.state === 'dead' || u.x < -9000) return;
+    var d = D.data.fx.arms[35], f = d && (d.hit.length ? d.hit : d.seq); if (f && f.length) { ctx.save(); ctx.translate(u.x, u.y - 40); ctx.scale(2, 2); ctx.globalAlpha = 0.8; D._fxFrame(f[Math.floor(T * 15) % f.length], 0, 0, true); ctx.restore(); }
+  };
+  /* 탄 그림: 종류마다 한 번 그려 두고 찍는다 (탄이 수백 발이라 매번 빛무리를 새로 만들면 느리다). 꼬리는 왼쪽 — 날아가는 쪽으로 돌려 찍는다 */
+  var BSPR = {}, bSprite = function (k) {
+    if (BSPR[k]) return BSPR[k]; var c = document.createElement('canvas'), W = 56, H = 32; c.width = W; c.height = H; var x = c.getContext('2d'), cx = 38, cy = 16, i,
+      col = k === 'ice' ? ['235,250,255', '120,200,255', '50,110,255'] : k === 'dark' ? ['255,225,255', '200,90,255', '110,30,220'] : ['255,245,200', '255,150,40', '255,60,10'];
+    x.globalCompositeOperation = 'lighter';
+    if (k === 'flame') { for (i = 0; i < 5; i++) { var fy = cy + 6 - i * 4, fr = 9 - i * 1.4, g0 = x.createRadialGradient(28 + (i % 2 ? 2 : -2), fy, 0, 28, fy, fr); g0.addColorStop(0, 'rgba(255,' + (230 - i * 30) + ',120,.8)'); g0.addColorStop(1, 'rgba(255,60,10,0)'); x.fillStyle = g0; x.beginPath(); x.arc(28, fy, fr, 0, 6.2832); x.fill(); } return (BSPR[k] = c); }
+    for (i = 5; i >= 1; i--) { var tr = 7.5 - i * 1.1, tg = x.createRadialGradient(cx - i * 6, cy + (i % 2 ? 1.5 : -1.5), 0, cx - i * 6, cy, tr); tg.addColorStop(0, 'rgba(' + col[1] + ',' + (0.55 - i * 0.08).toFixed(2) + ')'); tg.addColorStop(1, 'rgba(' + col[2] + ',0)'); x.fillStyle = tg; x.beginPath(); x.arc(cx - i * 6, cy, tr, 0, 6.2832); x.fill(); }
+    var g = x.createRadialGradient(cx, cy, 0, cx, cy, 14); g.addColorStop(0, 'rgba(' + col[0] + ',1)'); g.addColorStop(0.4, 'rgba(' + col[1] + ',.7)'); g.addColorStop(1, 'rgba(' + col[2] + ',0)'); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, 14, 0, 6.2832); x.fill();
+    x.globalCompositeOperation = 'source-over'; x.fillStyle = 'rgba(' + col[0] + ',1)'; x.beginPath(); x.arc(cx + 1, cy, 3.4, 0, 6.2832); x.fill(); return (BSPR[k] = c);
+  };
+  P._bossShot = function (s) {
+    var D = this.D, ctx = D.ctx, T = D.time, c = bSprite(s.bk), armed = !(s.armAt > T);
+    ctx.save(); ctx.translate(s.x, s.y); if (s.bk === 'flame') { ctx.globalAlpha = Math.min(1, (s.t0 + s.life - T) / 0.5) * (0.75 + 0.25 * Math.sin(T * 18 + s.x)); ctx.drawImage(c, -28, -22); }
+    else { ctx.rotate(Math.atan2(s.vy, s.vx)); ctx.globalAlpha = armed ? 1 : 0.4; ctx.drawImage(c, -38, -16); }   /* 아직 판정이 없는 탄(태풍의 눈)은 옅게 */
+    ctx.restore();
+  };
+  /* 긴 체력 줄: 여러 겹 — 한 줄이 다 닳으면 아래 색 줄이 드러난다 (메탈슬러그·1945 식). 위쪽 표시 아래, 전장 위 */
+  P._bossHud = function () {
+    var B = this.bossF, C = CFG.BOSSF, D = this.D, ctx = D.ctx, W = D.W, u = B.u, X = this.xpBox; if (!u || B.st === 'intro' && u.ghostA != null && u.ghostA < 0.3) return;
+    var x = 10, y = X.y + 66, w = W - 20, hgt = 9, cur = Math.max(0, u.life) / u.life0 * C.bars, idx = Math.max(0, Math.ceil(cur) - 1), fr = u.life <= 0 ? 0 : cur - idx, cols = C.cols;
+    ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(x - 1, y - 1, w + 2, hgt + 2);
+    if (idx > 0) { ctx.fillStyle = cols[(idx - 1) % cols.length]; ctx.globalAlpha = 0.55; ctx.fillRect(x, y, w, hgt); ctx.globalAlpha = 1; }
+    ctx.fillStyle = cols[idx % cols.length]; ctx.fillRect(x, y, Math.round(w * fr), hgt); ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x, y, Math.round(w * fr), 3);
+    ctx.strokeStyle = '#a8823a'; ctx.lineWidth = 1; ctx.strokeRect(x - 0.5, y - 0.5, w + 1, hgt + 1);
+    ctx.font = 'bold 11px sans-serif'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+    ctx.textAlign = 'left'; ctx.strokeText('대마술사' + (B.sh.on ? '  ◈ 실드' : ''), x + 2, y + hgt + 9); ctx.fillStyle = B.raged ? '#ff6a5a' : '#ffe9b0'; ctx.fillText('대마술사' + (B.sh.on ? '  ◈ 실드' : ''), x + 2, y + hgt + 9);
+    ctx.textAlign = 'right'; ctx.strokeText('×' + (idx + 1), x + w - 2, y + hgt + 9); ctx.fillStyle = cols[idx % cols.length]; ctx.fillText('×' + (idx + 1), x + w - 2, y + hgt + 9); ctx.textAlign = 'left';
   };
 
   MWE.SurvivalGame = SurvivalGame;
