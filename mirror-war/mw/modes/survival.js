@@ -24,7 +24,7 @@
     CRIT: { p: q('crit', 0.1), mul: 2, p2: q('crit2', 0.15), mul2: 4 },   // 치명타(붉은보석 도둑에서): 확률·피해 배수. 더블 크리티컬 = 치명타가 났을 때 p2 확률로, 피해 mul2 배. 숫자 색: 보통 흰색 · 치명타 노랑 · 더블 붉은색 (NUM)
     BOOM: { touch: 30, radius: 46 },   // 좀비 자폭: 닿으면 터진다
     DEF: { lvk: q('deflv', 0.25), min: q('dmin', 0.3), lateLv: q('latelv', 30), lateK: q('latek', 0.04) },   // lateLv·lateK (343번, 2026-11-20 사용자 "고레벨 이후에는 맞아도 체력이 거의 안 달아서 몹들의 공격이 강해져야"): 도둑 레벨 lateLv 를 넘으면 레벨마다 적 피해 +lateK (레벨 40 ×1.4 · 50 ×1.8 · 60 ×2.2)   // 도둑이 받는 피해 (294·295번): 방어 계산에 넣는 레벨 = 도둑 레벨 × lvk (원작 방어 = def + defGrow×레벨/4 → 레벨 40 이면 25 라 후반 적이 전부 1 을 쳤다. 0.25 면 5 + 레벨/8), min = 방어가 아무리 높아도 적 공격값의 이 비율은 들어간다
-    HURT: { inv: 0.25, flash: 0.35 },  // 도둑이 맞은 뒤 무적 시간(여럿이 한 틱에 겹쳐 치는 것 방지)·화면 가장자리 붉은 빛
+    HURT: { inv: 0.25, flash: 0.35 , red: 0.18, blink: 0.07, blinkMax: 1, shake: [2.5, 6], shakeSec: 0.16, gap: 0.3, snd: q('hurtsnd', 5011), vol: 0.45, numLife: 0.9 },  // 도둑이 맞은 뒤 무적 시간(여럿이 한 틱에 겹쳐 치는 것 방지)·화면 가장자리 붉은 빛
     /* 웨이브 10단계 (4단계, 2026-11-19 사용자 안: 처음엔 쉬운 적, 10단계로 갈수록 모든 유닛). 1분에 한 단계.
        add = 그 단계에 새로 나오는 유닛(세 진영 모두 — 기본 공격이 있는 유닛만). 뽑힐 비중: 새로 나온 단계 3 · 한 단계 전 2 · 두 단계 전 1 · 그보다 옛것 0.4 — 10단계는 전부 같은 비중(모든 유닛이 다 나온다).
        rate = 초당 마릿수, cap = 살아 있는 적 상한, hp = 체력 배수. boss = 그 단계가 시작될 때 나오는 우두머리 [유닛, 체력 배수] */
@@ -317,8 +317,17 @@
     dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * this._pace('dmg') * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minS[this._rageSt()])); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
+  /* 맞았다는 느낌 (429번, 2026-11-27 사용자 "유저가 맞았을 때 맞았다는 느낌이 잘 안 남 — 몸이 붉은색으로 점멸해야 하나" → 권장안 넷 "ㄱ"): 체력이 줄어든 것을 여기서 한 곳에서 본다(어디서 맞았든 — 근접·탄·폭발·보스전·돌진 떼).
+     ① 몸이 red 초 동안 붉게 물들고, 맞은 뒤의 무적이 남아 있는 동안(최대 blinkMax 초) blink 간격으로 붉게 깜빡인다 ② 화면이 shakeSec 초 살짝 흔들린다(피해가 클수록 세게, 더 센 흔들림이 돌고 있으면 건드리지 않는다) ③ 소리 ④ 머리 위에 붉은 '-숫자'.
+     ②③ 은 gap 초에 한 번만 — 돌진 떼처럼 잘게 계속 닳는 피해에 매번 울리지 않게. 전부터 있던 것(화면 가장자리의 붉은 빛)은 그대로 */
+  P._hurtWatch = function (T) {
+    var h = this.hero, p = this.hpPrev, HU = CFG.HURT, D = this.D; this.hpPrev = h.hp; if (p == null || h.hp >= p - 0.5) return;
+    var dmg = Math.round(p - Math.max(0, h.hp)); this.hurtFxT = T; this.hurtBlinkUntil = Math.max(T + HU.red, Math.min(this.invUntil, T + HU.blinkMax));
+    this.texts.push({ x: h.x + (D.rng.next() - 0.5) * 12, y: h.y - h.headY - 2, s: '-' + dmg, t0: T, col: '#ff5040', life: HU.numLife });
+    if (T - (this.hurtSndT || -9) >= HU.gap) { this.hurtSndT = T; D._play(HU.snd, HU.vol); if (!(T < (this.shakeUntil || 0))) { this.shakeUntil = T + HU.shakeSec; this.shakeLen = HU.shakeSec; this.shakeAmp = HU.shake[0] + (HU.shake[1] - HU.shake[0]) * Math.min(1, dmg / h.maxHp / 0.18); } }
+  };
   P.update = function (dt) {
-    var D = this.D, R = D.rules, rng = D.rng, h = this.hero, v = this._moveVec(), F = this.foes, T = D.time, self = this, i, j, u;
+    var D = this.D, R = D.rules, rng = D.rng, h = this.hero, v = this._moveVec(), F = this.foes, T = D.time, self = this, i, j, u; this._hurtWatch(T);
     if (!this.bossPre && CFG.BOSSF.on && this.t >= CFG.RAGE.at) { this.bossPre = true; bossType(D, 0); bossType(D, 1); bossType(D, 2); this._need([92, 93, BOSS_ID]); if (!D.assets.img[BOSS_BG_KEY]) D.assets.load(BOSS_BG_KEY, BOSS_BG); }   /* 보스 그림은 최후의 3분에 미리 받는다 (10:00 의 선택 화면에 쓴다) */
     if (this.bossF) this.t = CFG.TIME; else { this.t += dt; if (this.t >= CFG.TIME) { this.t = CFG.TIME; if (BOSSQ) this._bossEnter(); else if (CFG.BOSSF.on) { this.bossAsk = { t: 0 }; this.stick = null; this.keys = {}; return; } else { this.over = 'win'; this.overT = 0; this.stick = null; return; } } }   /* 보스전(README 416): 10:00 에 승리 대신 보스전으로 — 지금은 ?boss=1·?bossf=1 일 때만 */
     if (this.cls && h.t.id !== (CLS[this.cls].unit || GROW.clsUnit) && this._has(CLS[this.cls].unit || GROW.clsUnit)) this._promote(this.cls);   // 전직했는데 아직 그 모습(대도·마법전사) 그림을 못 받았던 경우 (시험용 ?cls= 로 시작할 때)
@@ -462,7 +471,7 @@
         if (got && s.vol) { if (s.vol.left > 0) { s.vol.left--; s.vol.hit[got.uid] = 1; this._hitFoe(got, s.dmg * (1 - (1 - s.far) * Math.min(1, Math.hypot(got.x - s.x0, got.y - s.y0) / CFG.ATK.range)) * this._onDagger(got), s.arm); this.bursts.push({ x: got.x, y: got.y - got.headY * 0.5, t0: T, a: Math.atan2(s.vy, s.vx), k: 'p', life: 0.2 }); if (s.spl) this._dagMark(got, s.spl); } else { s.dead = true; continue; } }   // 꿰뚫고 계속 난다 — 먼 적일수록 약하게(far), 한 번에 n명까지
         else if (got) { if (s.bomb) this._bombHit(s, got); if (s.spl) this._dagMark(got, s.spl); this._hitFoe(got, s.dmg * (s.dg ? this._onDagger(got) : 1), s.arm, 0, s.cb); this._extra(s, got); if (s.spl) this._dagMark(got, s.spl); s.dead = true; continue; } }
       if (s.mg === 'orb') { var oa = Math.atan2(s.vy, s.vx), ta = Math.atan2(h.y - h.headY * 0.5 - s.y, h.x - s.x), od = Math.atan2(Math.sin(ta - oa), Math.cos(ta - oa)), ot = CFG.MAGIC.orb.turn * dt; oa += Math.max(-ot, Math.min(ot, od)); s.vx = Math.cos(oa) * CFG.MAGIC.orb.speed; s.vy = Math.sin(oa) * CFG.MAGIC.orb.speed; }   // 따라오는 구체: 천천히 방향을 튼다 (끝까지 따라오지는 못한다)
-      if (s.foe && !(s.armAt > T) && Math.hypot(h.x - s.x, h.y - h.headY * 0.5 - s.y) < (s.mg === 'orb' ? 17 : 13)) { if (this.bossF) this.bossF.src = s.pat || 'shot'; if (s.arm >= 0) this._fx(s.x, s.y, s.arm); var hp0 = h.hp; this._hitHero(s.dmg); if (s.mg === 'frost' && h.hp < hp0) { this.chillUntil = T + CFG.MAGIC.frost.sec; this._text(h.x, h.y - h.headY - 30, '감속', '#9fd8ff'); } s.dead = true; }
+      if (s.foe && !(s.armAt > T) && !((s.bk || s.bfx) && this._bossShelter()) && Math.hypot(h.x - s.x, h.y - h.headY * 0.5 - s.y) < (s.mg === 'orb' ? 17 : 13)) { if (this.bossF) this.bossF.src = s.pat || 'shot'; if (s.arm >= 0) this._fx(s.x, s.y, s.arm); var hp0 = h.hp; this._hitHero(s.dmg); if (s.mg === 'frost' && h.hp < hp0) { this.chillUntil = T + CFG.MAGIC.frost.sec; this._text(h.x, h.y - h.headY - 30, '감속', '#9fd8ff'); } s.dead = true; }
       else if (T - s.t0 > s.life) s.dead = true; }
     this.shots = this.shots.filter(function (s) { return !s.dead; });
     this.effects = this.effects.filter(function (e) { return (T - e.t0) * 15 < e.f.length; });
@@ -602,7 +611,7 @@
       ctx.fillStyle = 'rgba(255,250,210,.9)'; for (var ri = 1; ri <= 5; ri++) { ctx.globalAlpha = 1 - ri * 0.17; ctx.beginPath(); ctx.arc(Math.cos(ra - ri * 0.2) * 23, Math.sin(ra - ri * 0.2) * 23, 1.6, 0, 6.3); ctx.fill(); }
       ctx.restore(); ctx.globalAlpha = 1; }
     var PS = this.rift && T - this.rift.t0 >= ULT.shadow.charge + ULT.shadow.plant * 0.5 && h.state !== 'dead' ? this._plantSprite() : null;
-    if (PS) ctx.drawImage(PS.c, 0, 0, PS.w, PS.h, Math.round(h.x) - PS.ox, Math.round(h.y) - PS.oy, PS.w, PS.h); else D._drawUnit(h);   /* 천지파열무: 꽂은 뒤로는 전용 자세 그림 */
+    if (PS) ctx.drawImage(PS.c, 0, 0, PS.w, PS.h, Math.round(h.x) - PS.ox, Math.round(h.y) - PS.oy, PS.w, PS.h); else { var HT = D.time, hred = this.hurtFxT != null && (HT - this.hurtFxT < CFG.HURT.red || (HT < this.hurtBlinkUntil && Math.floor((HT - this.hurtFxT) / CFG.HURT.blink) % 2 === 0)), htn = h.tint; if (hred) h.tint = 'rgba(255,40,30,.62)'; D._drawUnit(h); if (hred) h.tint = htn; }   /* 맞으면 몸이 붉게 깜빡인다 (429번) */   /* 천지파열무: 꽂은 뒤로는 전용 자세 그림 */
     ctx.globalAlpha = 1;
     if (T < this.stealthUntil && h.state !== 'dead') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';   // 그림자 숨기: 몸을 감싸고 위로 흐르는 보라색 빛줄기
       for (var si = 0; si < 9; si++) { var sx = h.x - 14 + si * 3.5 + Math.sin(T * 3 + si) * 1.5, ph = (T * 1.6 + si * 0.37) % 1, sy0 = h.y - 2 - ph * (h.headY + 6); ctx.strokeStyle = 'rgba(150,90,255,' + (0.55 * (1 - ph)).toFixed(3) + ')'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(sx, sy0); ctx.lineTo(sx, sy0 - 12); ctx.stroke(); }
@@ -1754,7 +1763,8 @@
   var BFORM = [{ id: 92, src: 49, k: 1.6, fr: BOSSFR1 }, { id: 93, src: 50, k: 1.8, fr: BOSSFR2 }, { id: BOSS_ID, src: 51, k: 2, fr: BOSSFR }];
   var bossType = function (D, fi) { var F = BFORM[fi == null ? 2 : fi]; if (D.types[F.id]) return D.types[F.id]; var B = D.types[F.src], T = Object.create(Object.getPrototypeOf(B)); Object.keys(B).forEach(function (k) { T[k] = B[k]; }); T.id = F.id; T.name = '보스'; T.img = 'u/' + F.id + '.png'; T.frames = F.fr; T.fr = F.fr; if (T.h) T.h = Math.round(T.h * F.k); if (T.alt) T.alt = Math.round(T.alt * F.k); D.types[F.id] = T; return T; };
   CFG.BOSSF = { on: q('bossf', 1), lv: q('bosslv', 55), hp: q('bosshp', 0), hpK: q('bosshpk', 2600), hpMin: 60000,   /* on: 421번부터 기본으로 켬 — 10:00 에 보스전으로 이어진다(?bossf=0 이면 예전처럼 10:00 승리). 체력 = 주인공의 기본 공격값(_base) × hpK (레벨 55 대도 ≈ 100 → 26만 — 봇이 3~4분에 잡던 값), ?bosshp= 를 주면 그 값 */ bars: 12, hit: q('bosshit', 0.18), inv: q('bossinv', 0.8), cap: q('bosscap', 320), maxHit: 0.03,
-    eye: q('bosseye', 78), block: q('bossblock', 82), bodyR: q('bossbody', 30),   /* 427번(2026-11-27 사용자 "보스와 겹쳐서 있으면 한 대도 안 맞는 것 고치기 — 안 맞는 영역으로 못 들어오게"): 갓 생긴 탄은 eye 만큼 날아간 뒤에야 판정이 생기므로(태풍의 눈) 보스 몸에 겹쳐 서면 탄이 전부 그냥 지나갔다 → 탄이 나오는 자리(가슴)에서 block(= eye + 4) 안으로는 주인공이 **못 들어간다**(밀려난다 — _bossClamp). 그만큼 무사의 칼이 안 닿게 되므로 근접 거리 계산에서 보스의 몸 반지름 bodyR 을 빼 준다(_nearest·_slash) */ near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 },
+    aid: { hp: q('bossaidhp', 0.3), cd: q('bossaidcd', 10), dist: 62, forms: 2 },   /* 428번(2026-11-27 사용자 "요마술사 단계까지는 체력 간당간당할 때 포션을 던져 줘"): 형태 1·2(흑마술사·요마술사 — forms 개)에서 주인공의 체력이 최대의 hp 이하이고 바닥에 이 물약이 없고 앞의 것을 준 지 cd 초가 지났으면 주인공 곁 dist 에 회복 아이템 하나(보스 반대쪽, 전장 안). 대마술사 형태에서는 안 준다 */
+    eye: q('bosseye', 78), block: q('bossblock', 82), bodyR: q('bossbody', 30),   /* 427번(2026-11-27 사용자 "보스와 겹쳐서 있으면 한 대도 안 맞는 것 고치기 — 안 맞는 영역으로 못 들어오게"): 갓 생긴 탄은 eye 만큼 날아간 뒤에야 판정이 생기므로(태풍의 눈) 보스 몸에 겹쳐 서면 탄이 전부 그냥 지나갔다 → 탄이 나오는 자리(가슴)에서 block(= eye + 4) 안으로는 주인공이 **못 들어간다**(밀려난다 — _bossClamp). 그만큼 무사의 칼이 안 닿게 되므로 근접 거리 계산에서 보스의 몸 반지름 bodyR 을 빼 준다(_nearest·_slash) */ near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 }, shelter: q('bossshelter', 1),
     warn: 2.8, dpad: { on: q('pad', 1), h: q('padh', 118), r: q('padr', 48), x: 20, fold: 22 },   /* 방향키 판 (README 424·425): on = 1 보스전이면 늘(기본) · -1 터치 기기에서만 · 0 끔, h = 판 높이, r = 방향키 반지름, x = 왼쪽 여백, fold = 접었을 때 남는 띠 높이 */ intro: 2.6, shift: 2.6, forms: [0.7, 0.4], start: q('bossform', 1), rage: 0.2, tiers: [0.85, 0.55],   /* forms = 이 비율에서 다음 형태로 · start = 시험용: 그 형태(1~3)부터 · tiers = 형태 1·2 안에서 단계가 오르는 체력 */ rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
     pad: { l: 10, r: 10, top: 112, bot: 6 }, home: 104, chest: 52, only: q('bosspat', 0),   /* only = 그 번호의 패턴만 되풀이 (1부 1~7, 2부 11~14) */
     seqF: [['fan', 'ring', 'bugs', 'bolt'], ['spiral', 'wall', 'bugs', 'quake', 'orb']], seq2: ['tele', 'dash', 'drake', 'bugs', 'turret', 'summon'], only1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb', 'bugs'], only2: ['tele', 'dash', 'turret', 'summon', 'bugs', 'drake', 'inferno'],
@@ -1829,6 +1839,8 @@
   P._bMark = function (x, y, r, warn, arm, pat) { var T = this.D.time; this.marks.push({ x: x, y: y, r: r, t0: T, at: T + warn, dmg: 1, arm: arm, pat: pat, bf: 1 }); };
   P._bCast = function (sec, snd) { var B = this.bossF, T = this.D.time; B.cast0 = T; B.cast = T + (sec || 0.6); if (snd) this.D._play(snd, 0.5); };
   /* 보스가 받는 피해 (_hitFoe 가 부른다): 등장·전환·쓰러지는 동안은 0, 한 방의 상한, 토네이도 실드 */
+  /* 토네이도 실드가 켜진 동안 보스 곁(near 안)에 붙어 있으면 보스의 **탄**에 맞지 않는다 (430번, 2026-11-27 사용자 "토네이도 쉴드에 붙었을 때 데미지 입는 기능은 빼 줘, 무사가 불리함"): 실드는 '멀리서는 피해 절반'이라 붙으라는 장치인데, 427번 뒤로는 붙어 선 자리가 탄에 판정이 막 생기는 자리라 피할 틈 없이 맞았다. 낙뢰·불기둥 벽·충격파·돌진·곤충·드래곤 같은 탄 아닌 것은 그대로 맞는다 */
+  P._bossShelter = function () { var B = this.bossF, C = CFG.BOSSF, h = this.hero, u = B && B.u; return !!(u && B.sh.on && C.shelter && u.state !== 'dead' && u.x > -9000 && Math.hypot(h.x - u.x, (h.y - u.y) / 0.62) <= C.near); };
   P._bossDmgIn = function (u, dmg) {
     var B = this.bossF, C = CFG.BOSSF, h = this.hero; if (!B || B.st === 'intro' || B.st === 'shift' || B.st === 'dead') return 0;
     var d = Math.hypot(h.x - u.x, (h.y - u.y) / 0.62), near = d <= C.near; dmg = Math.min(dmg, u.life0 * C.maxHit);
@@ -1923,6 +1935,9 @@
     var B = this.bossF, C = CFG.BOSSF, D = this.D, T = D.time, R = D.rules, h = this.hero, u = B.u, i, s, self = this;
     if (B.pad) { var ptg = B.st === 'dead' ? 0 : this.padFold ? C.dpad.fold : C.dpad.h, pst = C.dpad.h / 0.35 * dt; this.padH = this.padH < ptg ? Math.min(ptg, this.padH + pst) : Math.max(ptg, this.padH - pst); if (this.padH < C.dpad.h - 1) { this.padV = null; this.padPt = null; this.padI = -1; }   /* 방향키 판: WARNING 동안 아래에서 밀려 올라오고, 접으면 얇은 띠만 남고, 보스가 쓰러지면 내려간다 */
       B.bot = B.c.y + (this.hudBot - C.pad.bot - D.H * CFG.HERO_Y) / CFG.ZOOM; }   /* 전장의 아래 끝은 지금의 스킬 줄 위까지 (판을 접으면 넓어진다) */
+    var AD = C.aid; if (AD && B.form < AD.forms && u && u.state !== 'dead' && !this.over && h.hp > 0 && h.hp <= h.maxHp * AD.hp && T >= (B.aidT || 0) && !this.items.some(function (it) { return it.aid; })) {   /* 구급 물약 (형태 1·2 에서만) */
+      var aa = Math.atan2(h.y - u.y, h.x - u.x) + (D.rng.next() - 0.5) * 2.1, ax = Math.max(B.l + 22, Math.min(B.r - 22, h.x + Math.cos(aa) * AD.dist)), ay = Math.max(B.top + 30, Math.min(B.bot - 16, h.y + Math.sin(aa) * AD.dist * 0.8));
+      B.aidT = T + AD.cd; this.items.push({ k: 'meat', x: ax, y: ay, t0: T, aid: 1 }); this._text(ax, ay - 22, '회복 물약', '#9fe08a'); this._fx(ax, ay - 8, 3); }
     /* 탄: 전장 밖으로 나가면 사라진다 · 분열 · 개수 세기 */
     B.n = 0; var add = [];
     for (i = 0; i < this.shots.length; i++) { s = this.shots[i]; if (!s.foe || s.dead) continue; B.n++; if (!s.bk && !s.bfx) continue;
