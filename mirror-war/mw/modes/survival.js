@@ -622,7 +622,8 @@
     if (!this.over) return null; if (test) return { stage: stage, res: null, msg: '시험용 주소로 시작한 판은 기록을 올릴 수 없습니다' };
     if (!win && !this._rage()) return { stage: stage, res: null, msg: '최후의 3분(' + mmss(CFG.RAGE.at) + ')까지 버티면 기록을 올릴 수 있습니다' };
     var units = this._skList().map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
-    return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: win ? (this.bossKill ? ['완주', '보스 처치'] : ['완주']) : [] } };
+    var BR = this.bossF, bdmg = BR && BR.u ? Math.round(Math.max(0, Math.min(1e6, BR.u.life0 - Math.max(0, BR.u.life)))) : 0;   /* 보스전 순위 (README 417, 2026-11-27 사용자 "준 피해량으로 가자"): 서버는 time 큰 순 → base 큰 순으로 줄을 세운다. 10분 전 사망 = 버틴 초(1~599) · 보스전 없이 완주 = 600 · 보스전에서 쓰러짐 = 601 + base 에 보스에게 준 피해 · 보스 처치 = 3000 − 걸린 초(빨리 잡을수록 크다) */
+    return { stage: stage, res: { fac: 'surv', stage: stage, time: this.bossKill ? 3000 - Math.max(1, Math.min(999, BR.sec || 999)) : this.cleared && BR ? 601 : win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.cleared && BR && !this.bossKill ? bdmg : this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: win ? (this.bossKill ? ['완주', '보스 처치'] : ['완주']) : [] } };
   };
   /* 친구 초대 · 공유 (379번, 2026-11-26 사용자 "쓰러지거나 클리어 시 나오는 카드 화면에 공유하기 — 카카오톡에 보낼 수 있게(썸네일도), 그 링크를 타고 들어오면 서바이벌이 시작되고 시작 전에 '이름없는 대도(또는 무사)가 당신을 초대했습니다' 토스트. 명예의 전당에 입력한 이름이 '이름없는'을 대체"):
      보내는 주소 = 초대 페이지 defense/i/<갈래>.html?by=<이름> (갈래 t 대도 · m 무사 · d 전직 전 도둑). 그 페이지는 카카오톡 미리보기용 제목·그림(og)만 갖고 바로 게임(?mode=survival&inv=&by=)으로 넘긴다 — tools/dist.js 가 만든다.
@@ -707,7 +708,7 @@
     ctx.fillStyle = 'rgba(4,6,10,' + (0.74 * al).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); if (this.overT < 0.6) { this.overBtns = null; return; }
     D._plate(px, py, pw, ph, 8, false); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 22px sans-serif'; ctx.fillStyle = win ? '#ffd36e' : '#ffb4a8'; ctx.fillText(this.bossKill ? '대마술사를 쓰러뜨렸습니다' : win ? '10분을 버텼습니다' : this.cleared ? '대마술사에게 쓰러졌습니다' : '쓰러졌습니다', W / 2, py + 34);
-    var rows = [['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN],   /* 410번(2026-11-26 사용자 "쓰러졌습니다에서 웨이브 다음 '적 레벨 85%' 의미가 뭐야? 빼면 안 됨?"): 결과 카드에서 적 레벨 계수 표시를 뺐다 */ ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
+    var BO = this.bossF, rows = [BO && BO.u ? (this.bossKill ? ['보스 처치', mmss(BO.sec || 0)] : ['보스에게 준 피해', Math.round(BO.u.life0 - Math.max(0, BO.u.life)).toLocaleString() + '  (' + Math.round((1 - Math.max(0, BO.u.life) / BO.u.life0) * 100) + '%)']) : ['생존 시간', mmss(Math.floor(this.t))], ['웨이브', this._shown() + ' / ' + CFG.SHOWN],   /* 410번(2026-11-26 사용자 "쓰러졌습니다에서 웨이브 다음 '적 레벨 85%' 의미가 뭐야? 빼면 안 됨?"): 결과 카드에서 적 레벨 계수 표시를 뺐다 */ ['처치', this.kills + (ST.boss ? '  (우두머리 ' + ST.boss + ')' : '')], ['레벨', this.lv + (this.cls ? '  ·  ' + CLS[this.cls].name : '')],
       ['준 피해', Math.round(ST.dealt).toLocaleString()], ['최고 한 방', ST.maxHit.toLocaleString()], ['치명타 / 더블', ST.crit + ' / ' + ST.dbl], ['받은 피해', Math.round(ST.taken).toLocaleString()]];
     ctx.font = '13px sans-serif';
     for (i = 0; i < rows.length; i++) { var ry = py + 68 + i * 24; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b8'; ctx.fillText(rows[i][0], px + 24, ry); ctx.textAlign = 'right'; ctx.fillStyle = i < 4 ? '#ffe9b0' : '#dfe6f5'; ctx.fillText(rows[i][1], px + pw - 24, ry);

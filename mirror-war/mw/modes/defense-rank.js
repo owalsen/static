@@ -16,6 +16,8 @@
   function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (e) {} }
   function did() { var d = lsGet(LS.did); if (!/^[A-Za-z0-9_-]{8,40}$/.test(d)) { d = ''; var A = 'abcdefghijklmnopqrstuvwxyz0123456789'; for (var i = 0; i < 20; i++) d += A[Math.floor(Math.random() * A.length)]; lsSet(LS.did, d); } return d; }
   function mmss(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  /* 서바이벌 기록의 표시 (README 417): time 1~600 = 버틴 시간 · 601 = 보스전에서 쓰러짐(base = 보스에게 준 피해) · 2001~ = 보스 처치(3000 − 걸린 초) */
+  function svTime(t, base) { t = Math.round(t); return t >= 2000 ? '보스 처치 ' + mmss(3000 - t) : t > 600 ? (base != null ? '보스 피해 ' + Number(base).toLocaleString() : '보스전') : mmss(t); }
   function el(tag, css, txt) { var e = doc.createElement(tag); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; }
   function call(method, path, body) {
     return root.fetch(DG.RANK.api + path, { method: method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined }).then(function (r) { return r.json(); });
@@ -38,7 +40,7 @@
   P._rankShow = function (won, sv) {
     var g = this; if (g.rankOpen) return;
     var F = {}; if (sv) F.surv = SURV; else Object.keys(DG.FACTIONS).forEach(function (k) { F[k] = DG.FACTIONS[k]; });   /* 406번(2026-11-26 사용자 "명예의 전당은 서바이벌은 서바이벌만 나오게, 디펜스는 그것만 나오게"): 서바이벌에서 열면 서바이벌 판만, 디펜스에서 열면 진영 판만 — 전에는 두 쪽 탭이 다 나왔다 */
-    var res = sv ? sv.res : won ? g._rankResult() : null, view = sv ? { fac: 'surv', stage: sv.stage || 0 } : { fac: g.faction, stage: g.stageI || 0 }, sentKey = res ? res.fac + ':' + res.stage + ':' + res.time + ':' + res.kills : '';
+    var res = sv ? sv.res : won ? g._rankResult() : null, view = sv ? { fac: 'surv', stage: sv.stage || 0 } : { fac: g.faction, stage: g.stageI || 0 }, sentKey = res ? res.fac + ':' + res.stage + ':' + res.time + ':' + res.kills + ':' + res.base : '';
     var wrap = el('div', 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(6,8,12,.72);touch-action:manipulation;');
     var box = el('div', 'box-sizing:border-box;width:min(360px,94vw);max-height:92vh;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:10px;border:1px solid #6b5a33;background:#12151d;color:#dfe6f5;font:13px sans-serif;');
     var head = el('div', 'display:flex;align-items:center;justify-content:space-between;');
@@ -68,7 +70,7 @@
       nm.appendChild(el('div', 'font:bold 18px sans-serif;color:#ffd36e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;', r.nick));
       nm.appendChild(el('div', 'font-size:11px;color:#9aa3b8;margin-top:2px;', '서바이벌 · ' + SURV.stages[view.stage].name + ' · ' + (rank + 1) + '위'));
       var cl = el('button', BTN, '닫기'); hd.appendChild(nm); hd.appendChild(cl); cb.appendChild(hd);
-      var rows = [['생존 시간', mmss(r.time) + (r.time >= 600 ? '  (완주)' : '')], ['처치', String(r.kills)], ['레벨', String(r.lost)]];
+      var rows = [r.time > 600 ? ['보스전', svTime(r.time, r.base)] : ['생존 시간', mmss(r.time) + (r.time >= 600 ? '  (완주)' : '')], ['처치', String(r.kills)], ['레벨', String(r.lost)]];
       (r.cards || []).slice(0, 3).forEach(function (c) { var m2 = /^(적 레벨)\s*(.+)$/.exec(c); if (m2) rows.push([m2[1], m2[2]]); });
       if (r.ver) rows.push(['버전', (/\./.test(r.ver) ? 'v' : '') + r.ver]);
       var tb = el('div', 'display:flex;flex-direction:column;gap:5px;padding:8px 4px;border-top:1px solid rgba(168,130,58,.5);border-bottom:1px solid rgba(168,130,58,.5);');
@@ -121,7 +123,7 @@
           var top = el('div', 'display:flex;align-items:baseline;gap:8px;');
           top.appendChild(el('span', 'width:22px;text-align:right;color:' + (i < 3 ? '#ffd36e' : '#7b8397') + ';font-weight:bold;', String(i + 1)));
           top.appendChild(el('span', 'flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + (r.me ? '#8fe89a' : '#dfe6f5') + ';', r.nick + (r.me ? ' (나)' : '')));
-          top.appendChild(el('span', 'color:#ffe9b0;font-weight:bold;', mmss(r.time)));
+          top.appendChild(el('span', 'color:#ffe9b0;font-weight:bold;', view.fac === 'surv' ? svTime(r.time, r.base) : mmss(r.time)));
           row.appendChild(top);
           var more = el('div', 'display:none;margin:5px 0 0 30px;color:#9aa3b8;font-size:11px;line-height:1.5;');
           var sv2 = view.fac === 'surv';
@@ -133,7 +135,7 @@
           row.onclick = function () { more.style.display = more.style.display === 'none' ? 'block' : 'none'; };
           list.appendChild(row);
         });
-        foot.textContent = d.me ? '내 기록 ' + mmss(d.me.time) + ' — ' + d.me.rank + '위 / ' + d.total + '명' : d.total ? '기록 ' + d.total + '명 · 줄을 누르면 ' + (view.fac === 'surv' ? '스킬이, 한 번 더 누르면 카드가' : '편성이') + ' 보입니다' : '';
+        foot.textContent = d.me ? '내 기록 ' + (view.fac === 'surv' ? svTime(d.me.time) : mmss(d.me.time)) + ' — ' + d.me.rank + '위 / ' + d.total + '명' : d.total ? '기록 ' + d.total + '명 · 줄을 누르면 ' + (view.fac === 'surv' ? '스킬이, 한 번 더 누르면 카드가' : '편성이') + ' 보입니다' : '';
       }).catch(function () { if (my !== seq) return; list.textContent = ''; list.appendChild(el('div', 'padding:18px;text-align:center;color:#ff9a8a;', '순위 서버에 연결하지 못했습니다')); });
     };
     var tabs = function () {
@@ -145,7 +147,7 @@
     /* 이번 기록 올리기 (이긴 화면에서만, 같은 판은 한 번) */
     if (res && g._rankSent !== sentKey) {
       subBox.style.display = 'flex';
-      subBox.appendChild(el('div', 'color:#8fe89a;font-weight:bold;', res.fac === 'surv' ? '서바이벌 ' + SURV.stages[res.stage].name + ' — ' + mmss(res.time) + (res.time >= 600 ? ' 완주' : ' 생존') : F[res.fac].name + ' ' + (res.stage + 1) + '단계 클리어 — ' + mmss(res.time)));
+      subBox.appendChild(el('div', 'color:#8fe89a;font-weight:bold;', res.fac === 'surv' ? '서바이벌 ' + SURV.stages[res.stage].name + ' — ' + (res.time > 600 ? svTime(res.time, res.base) : mmss(res.time) + (res.time >= 600 ? ' 완주' : ' 생존')) : F[res.fac].name + ' ' + (res.stage + 1) + '단계 클리어 — ' + mmss(res.time)));
       var line = el('div', 'display:flex;gap:6px;');
       var inp = el('input', 'flex:1 1 auto;min-width:0;box-sizing:border-box;padding:7px 8px;border-radius:6px;border:1px solid #3a4152;background:#0d1017;color:#fff;font:14px sans-serif;');
       inp.maxLength = 12; inp.placeholder = '닉네임 (12자까지)'; inp.value = lsGet(LS.nick); inp.autocomplete = 'off';
@@ -157,7 +159,7 @@
         call('POST', '/score', { did: did(), nick: nick, fac: res.fac, stage: res.stage, time: res.time, base: res.base, lost: res.lost, kills: res.kills, units: res.units, cards: res.cards, ver: DG.GAME_VER || DG.RANK.ver })   /* 버전 = 그 판의 게임 버전(화면 왼쪽 위 숫자)이 저절로 들어간다 (2026-11-23 사용자) — 전에는 손으로 올리던 README 번호 */.then(function (d) {
           if (!d || !d.ok) throw new Error('fail');
           g._rankSent = sentKey; msg.style.color = '#8fe89a';
-          msg.textContent = d.best ? d.rank + '위 / ' + d.total + '명 — 내 최고 기록입니다' : '전에 올린 기록(' + mmss(d.time) + ')이 더 ' + (res.fac === 'surv' ? '깁니다' : '빠릅니다') + ' — ' + d.rank + '위 / ' + d.total + '명';
+          msg.textContent = d.best ? d.rank + '위 / ' + d.total + '명 — 내 최고 기록입니다' : '전에 올린 기록(' + (res.fac === 'surv' ? svTime(d.time) : mmss(d.time)) + ')이 더 ' + (res.fac === 'surv' ? '좋습니다' : '빠릅니다') + ' — ' + d.rank + '위 / ' + d.total + '명';
           line.style.display = 'none'; view.fac = res.fac; view.stage = res.stage; tabs(); load();
         }).catch(function () { send.disabled = false; msg.style.color = '#ff9a8a'; msg.textContent = '올리지 못했습니다. 잠시 뒤 다시 눌러 주세요'; });
       };
