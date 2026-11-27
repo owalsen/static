@@ -59,7 +59,7 @@
        적 체력 = 기본 × (1 + hp × (적 레벨 − 1)) × 웨이브 체력 배수^wave   (스폰할 때의 적 레벨로 정해진다. 웨이브 배수는 wave 제곱으로 눌러 "시간" 몫을 조금만 남긴다)
        적 피해 = 기본 × (1 + atk × (적 레벨 − 1))                          (맞는 순간의 적 레벨)
        hp·atk = 적 레벨 1당 늘어나는 비율 — 도둑은 레벨 1당 한 방 피해가 약 +5%, 최대 체력이 약 +5% 늘어난다 */
-    SCALE: { k: q('scale', -1), pool: [[0.7, '시원한 판'], [0.85, '보통 판'], [1, '팽팽한 판']],   /* k 가 주소(?scale=)에 없으면 판마다 pool 에서 하나를 고른다 — 첫 웨이브 알림과 결과 화면에 보인다 */ hp: q('scalehp', 0.032), atk: q('scaleatk', 0.003), wave: 0.25 },
+    SCALE: { k: q('scale', 0.85),   /* 412번: 판마다 pool 에서 뽑던 것을 0.85 고정으로(순위가 판 운에 좌우되지 않게 — 굴곡은 PACE 가 맡는다). 랜덤 판은 이제 없다 */ pool: [[0.7, '시원한 판'], [0.85, '보통 판'], [1, '팽팽한 판']],   /* k 가 주소(?scale=)에 없으면 판마다 pool 에서 하나를 고른다 — 첫 웨이브 알림과 결과 화면에 보인다 */ hp: q('scalehp', 0.032), atk: q('scaleatk', 0.003), wave: 0.25 },
     /* 화염 포격 (344번, 2026-11-23 사용자: "5단계 때는 흑마술사 또는 요마술사들의 대부대가 깜짝 등장해서 파이어볼을 다량으로 날리고 그걸 피하는 재미 — 거의 비행기 슈팅게임의 미사일 피하기 하듯"):
        at 초(보이는 5웨이브가 시작되고 조금 뒤)에 warn 초 예고 → 도둑 둘레 타원(rx·ry — 화면 가장자리)에 술사 n 기가 한꺼번에 나타나 sec 초 동안 **제자리에서** 화염구를 쏜다. 술사마다 aim 초에 한 발씩 도둑을 겨누고(서로 엇갈리게), fan 초마다 술사 fanFrom 기가 부채꼴 fanN 발을 흩뿌린다.
        화염구는 느리고(speed — 도둑 걸음 88 보다 조금 빠름) 크게 보인다(플레임 윈드 그림) — 틈을 보고 피한다. 그동안 다른 적이 나오는 수는 × spawnK. 포격이 끝나면 술사들은 보통 적처럼 다가온다. 피해 = 술사의 기본 피해 × dmg */
@@ -190,6 +190,11 @@
   P._rage = function () { return this.t >= CFG.RAGE.at; };
   P._rageSt = function () { var R = CFG.RAGE; return this.t < R.at ? -1 : Math.min(R.hpS.length - 1, Math.floor((this.t - R.at) / R.stageSec)); };   // 최후의 3분의 단계 (0·1·2, 아니면 −1)
   P._shown = function () { return Math.min(CFG.SHOWN, Math.floor(this.t / (CFG.WAVE.list.length * CFG.WAVE.sec / CFG.SHOWN)) + 1); };   // 화면에 보이는 웨이브 번호 (1~7)
+  /* 웨이브 완급 (README 412, 2026-11-27 사용자 "어떤 판은 쉽고 어렵고 굴곡이 있어야" → 웨이브마다 값이 다르되 모든 게임에서 같은 순서): PACE.rate·dmg = 보이는 웨이브 1~7 + 최후의 3분에 곱하는 물량(초당 나오는 수)·적 피해 배수. 3·5·7 을 조이고 4·6 을 푼다.
+     적 레벨 비율로는 굴곡이 안 생겼다(봇 — 레벨이 1분에 8~10씩 올라 비율을 낮춰도 적 체력이 안 내려간다). 시험 주소 ?pacer=1,1,1,1,1,1,1,1 · ?paced=… (전부 1 = 완급 끔) */
+  var PACE = (function () { var f = function (k) { var m = new RegExp('[?&]' + k + '=([0-9.,]+)').exec(root.location.search); return m ? m[1].split(',').map(Number) : null; }; return { rate: f('pacer') || [1, 1, 1.25, 0.55, 1.15, 0.6, 1.15, 1], dmg: f('paced') || [1, 1, 1.2, 0.6, 1.1, 0.6, 1.1, 1] }; })();
+  P._pace = function (k) { var B = PACE[k]; if (!B) return 1; var v = this._rage() ? B[B.length - 1] : B[Math.min(B.length - 1, this._shown() - 1)]; return v > 0 ? v : 1; };
+  P._paceName = function () { var v = this._pace('rate'); return this._rage() ? '' : v >= 1.1 ? '적이 몰려옵니다' : v <= 0.8 ? '숨 고르기' : ''; };
   P._foeLv = function () { return 1 + (this.lv - 1) * this.scaleK; };   // 적 레벨 (레벨 스케일링)
   P._hpK = function (w) { var S = CFG.SCALE, W = CFG.WAVE.list[w == null ? this.wave : w]; return (this._rage() ? CFG.RAGE.hpS[this._rageSt()] : 1) * (this.scaleK > 0 ? (1 + S.hp * (this._foeLv() - 1)) * Math.pow(W.hp, S.wave) : W.hp); };   // 적 체력 배수
   P._atkK = function () { var S = CFG.SCALE; return this.scaleK > 0 ? 1 + S.atk * (this._foeLv() - 1) : 1; };   // 적 피해 배수
@@ -289,7 +294,7 @@
         this.foes.forEach(function (u) { if (u.state === 'dead' || Math.hypot(u.x - h.x, (u.y - h.y) / 0.62) > FS.r) return; if (!u.boss) u.stunUntil = Math.max(u.stunUntil || 0, D.time + FS.v(fl2)); self2._hitFoe(u, fb2, -1); }); }
       return; }
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minS[this._rageSt()])); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
+    dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * this._pace('dmg') * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minS[this._rageSt()])); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
   };
   P.update = function (dt) {
@@ -316,8 +321,9 @@
       F.forEach(function (x) { if (x.state === 'dead' || x.rush) return; x.life = Math.round(x.life * rk); x.life0 = Math.round(x.life0 * rk); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.flashT = T; D._play(5064, first ? 0.9 : 0.6); if (first) this.rageT = T; else this.banner = { s: RGC.names[rst], t0: T, col: '#ff6a5a' }; }
     this._rescue(T, v); this._shrine(T); if (this.rageOn) this._storm(T, v);
     if (!this.rageOn && !this.rageSoon && this.t >= CFG.RAGE.at - 10) { this.rageSoon = true; this.banner = { s: '경고 — 10초 뒤 최후의 3분', t0: T, col: '#ff6a5a' }; }
+    var sh = this._shown(); if (sh !== this.shownWave && !this._rage()) { this.shownWave = sh; this.banner = { s: '웨이브 ' + sh + (this._paceName() ? ' · ' + this._paceName() : ''), t0: T, col: '#ffe9b0' }; }   /* 412번: 보이는 웨이브가 바뀌는 그 순간에 알린다 — 전에는 안쪽 난이도 칸(42초)이 바뀔 때만 살펴 최대 36초 늦었다 */
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
-      var sh = this._shown(), newSh = sh !== this.shownWave; this.shownWave = sh; if (newSh || WV.boss) this.banner = { s: (newSh ? '웨이브 ' + sh + (sh === 1 && this.scaleK > 0 ? ' · 적 레벨 ' + Math.round(this.scaleK * 100) + '%' + (this.scaleName ? ' (' + this.scaleName + ')' : '') : '') : '') + (WV.boss ? (newSh ? ' — ' : '') + D.types[WV.boss[0]].name + ' 등장' : ''), t0: T, col: WV.boss ? '#ff8a7a' : '#ffe9b0' };   /* 알림은 보이는 웨이브가 바뀔 때와 우두머리가 나올 때만 (안쪽 난이도 칸은 10개) */
+      if (WV.boss) this.banner = { s: D.types[WV.boss[0]].name + ' 등장', t0: T, col: '#ff8a7a' };   /* 알림은 보이는 웨이브가 바뀔 때와 우두머리가 나올 때만 (안쪽 난이도 칸은 10개) */
       if (WV.boss) { this._need([WV.boss[0]]); this.bossWait = WV.boss; } if (WV.mini) this._need([WV.mini[0]]); }
     if (this.bossWait && this._has(this.bossWait[0])) { this._spawn(this.bossWait[0], this.bossWait[1]); this.bossWait = null; }
     var MW = WL[wv].mini, mn = this.miniWave === wv ? this.miniN : 0; if (MW && mn < CFG.MINI.ats.length && this.t - wv * CFG.WAVE.sec >= CFG.MINI.ats[mn] && this._has(MW[0])) { this.miniWave = wv; this.miniN = mn + 1; var mu = this._spawn(MW[0], MW[1] * CFG.MINI.hpk); if (mu) { mu.mini = true; mu.speedPx = Math.max(mu.spd0, this.speed * CFG.BOSS.miniChase); this.banner = { s: '중간 우두머리 — ' + mu.t.name, t0: T, col: '#ffb27a' }; } }   // 중간 우두머리: 단계마다 at 초에 하나
@@ -328,7 +334,7 @@
       for (i = 0; i < BA.c.n; i++) { var bga = ba0 + i / BA.c.n * 6.2832, bu3 = this._spawn(BA.ids[i % BA.ids.length], BA.c.hp, [h.x + Math.cos(bga) * BA.c.rx, h.y + Math.sin(bga) * BA.c.ry], true); if (bu3) { bu3.barr = true; bu3.barrA = bga; bu3.boom = null; bu3.shotT = 0.5 + (i * 0.37) % BA.c.aim; } } }
     if (BA && BA.ph === 'fire') { if (T >= BA.until) { F.forEach(function (x) { x.barr = false; }); this.barr = null; }
       else if (T >= BA.fanAt) { BA.fanAt = T + BA.c.fan; var cst = F.filter(function (x) { return x.barr && x.state !== 'dead'; }); for (i = 0; i < BA.c.fanFrom && cst.length; i++) { var cu = cst.splice(Math.floor(rng.next() * cst.length), 1)[0]; this._fireball(cu, BA.c.fanN); } } }
-    this.spawnAcc += dt * WL[wv].rate * (this.barr && this.barr.ph === 'fire' ? BG.spawnK : 1);
+    this.spawnAcc += dt * WL[wv].rate * this._pace('rate') * (this.barr && this.barr.ph === 'fire' ? BG.spawnK : 1);
     while (this.spawnAcc >= 1) { this.spawnAcc -= 1; if (F.length < WL[wv].cap) this._spawn(); }
     // 돌진: 예고(길과 화살표) → warn 초 뒤 떼가 나타나 달려 지나간다
     var RU = CFG.RUSH; if (wv >= RU.from) { var rk = (wv - RU.from) / Math.max(1, WL.length - 1 - RU.from);
@@ -593,7 +599,7 @@
     if (!this.over) return null; if (test) return { stage: stage, res: null, msg: '시험용 주소로 시작한 판은 기록을 올릴 수 없습니다' };
     if (!win && !this._rage()) return { stage: stage, res: null, msg: '최후의 3분(' + mmss(CFG.RAGE.at) + ')까지 버티면 기록을 올릴 수 있습니다' };
     var units = this._skList().map(function (k) { return [String(SK[k].name).slice(0, 16), self.sk[k]]; }).slice(0, 40);
-    return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: ['적 레벨 ' + Math.round((this.scaleK || 0) * 100) + '%'].concat(win ? ['완주'] : []) } };
+    return { stage: stage, res: { fac: 'surv', stage: stage, time: win ? CFG.TIME : Math.max(1, Math.min(CFG.TIME, Math.floor(this.t))), base: this.kills || 0, lost: this.lv, kills: this.kills || 0, units: units, cards: win ? ['완주'] : [] } };
   };
   /* 친구 초대 · 공유 (379번, 2026-11-26 사용자 "쓰러지거나 클리어 시 나오는 카드 화면에 공유하기 — 카카오톡에 보낼 수 있게(썸네일도), 그 링크를 타고 들어오면 서바이벌이 시작되고 시작 전에 '이름없는 대도(또는 무사)가 당신을 초대했습니다' 토스트. 명예의 전당에 입력한 이름이 '이름없는'을 대체"):
      보내는 주소 = 초대 페이지 defense/i/<갈래>.html?by=<이름> (갈래 t 대도 · m 무사 · d 전직 전 도둑). 그 페이지는 카카오톡 미리보기용 제목·그림(og)만 갖고 바로 게임(?mode=survival&inv=&by=)으로 넘긴다 — tools/dist.js 가 만든다.
