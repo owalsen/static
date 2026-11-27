@@ -145,7 +145,7 @@
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
     this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageSt = -1; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.shrine = null; this.shrineNext = CFG.SHRINE.from; this.shrineLast = null; this.buff = { war: 0, magic: 0, guard: 0 }; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
-    this.bossF = null; this.bossAsk = null; this.cleared = false; this.bossKill = false; this._growReset(); if (BOSSQ) this._bossPrep();
+    this.bossF = null; this.bossAsk = null; this.bossPre = false; this.cleared = false; this.bossKill = false; this._growReset(); if (BOSSQ) this._bossPrep();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
 
@@ -318,6 +318,7 @@
   };
   P.update = function (dt) {
     var D = this.D, R = D.rules, rng = D.rng, h = this.hero, v = this._moveVec(), F = this.foes, T = D.time, self = this, i, j, u;
+    if (!this.bossPre && CFG.BOSSF.on && this.t >= CFG.RAGE.at) { this.bossPre = true; bossType(D, 0); bossType(D, 1); bossType(D, 2); this._need([92, 93, BOSS_ID]); }   /* 보스 그림은 최후의 3분에 미리 받는다 (10:00 의 선택 화면에 쓴다) */
     if (this.bossF) this.t = CFG.TIME; else { this.t += dt; if (this.t >= CFG.TIME) { this.t = CFG.TIME; if (BOSSQ) this._bossEnter(); else if (CFG.BOSSF.on) { this.bossAsk = { t: 0 }; this.stick = null; this.keys = {}; return; } else { this.over = 'win'; this.overT = 0; this.stick = null; return; } } }   /* 보스전(README 416): 10:00 에 승리 대신 보스전으로 — 지금은 ?boss=1·?bossf=1 일 때만 */
     if (this.cls && h.t.id !== (CLS[this.cls].unit || GROW.clsUnit) && this._has(CLS[this.cls].unit || GROW.clsUnit)) this._promote(this.cls);   // 전직했는데 아직 그 모습(대도·마법전사) 그림을 못 받았던 경우 (시험용 ?cls= 로 시작할 때)
     // 도둑: 걷기
@@ -1767,15 +1768,31 @@
   };
   /* 10분을 버틴 뒤의 선택 (README 421, 2026-11-27 사용자 "10분을 클리어하면 보스전 할지 말지 선택 UI — 그만하기 누르면 클리어 카드, 보스전 진입 하면 보스전으로"): 게임이 멈추고 두 단추. 그만하기 = 예전의 10분 완주 그대로 */
   P._drawBossAsk = function () {
-    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, A = this.bossAsk, k = Math.min(1, A.t / 0.25), pw = Math.min(W - 28, 320), ph = 236, px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2) - 20, bw = pw - 40, bx = px + 20;
-    ctx.globalAlpha = k; ctx.fillStyle = 'rgba(4,6,10,.66)'; ctx.fillRect(0, 0, W, H); D._plate(px, py, pw, ph, 7, false);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 21px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('10분을 버텼습니다', W / 2, py + 34);
-    ctx.font = '13px sans-serif'; ctx.fillStyle = '#dfe5f2'; ctx.fillText('보스전에 도전하시겠습니까?', W / 2, py + 64);
-    ctx.font = '11px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('보스전에서 쓰러져도 10분 완주는 기록됩니다', W / 2, py + 84);
-    var b1 = A.go = { x: bx, y: py + 106, w: bw, h: 50 }, b2 = A.stop = { x: bx, y: py + 168, w: bw, h: 44 };
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, A = this.bossAsk, k = Math.min(1, A.t / 0.3), pw = Math.min(W - 20, 344), ph = 372, px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2) - 10 + Math.round((1 - k) * 14), cx = W / 2, i, self = this;
+    ctx.globalAlpha = k; ctx.fillStyle = 'rgba(4,6,10,.7)'; ctx.fillRect(0, 0, W, H); D._plate(px, py, pw, ph, 8, false);
+    /* 축하: 금빛 제목 + 반짝이는 빛 알갱이 (422번, 2026-11-27 사용자 "10분 클리어 시 축하 메시지창과 함께 보스전 여부 — 지금은 너무 UI 가 단촐해" + 참고 화면: 리본 제목·정보 칸·보스 그림 칸·아래 두 단추) */
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (i = 0; i < 14; i++) { var ga = i * 2.4 + 0.7, gx = cx + Math.cos(ga) * (pw * 0.2 + (i * 37) % (pw * 0.26)), gy = py + 34 + Math.sin(ga * 1.7) * 22, gt = (A.t * 1.3 + i * 0.37) % 1, gs = Math.sin(gt * 3.1416) * (2.5 + (i % 3)); ctx.fillStyle = 'rgba(255,225,130,' + (0.8 * Math.sin(gt * 3.1416)).toFixed(3) + ')'; ctx.fillRect(gx - gs, gy - 0.5, gs * 2, 1); ctx.fillRect(gx - 0.5, gy - gs, 1, gs * 2); } ctx.restore();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.font = 'bold 25px sans-serif'; ctx.strokeText('축하합니다!', cx, py + 32); ctx.fillStyle = '#ffd36e'; ctx.fillText('축하합니다!', cx, py + 32);
+    ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('10분 생존 완주', cx, py + 60);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#c9cfdd'; ctx.fillText('처치 ' + this.kills + '   ·   레벨 ' + this.lv + (this.cls ? '   ·   ' + CLS[this.cls].name : ''), cx, py + 82);
+    /* 보스전 안내 칸 */
+    var ix = px + 14, iy = py + 112, iw = pw - 28, ih = 176; ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.fillRect(ix, iy, iw, ih); ctx.strokeStyle = '#a8823a'; ctx.lineWidth = 1; ctx.strokeRect(ix + 0.5, iy + 0.5, iw - 1, ih - 1);
+    var rw = 132, rh = 26, rx = Math.round(cx - rw / 2), ry = iy - 13, rg = ctx.createLinearGradient(0, ry, 0, ry + rh); rg.addColorStop(0, '#c8301e'); rg.addColorStop(1, '#7c1408'); ctx.fillStyle = rg; ctx.beginPath(); ctx.moveTo(rx - 10, ry); ctx.lineTo(rx + rw + 10, ry); ctx.lineTo(rx + rw + 2, ry + rh / 2); ctx.lineTo(rx + rw + 10, ry + rh); ctx.lineTo(rx - 10, ry + rh); ctx.lineTo(rx - 2, ry + rh / 2); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#e6b25a'; ctx.lineWidth = 1.5; ctx.stroke();   /* 리본 제목 */
+    ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#fff2c8'; ctx.fillText('보 스 전', cx, ry + rh / 2 + 1);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = '#dfe5f2'; ctx.fillText('세 형태로 변하는 보스가 기다립니다', cx, iy + 30);
+    var tw = Math.floor((iw - 20 - 2 * 16) / 3), th = 92, ty = iy + 46, ref = BFORM[2].fr[D.types[51].anim.idle[4]], sc = 70 / ref[3];
+    for (i = 0; i < 3; i++) { var tx = ix + 10 + i * (tw + 16), F = BFORM[i], T = bossType(D, i), im = D.assets.img['u' + F.id], f = T.frames[T.anim.idle[4]], last = i === 2; ctx.fillStyle = 'rgba(20,10,8,.85)'; ctx.fillRect(tx, ty, tw, th); ctx.strokeStyle = last ? '#ff6a4a' : '#8a6a2e'; ctx.lineWidth = last ? 2 : 1; ctx.strokeRect(tx + 0.5, ty + 0.5, tw - 1, th - 1);
+      var tg = ctx.createRadialGradient(tx + tw / 2, ty + th - 14, 2, tx + tw / 2, ty + th - 14, tw * 0.6); tg.addColorStop(0, ['rgba(60,150,255,.35)', 'rgba(170,80,255,.35)', 'rgba(255,60,40,.4)'][i]); tg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = tg; ctx.fillRect(tx + 1, ty + 1, tw - 2, th - 2);
+      if (im && im.complete && im.naturalWidth && f) { var dw = f[2] * sc, dh = f[3] * sc, bob = Math.sin(A.t * 2 + i) * 2; ctx.drawImage(im, f[0], f[1], f[2], f[3], Math.round(tx + tw / 2 - dw / 2), Math.round(ty + th - 8 - dh + bob), Math.round(dw), Math.round(dh)); }
+      ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#c9b48a'; ctx.textAlign = 'left'; ctx.fillText((i + 1) + '단계', tx + 5, ty + 10); ctx.textAlign = 'center';
+      if (last) { ctx.fillStyle = '#d8281a'; ctx.fillRect(tx + tw - 36, ty + 3, 33, 14); ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('BOSS', tx + tw - 19.5, ty + 10.5); }
+      if (i < 2) { ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#e6b25a'; ctx.fillText('▶', tx + tw + 8, ty + th / 2); } }
+    ctx.font = '11px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('쓰러져도 10분 완주는 기록됩니다', cx, iy + ih - 16);
+    /* 단추: 왼쪽 그만하기 · 오른쪽 보스전 진입 */
+    var by = py + ph - 68, b2 = A.stop = { x: px + 14, y: by, w: Math.round((pw - 38) * 0.42), h: 50 }, b1 = A.go = { x: b2.x + b2.w + 10, y: by, w: pw - 28 - b2.w - 10, h: 50 };
+    D._plate(b2.x, b2.y, b2.w, b2.h, 6, false); ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('그만하기', b2.x + b2.w / 2, b2.y + b2.h / 2);
     D._plate(b1.x, b1.y, b1.w, b1.h, 6, true); ctx.strokeStyle = 'rgba(255,90,60,' + (0.55 + 0.45 * Math.sin(A.t * 6)).toFixed(3) + ')'; ctx.lineWidth = 2.5; ctx.strokeRect(b1.x + 1, b1.y + 1, b1.w - 2, b1.h - 2);
-    ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = '#ff8a7a'; ctx.fillText('보스전 진입', W / 2, b1.y + b1.h / 2);
-    D._plate(b2.x, b2.y, b2.w, b2.h, 6, false); ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('그만하기', W / 2, b2.y + b2.h / 2);
+    ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = '#ff8a7a'; ctx.fillText('보스전 진입', b1.x + b1.w / 2, b1.y + b1.h / 2);
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
   };
   P._bossAskTap = function (x, y) {
