@@ -145,7 +145,7 @@
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
     this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageSt = -1; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.shrine = null; this.shrineNext = CFG.SHRINE.from; this.shrineLast = null; this.buff = { war: 0, magic: 0, guard: 0 }; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
-    this.bossF = null; this.cleared = false; this.bossKill = false; this._growReset(); if (BOSSQ) this._bossPrep();
+    this.bossF = null; this.bossAsk = null; this.cleared = false; this.bossKill = false; this._growReset(); if (BOSSQ) this._bossPrep();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
 
@@ -155,7 +155,7 @@
     if (D.time - (D._groundAt || 0) > 0.5 && D.terrain) D._makeGround();   // 아이폰이 보조 캔버스를 비우는 문제의 복구 (defense.js _frame 과 같은 이유)
     var TSv = this.devSpeed != null ? this.devSpeed : CFG.TS, steps = TSv > 0 ? Math.max(1, Math.round(TSv)) : 0, dt0 = dt; dt = steps ? dt0 * TSv / steps : 0;   /* 빠르기: ?ts= 또는 개발 모드의 버튼(devSpeed) — 1 보다 느리면 한 걸음을 짧게, 빠르면 여러 걸음. 0 = 멈춤 */
     for (var k = 0; k < steps; k++) {
-      if (!this.menu && !D.paused && this.ready()) { if (this.charPick) this.charPick.t += dt; else if (this.invite) { this.invite.t += dt; if (this.invite.t >= INVITE.sec) this.invite = null; } else if (this.guide) this.guideT += dt; else if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else if (this.aim2) { /* 투룡 조준 중: 방향을 찍을 때까지 게임이 멈춘다 (371번) */ } else this.update(dt); }
+      if (!this.menu && !D.paused && this.ready()) { if (this.charPick) this.charPick.t += dt; else if (this.invite) { this.invite.t += dt; if (this.invite.t >= INVITE.sec) this.invite = null; } else if (this.guide) this.guideT += dt; else if (this.cards) this.cardT += dt; else if (this.info) this.infoT += dt; else if (this.bossAsk) this.bossAsk.t += dt;   /* 10:00 의 보스전 선택: 고를 때까지 게임이 멈춘다 */ else if (this.over) { this.overT += dt; if (this.hero.state === 'dead') this.hero.deadT += dt; } else if (this.aim2) { /* 투룡 조준 중: 방향을 찍을 때까지 게임이 멈춘다 (371번) */ } else this.update(dt); }
       D.time += dt; }                                        // D._faceVec·_drawUnit 이 D.time 을 본다
     dt = dt0; if (this.menu) this.menuT += dt;
     if (this.press && Date.now() - this.press.t0 >= 350 && !this.cards && (!this.over || this.press.over) && !this.menu) { var ik = this.press.key === 'ult' && !this.cls ? null : this.press.key; if (ik) { this.info = { key: ik }; this.infoT = 0; } this.press = null; this.stick = null; this.keys = {}; }   // 스킬 칸을 꾹 누르면 설명 (게임은 멈춘다)
@@ -318,7 +318,7 @@
   };
   P.update = function (dt) {
     var D = this.D, R = D.rules, rng = D.rng, h = this.hero, v = this._moveVec(), F = this.foes, T = D.time, self = this, i, j, u;
-    if (this.bossF) this.t = CFG.TIME; else { this.t += dt; if (this.t >= CFG.TIME) { this.t = CFG.TIME; if (CFG.BOSSF.on || BOSSQ) this._bossEnter(); else { this.over = 'win'; this.overT = 0; this.stick = null; return; } } }   /* 보스전(README 416): 10:00 에 승리 대신 보스전으로 — 지금은 ?boss=1·?bossf=1 일 때만 */
+    if (this.bossF) this.t = CFG.TIME; else { this.t += dt; if (this.t >= CFG.TIME) { this.t = CFG.TIME; if (BOSSQ) this._bossEnter(); else if (CFG.BOSSF.on) { this.bossAsk = { t: 0 }; this.stick = null; this.keys = {}; return; } else { this.over = 'win'; this.overT = 0; this.stick = null; return; } } }   /* 보스전(README 416): 10:00 에 승리 대신 보스전으로 — 지금은 ?boss=1·?bossf=1 일 때만 */
     if (this.cls && h.t.id !== (CLS[this.cls].unit || GROW.clsUnit) && this._has(CLS[this.cls].unit || GROW.clsUnit)) this._promote(this.cls);   // 전직했는데 아직 그 모습(대도·마법전사) 그림을 못 받았던 경우 (시험용 ?cls= 로 시작할 때)
     // 도둑: 걷기
     if (this.zrun) { this._zStep(dt); v = [0, 0]; }   /* 처형으로 달리는 동안은 조작이 안 먹는다 */
@@ -557,6 +557,7 @@
     if (this.info) this._drawInfo();
     if (D.time - this.rageT < CFG.RAGE.show) this._drawRage();
     if (this.charPick) this._drawChars(); else if (this.invite) this._drawInvite(); else if (this.guide) this._drawGuide();
+    if (this.bossAsk && !this.over) this._drawBossAsk();
     if (this.menu) this._drawMenu();
   };
   /* 천지파열무의 '칼을 꽂은 자세' (331번, 2026-11-20 사용자가 시안 A·B·C 중 "원래 C 안으로"): 마법전사의 앞쪽 대각선 방향 공격 프레임 1(칼을 정면에 곧게 든 자세)에서
@@ -852,6 +853,7 @@
       if (self.guide) { if (self.guideT > 0.4) { self.guide = false; if (D._raceSnd) D._raceSnd('click'); } return; }   // 시작 안내: 아무 데나 누르면 시작
       D.sfx.unlock(); D.bgm.resume();
       if (self.menu) { self._menuTap(x, y); return; }
+      if (self.bossAsk) { self._bossAskTap(x, y); return; }
       if (self.cards) { self._cardTap(x, y); return; }
       if (self.info) { self._infoTap(x, y); return; }
       if (self.over) { var osk = null; (self.overBtns ? self.overSk || [] : []).forEach(function (b) { if (inBox(b, x, y)) osk = b.key; }); if (osk) { self.press = { key: osk, t0: Date.now(), id: e.pointerId, over: true }; return; }   /* 결과 카드의 스킬 그림: 0.35초 넘게 누르고 있으면 설명 (frame) */
@@ -1202,7 +1204,7 @@
   };
   P._drawGuide = function () {
     var D = this.D, ctx = D.ctx, W = D.W, H = D.H, pw = Math.min(W - 28, 330), px = Math.round((W - pw) / 2), mins = Math.round(CFG.TIME / 60), rmin = Math.round(CFG.RAGE.at / 60), k = Math.min(1, this.guideT / 0.25),
-      L = [['목표', '사방에서 몰려오는 적을 ' + mins + '분 동안 버티세요. ' + rmin + '분부터는 적이 훨씬 강해집니다.'], ['조작', '화면을 끌어 움직입니다. 공격은 자동입니다.'], ['성장', '적을 잡아 경험치를 모으면 스킬 카드를 고릅니다.'], ['전직', '레벨 ' + GROW.classLv + '에 대도의 길·무사의 길 중 하나로.'], ['버튼', '오른쪽 아래 축지법, 전직 뒤에는 궁극기.']], rows = [], i;
+      L = [['목표', '사방에서 몰려오는 적을 ' + mins + '분 동안 버티세요. ' + rmin + '분부터는 적이 훨씬 강해지고, 끝까지 버티면 보스전입니다.'], ['조작', '화면을 끌어 움직입니다. 공격은 자동입니다.'], ['성장', '적을 잡아 경험치를 모으면 스킬 카드를 고릅니다.'], ['전직', '레벨 ' + GROW.classLv + '에 대도의 길·무사의 길 중 하나로.'], ['버튼', '오른쪽 아래 축지법, 전직 뒤에는 궁극기.']], rows = [], i;
     ctx.font = '13px sans-serif'; L.forEach(function (e) { D._wrap(e[1], pw - 86).forEach(function (ln, n) { rows.push([n ? '' : e[0], ln]); }); });
     var ph = 74 + rows.length * 21 + 40, py = Math.round((H - ph) / 2);
     ctx.globalAlpha = k; ctx.fillStyle = 'rgba(4,6,10,.62)'; ctx.fillRect(0, 0, W, H); D._plate(px, py, pw, ph, 7, false);
@@ -1745,7 +1747,7 @@
      형태 1 흑마술사(푸른빛, 1.6배, u/92.png) · 2 요마술사(보라, 1.8배, u/93.png) · 3 대마술사(진홍, 2배, u/91.png). 1·2 는 위쪽에 떠서 탄막(seqF), 3 은 움직이며 덮친다(seq2). 화면에 이름은 '보스' 로만 나온다 */
   var BFORM = [{ id: 92, src: 49, k: 1.6, fr: BOSSFR1 }, { id: 93, src: 50, k: 1.8, fr: BOSSFR2 }, { id: BOSS_ID, src: 51, k: 2, fr: BOSSFR }];
   var bossType = function (D, fi) { var F = BFORM[fi == null ? 2 : fi]; if (D.types[F.id]) return D.types[F.id]; var B = D.types[F.src], T = Object.create(Object.getPrototypeOf(B)); Object.keys(B).forEach(function (k) { T[k] = B[k]; }); T.id = F.id; T.name = '보스'; T.img = 'u/' + F.id + '.png'; T.frames = F.fr; T.fr = F.fr; if (T.h) T.h = Math.round(T.h * F.k); if (T.alt) T.alt = Math.round(T.alt * F.k); D.types[F.id] = T; return T; };
-  CFG.BOSSF = { on: q('bossf', 0), lv: q('bosslv', 55), hp: q('bosshp', 60000), bars: 12, hit: q('bosshit', 0.11), inv: q('bossinv', 0.8), cap: q('bosscap', 320), maxHit: 0.03,
+  CFG.BOSSF = { on: q('bossf', 1), lv: q('bosslv', 55), hp: q('bosshp', 0), hpK: q('bosshpk', 2600), hpMin: 60000,   /* on: 421번부터 기본으로 켬 — 10:00 에 보스전으로 이어진다(?bossf=0 이면 예전처럼 10:00 승리). 체력 = 주인공의 기본 공격값(_base) × hpK (레벨 55 대도 ≈ 100 → 26만 — 봇이 3~4분에 잡던 값), ?bosshp= 를 주면 그 값 */ bars: 12, hit: q('bosshit', 0.18), inv: q('bossinv', 0.8), cap: q('bosscap', 320), maxHit: 0.03,
     eye: q('bosseye', 78), near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 },
     warn: 2.8, intro: 2.6, shift: 2.6, forms: [0.7, 0.4], start: q('bossform', 1), rage: 0.2, tiers: [0.85, 0.55],   /* forms = 이 비율에서 다음 형태로 · start = 시험용: 그 형태(1~3)부터 · tiers = 형태 1·2 안에서 단계가 오르는 체력 */ rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
     pad: { l: 10, r: 10, top: 112, bot: 6 }, home: 104, chest: 52, only: q('bosspat', 0),   /* only = 그 번호의 패턴만 되풀이 (1부 1~7, 2부 11~14) */
@@ -1762,6 +1764,24 @@
     while (this.lv < C.lv && g++ < 400) { this.exp = this.expNeed; this._gain(0); }
     g = 0; while (this.pend > 0 && g++ < 400) { var c = this._roll(), wantCls = this.cls, pk = c[0].cls ? (c.filter(function (x) { return x.cls === wantCls; })[0] || c[0]) : c[Math.floor(rng.next() * c.length)]; this._pick(pk); }
     this.hero.hp = this.hero.maxHp; this.texts = []; this.banner = null; this.cards = null; this.lvGain = null; this.guide = false; this.t = CFG.TIME - 0.01;
+  };
+  /* 10분을 버틴 뒤의 선택 (README 421, 2026-11-27 사용자 "10분을 클리어하면 보스전 할지 말지 선택 UI — 그만하기 누르면 클리어 카드, 보스전 진입 하면 보스전으로"): 게임이 멈추고 두 단추. 그만하기 = 예전의 10분 완주 그대로 */
+  P._drawBossAsk = function () {
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, A = this.bossAsk, k = Math.min(1, A.t / 0.25), pw = Math.min(W - 28, 320), ph = 236, px = Math.round((W - pw) / 2), py = Math.round((H - ph) / 2) - 20, bw = pw - 40, bx = px + 20;
+    ctx.globalAlpha = k; ctx.fillStyle = 'rgba(4,6,10,.66)'; ctx.fillRect(0, 0, W, H); D._plate(px, py, pw, ph, 7, false);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 21px sans-serif'; ctx.fillStyle = '#ffd36e'; ctx.fillText('10분을 버텼습니다', W / 2, py + 34);
+    ctx.font = '13px sans-serif'; ctx.fillStyle = '#dfe5f2'; ctx.fillText('보스전에 도전하시겠습니까?', W / 2, py + 64);
+    ctx.font = '11px sans-serif'; ctx.fillStyle = '#9aa3b8'; ctx.fillText('보스전에서 쓰러져도 10분 완주는 기록됩니다', W / 2, py + 84);
+    var b1 = A.go = { x: bx, y: py + 106, w: bw, h: 50 }, b2 = A.stop = { x: bx, y: py + 168, w: bw, h: 44 };
+    D._plate(b1.x, b1.y, b1.w, b1.h, 6, true); ctx.strokeStyle = 'rgba(255,90,60,' + (0.55 + 0.45 * Math.sin(A.t * 6)).toFixed(3) + ')'; ctx.lineWidth = 2.5; ctx.strokeRect(b1.x + 1, b1.y + 1, b1.w - 2, b1.h - 2);
+    ctx.font = 'bold 17px sans-serif'; ctx.fillStyle = '#ff8a7a'; ctx.fillText('보스전 진입', W / 2, b1.y + b1.h / 2);
+    D._plate(b2.x, b2.y, b2.w, b2.h, 6, false); ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#ffe9b0'; ctx.fillText('그만하기', W / 2, b2.y + b2.h / 2);
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
+  };
+  P._bossAskTap = function (x, y) {
+    var A = this.bossAsk, D = this.D; if (!A || A.t < 0.5) return;   /* 뜨자마자 눌리지 않게 (조작하던 손가락) */
+    if (inBox(A.go, x, y)) { this.bossAsk = null; if (D._raceSnd) D._raceSnd('click'); this._bossEnter(); }
+    else if (inBox(A.stop, x, y)) { this.bossAsk = null; if (D._raceSnd) D._raceSnd('click'); this.over = 'win'; this.overT = 0; this.stick = null; }
   };
   P._bossEnter = function () {
     var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y; this._layout(); bossType(D, 0); bossType(D, 1); bossType(D, 2); this._need([92, 93, BOSS_ID, 49, 50, 68, 69, 70]);
@@ -1863,7 +1883,7 @@
       if (!rg.hit) { var rx = h.x - rg.x, ry = (h.y - rg.y) / 0.62, rr = Math.hypot(rx, ry), ra = Math.atan2(ry, rx), open = rg.g.some(function (g) { return Math.abs(Math.atan2(Math.sin(ra - g), Math.cos(ra - g))) < rg.gw; }); if (Math.abs(rr - rg.r) < 9 && !open) { rg.hit = true; B.src = 'quake'; this._hitHero(1); } } }
     if (T - B.logT >= 10 && u) { B.logT = T; B.log.push({ t: Math.round(T - B.in0), st: B.st, hp: Math.round(u.life / u.life0 * 1000) / 10, hero: Math.round(h.hp / h.maxHp * 100), shots: B.n, lv: this.lv }); }
     if (B.st === 'intro') {
-      if (!u && T - B.t0 >= 0.9 && this._has(BFORM[B.form].id)) { u = B.u = this._unit(BFORM[B.form].id, 1, B.hx, B.hy); u.life0 = C.hp; u.life = Math.round(C.hp * (B.form ? C.forms[B.form - 1] : 1)); u.maxHp = C.hp; u.hp = C.hp; u.boss = true; u.bf = true; u.born = T; u.boom = null; u.act = null; u.ranged = false; u.reach = 0; u.cd = 0; u.state = 'idle'; D._faceVec(u, 0, 1, true); this.foes.push(u); this._fx(u.x, u.y - 30, 3); D._play(5018, 0.7); B.t0 = T - 0.9; }
+      if (!u && T - B.t0 >= 0.9 && this._has(BFORM[B.form].id)) { u = B.u = this._unit(BFORM[B.form].id, 1, B.hx, B.hy); B.hp = C.hp > 0 ? C.hp : Math.max(C.hpMin, Math.round(C.hpK * this._base())); u.life0 = B.hp; u.life = Math.round(B.hp * (B.form ? C.forms[B.form - 1] : 1)); u.maxHp = B.hp; u.hp = B.hp; u.boss = true; u.bf = true; u.born = T; u.boom = null; u.act = null; u.ranged = false; u.reach = 0; u.cd = 0; u.state = 'idle'; D._faceVec(u, 0, 1, true); this.foes.push(u); this._fx(u.x, u.y - 30, 3); D._play(5018, 0.7); B.t0 = T - 0.9; }
       if (u) { u.ghostA = Math.min(1, (T - B.t0 - 0.9) / 0.8); if (T - B.t0 >= C.intro) { u.ghostA = null; B.st = B.form === 2 ? 'p2' : 'p1'; B.next = T + 0.5; B.in0 = T; B.sh.at = T + C.shield.first; } }
       if (u) u.hp = u.maxHp; return; }
     if (B.st === 'dead') { if (T - B.t0 >= 2.6 && !this.over) { this.over = 'win'; this.overT = 0; this.stick = null; this.bossKill = true; } return; }
@@ -1872,7 +1892,7 @@
     u.hp = u.maxHp; if (u.x > -9000) D._faceVec(u, dx, dy);
     if (B.st === 'shift') { var sq = (T - B.t0) / C.shift, to = B.form + 1; u.state = 'idle';   /* 진화: 앞 절반에 옛 모습이 흐려지고 → 가운데에서 모습을 갈아입고 → 뒤 절반에 새 모습이 또렷해진다. 그동안 무적 */
       if (to === 2) { var sk = Math.min(1, sq / 0.6); u.x = B.sx + (B.c.x - B.sx) * sk; u.y = B.sy + (B.top + (B.bot - B.top) * 0.42 - B.sy) * sk; }   /* 마지막 형태는 전장 가운데로 내려온다 */
-      if (!B.swap && sq >= 0.5 && this._has(BFORM[to].id)) { B.swap = true; u.setType(bossType(D, to)); D._applyType(u); u.maxHp = C.hp; u.hp = C.hp; u.act = null; u.boom = null; u.ranged = false; this._fx(u.x, u.y - 30, 3); this.flashT = T; D._play(5018, 0.7); }
+      if (!B.swap && sq >= 0.5 && this._has(BFORM[to].id)) { B.swap = true; u.setType(bossType(D, to)); D._applyType(u); u.maxHp = B.hp; u.hp = B.hp; u.act = null; u.boom = null; u.ranged = false; this._fx(u.x, u.y - 30, 3); this.flashT = T; D._play(5018, 0.7); }
       u.ghostA = B.swap ? Math.min(1, 0.15 + (sq - 0.5) * 2) : Math.max(0.15, 1 - sq * 2);
       if (sq >= 1 && B.swap) { u.ghostA = null; B.swap = false; B.form = to; B.st = to === 2 ? 'p2' : 'p1'; B.seq = 0; B.pat = null; B.next = T + 0.6; } return; }
     if (B.form < 2 && hpk <= C.forms[B.form]) { B.st = 'shift'; B.t0 = T; B.sx = u.x; B.sy = u.y; B.pat = null; B.line = null; B.swap = false; this._bossClear(); this.banner = { s: B.form === 1 ? '보스가 움직인다' : '보스가 변한다', t0: T, col: '#ff6a5a' }; D._play(5059, 0.8); this.items.push({ k: 'meat', x: B.c.x, y: B.bot - 60, t0: T }); return; }
