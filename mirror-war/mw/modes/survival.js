@@ -196,20 +196,22 @@
   P._pace = function (k) { var B = PACE[k]; if (!B) return 1; var v = this._rage() ? B[B.length - 1] : B[Math.min(B.length - 1, this._shown() - 1)]; return v > 0 ? v : 1; };
   /* 웨이브 넘어가는 연출 (README 414, 2026-11-27 사용자 "웨이브 넘어갈 때 표시나 느낌이 없어서 좀 더 임팩트 있게"): 보이는 웨이브가 바뀌면 sec 초 동안 큰 글자 "웨이브 n"(쾅 하고 들어와 줄어든다) + 화면 가장자리 빛 + 소리. 게임은 멈추지 않는다.
      종류는 완급(PACE)에서: hot = 조이는 웨이브(붉은 빛, 비스트 버서커의 포효 5047) · cool = 숨 고르기(푸른 빛, 힐링 5002) · plain = 그 밖(금빛, 천리안 5009). 끄기 ?wavefx=0 */
-  var WAVEFX = { on: q('wavefx', 1), sec: 1.7, y: 0.27, hot: { col: '#ff8a6a', rgb: '255,70,40', snd: 5047, vol: 0.6 }, cool: { col: '#9fd8ff', rgb: '70,160,255', snd: 5002, vol: 0.6 }, plain: { col: '#ffe9b0', rgb: '255,205,110', snd: 5009, vol: 0.45 } };
+  var WAVEFX = { on: q('wavefx', 1), sec: 2.6, y: 0.27,
+    /* tips = 그 웨이브에 일어나는 일 한 줄 (README 415, 2026-11-27 사용자 "웨이브 타이틀 나올 때 그 웨이브의 특징을 설명 — 5 때 마법사 등장해서 파이어볼 이런 것처럼" → "그냥 명사로 끝나면 좋을 듯" — 글은 모두 명사로 끝낸다). 웨이브 표·포격(BARRAGE.list)·포위(SIEGE)·성소(SHRINE)의 시점을 바꾸면 이 글도 함께 고칠 것 */
+    tips: ['해골전사와 좀비 무리', '늑대와 박쥐 — 빠른 적, 돌진 떼', '궁수 부대의 화살 세례 · 우두머리 듀라한', '적의 포위망 · 성소 등장', '마술사 부대의 화염 포격 · 우두머리 드래곤', '장로 부대의 장풍 포격', '우두머리 다크로드 — 마지막 고비'], hot: { col: '#ff8a6a', rgb: '255,70,40', snd: 5047, vol: 0.6 }, cool: { col: '#9fd8ff', rgb: '70,160,255', snd: 5002, vol: 0.6 }, plain: { col: '#ffe9b0', rgb: '255,205,110', snd: 5009, vol: 0.45 } };
   P._drawWaveFx = function () {
     var F = this.waveFx, D = this.D; if (!F || !WAVEFX.on) return; var a = D.time - F.t0, S = WAVEFX.sec; if (a < 0 || a >= S) return;
     var ctx = D.ctx, W = D.W, H = D.H, K = WAVEFX[F.k], k = Math.min(1, a / 0.1) * Math.min(1, (S - a) / 0.45), cy = Math.round(H * WAVEFX.y), sc = 1 + 1.1 * Math.max(0, 1 - a / 0.2), ga = Math.max(0, 1 - a / 1.1);
     ctx.save();
     if (ga > 0) { var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.34, W / 2, H / 2, Math.max(W, H) * 0.72); vg.addColorStop(0, 'rgba(' + K.rgb + ',0)'); vg.addColorStop(1, 'rgba(' + K.rgb + ',' + (0.5 * ga).toFixed(3) + ')'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
     ctx.globalAlpha = Math.max(0, k);
-    var bg = ctx.createLinearGradient(0, cy - 46, 0, cy + 46); bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(0.5, 'rgba(0,0,0,.6)'); bg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = bg; ctx.fillRect(0, cy - 46, W, 92);
-    var lw = W * Math.min(1, a / 0.25); ctx.fillStyle = 'rgba(' + K.rgb + ',.85)'; ctx.fillRect((W - lw) / 2, cy - 30, lw, 2); ctx.fillRect((W - lw) / 2, cy + 30, lw, 2);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.translate(W / 2, cy - (F.name ? 7 : 0)); ctx.scale(sc, sc);
-    ctx.font = 'bold 30px sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText('웨이브 ' + F.n, 0, 0); ctx.fillStyle = K.col; ctx.fillText('웨이브 ' + F.n, 0, 0);
-    if (F.name) { ctx.font = 'bold 13px sans-serif'; ctx.lineWidth = 3; ctx.strokeText(F.name, 0, 23); ctx.fillStyle = '#fff'; ctx.fillText(F.name, 0, 23); }
+    var bg = ctx.createLinearGradient(0, cy - 56, 0, cy + 56); bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(0.5, 'rgba(0,0,0,.66)'); bg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = bg; ctx.fillRect(0, cy - 56, W, 112);
+    var lw = W * Math.min(1, a / 0.25); ctx.fillStyle = 'rgba(' + K.rgb + ',.85)'; ctx.fillRect((W - lw) / 2, cy - 36, lw, 2); ctx.fillRect((W - lw) / 2, cy + 36, lw, 2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.translate(W / 2, cy - (F.tip ? 13 : 0)); ctx.scale(sc, sc);
+    ctx.font = 'bold 30px sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; var ttl = '웨이브 ' + F.n + (F.name ? ' · ' + F.name : ''); ctx.font = 'bold ' + (F.name ? 24 : 30) + 'px sans-serif'; ctx.strokeText(ttl, 0, 0); ctx.fillStyle = K.col; ctx.fillText(ttl, 0, 0);
+    if (F.tip) { ctx.font = 'bold 14px sans-serif'; ctx.lineWidth = 3; ctx.strokeText(F.tip, 0, 27); ctx.fillStyle = '#fff'; ctx.fillText(F.tip, 0, 27); }
     ctx.restore(); };
-  P._paceName = function () { var v = this._pace('rate'); return this._rage() ? '' : v >= 1.1 ? '적이 몰려옵니다' : v <= 0.8 ? '숨 고르기' : ''; };
+  P._paceName = function () { var v = this._pace('rate'); return this._rage() ? '' : v >= 1.1 ? '적의 맹공' : v <= 0.8 ? '숨 고르기' : ''; };
   P._foeLv = function () { return 1 + (this.lv - 1) * this.scaleK; };   // 적 레벨 (레벨 스케일링)
   P._hpK = function (w) { var S = CFG.SCALE, W = CFG.WAVE.list[w == null ? this.wave : w]; return (this._rage() ? CFG.RAGE.hpS[this._rageSt()] : 1) * (this.scaleK > 0 ? (1 + S.hp * (this._foeLv() - 1)) * Math.pow(W.hp, S.wave) : W.hp); };   // 적 체력 배수
   P._atkK = function () { var S = CFG.SCALE; return this.scaleK > 0 ? 1 + S.atk * (this._foeLv() - 1) : 1; };   // 적 피해 배수
@@ -336,7 +338,7 @@
       F.forEach(function (x) { if (x.state === 'dead' || x.rush) return; x.life = Math.round(x.life * rk); x.life0 = Math.round(x.life0 * rk); if (x.boss) { x.maxHp = x.life0; x.hp = x.life; } }); this.flashT = T; D._play(5064, first ? 0.9 : 0.6); if (first) this.rageT = T; else this.banner = { s: RGC.names[rst], t0: T, col: '#ff6a5a' }; }
     this._rescue(T, v); this._shrine(T); if (this.rageOn) this._storm(T, v);
     if (!this.rageOn && !this.rageSoon && this.t >= CFG.RAGE.at - 10) { this.rageSoon = true; this.banner = { s: '경고 — 10초 뒤 최후의 3분', t0: T, col: '#ff6a5a' }; }
-    var sh = this._shown(); if (sh !== this.shownWave && !this._rage()) { this.shownWave = sh; var pv = this._pace('rate'), wk = pv >= 1.1 ? 'hot' : pv <= 0.8 ? 'cool' : 'plain'; this.waveFx = { t0: T, n: sh, name: this._paceName(), k: wk }; D._play(WAVEFX[wk].snd, WAVEFX[wk].vol); }   /* 412번: 보이는 웨이브가 바뀌는 그 순간에 알린다 — 전에는 안쪽 난이도 칸(42초)이 바뀔 때만 살펴 최대 36초 늦었다. 414번: 작은 알림 줄 대신 큰 글자 + 가장자리 빛 + 소리(_drawWaveFx) */
+    var sh = this._shown(); if (sh !== this.shownWave && !this._rage()) { this.shownWave = sh; var pv = this._pace('rate'), wk = pv >= 1.1 ? 'hot' : pv <= 0.8 ? 'cool' : 'plain'; this.waveFx = { t0: T, n: sh, name: this._paceName(), tip: WAVEFX.tips[sh - 1] || '', k: wk }; D._play(WAVEFX[wk].snd, WAVEFX[wk].vol); }   /* 412번: 보이는 웨이브가 바뀌는 그 순간에 알린다 — 전에는 안쪽 난이도 칸(42초)이 바뀔 때만 살펴 최대 36초 늦었다. 414번: 작은 알림 줄 대신 큰 글자 + 가장자리 빛 + 소리(_drawWaveFx) */
     if (wv !== this.wave || !this.waveOn) { this.wave = wv; this.waveOn = true; var WV = WL[wv]; if (WL[wv + 1]) { this._need(WL[wv + 1].add); if (WL[wv + 1].boss) this._need([WL[wv + 1].boss[0]]); }
       if (WV.boss) this.banner = { s: D.types[WV.boss[0]].name + ' 등장', t0: T, col: '#ff8a7a' };   /* 알림은 보이는 웨이브가 바뀔 때와 우두머리가 나올 때만 (안쪽 난이도 칸은 10개) */
       if (WV.boss) { this._need([WV.boss[0]]); this.bossWait = WV.boss; } if (WV.mini) this._need([WV.mini[0]]); }
