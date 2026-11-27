@@ -312,7 +312,7 @@
         this.foes.forEach(function (u) { if (u.state === 'dead' || Math.hypot(u.x - h.x, (u.y - h.y) / 0.62) > FS.r) return; if (!u.boss) u.stunUntil = Math.max(u.stunUntil || 0, D.time + FS.v(fl2)); self2._hitFoe(u, fb2, -1); }); }
       return; }
     var sl = this._lvOf('sense'); if (sl && D.rng.next() < SK.sense.v(sl)) { this._text(h.x, h.y - h.headY - 8, '회피', '#9fe08a'); this.invUntil = D.time + CFG.HURT.inv; return; }
-    if (this.bossF) { var bd = Math.max(1, Math.ceil(h.maxHp * CFG.BOSSF.hit)), bsrc = this.bossF.src || '?'; this.bossF.src = null; this.bossF.hits[bsrc] = (this.bossF.hits[bsrc] || 0) + 1; this.stat.taken += Math.min(bd, h.hp); h.hp -= bd; h.hitT = D.time; this.hurtT = D.time; this.invUntil = Math.max(this.invUntil, D.time + CFG.BOSSF.inv);   /* 보스전: 무엇에 맞든 최대 체력의 hit, 맞은 뒤 inv 초 무적 */
+    if (this.bossF) { var bd = Math.max(1, Math.ceil(h.maxHp * CFG.BOSSF.hit * (this.bossF.hitK || 1))), bsrc = this.bossF.src || '?'; this.bossF.src = null; this.bossF.hitK = 0; this.bossF.hits[bsrc] = (this.bossF.hits[bsrc] || 0) + 1; this.stat.taken += Math.min(bd, h.hp); h.hp -= bd; h.hitT = D.time; this.hurtT = D.time; this.invUntil = Math.max(this.invUntil, D.time + CFG.BOSSF.inv);   /* 보스전: 무엇에 맞든 최대 체력의 hit, 맞은 뒤 inv 초 무적 */
       if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); } return; }
     dmg = Math.max(1, Math.round(dmg * CFG.FOE.dmg * this._atkK() * (CFG.WAVE.list[this.wave].dmg || 1) * this._pace('dmg') * (this.cls === 'shadow' ? CFG.BLADE.armor : this.cls && CLS[this.cls] && CLS[this.cls].armor ? CLS[this.cls].armor : 1) * (1 + CFG.DEF.lateK * Math.max(0, this.lv - CFG.DEF.lateLv)))); if (this._rage()) dmg = Math.max(dmg, Math.ceil(h.maxHp * CFG.RAGE.minS[this._rageSt()])); if (D.time < this.buff.guard) dmg = Math.max(1, Math.ceil(dmg * CFG.SHRINE.kinds.guard.take));   /* 수호의 성소 */ this.stat.taken += Math.min(dmg, h.hp); h.hp -= dmg; h.hitT = D.time; this.hurtT = D.time; var ssl = this.cls === 'shadow' ? this._lvOf('sidestep') : 0; this.invUntil = Math.max(this.invUntil, D.time + (ssl ? SK.sidestep.v(ssl) : CFG.HURT.inv)); if (ssl) { h.glowT0 = D.time; h.glowUntil = this.invUntil; this._text(h.x, h.y - h.headY - 12, '비켜 피하기', '#ffd24a'); } if (ssl && this.ghosts) { var sga = D.rng.next() < 0.5 ? 1 : -1; this.ghosts.push({ x: h.x + sga * 12, y: h.y, dir: h.dir, t0: D.time, until: D.time + 0.3 }); }   /* 비켜 피하기: 맞은 뒤 무적이 길어지고, 옆으로 비켜서는 잔상 */   // 웨이브 dmg = 그 단계 적 피해 배수 (1·2단계만)
     if (h.hp <= 0) { h.hp = 0; h.state = 'dead'; h.deadT = 0; h.fade = 0; this.stick = null; this.keys = {}; this.over = 'dead'; this.overT = 0; D._play(h.t.snd && h.t.snd.die, 0.8); }
@@ -403,6 +403,7 @@
       if (u.boss) { u.stunUntil = 0; u.rootUntil = 0; u.slowUntil = 0; }   // 우두머리는 멈춤·묶임·감속이 안 걸린다
       if (u.stunUntil > T || u.rootUntil > T) { u.state = 'idle'; continue; }   // 멈춤(교란)·묶임(발목 함정)
       if (u.rush) { u.x += u.rush.vx * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.y += u.rush.vy * dt * (u.slowUntil > T ? SK.mouse.slow : 1); u.state = 'move'; u.walkT += dt * 1.6;   // 돌진하는 떼: 도둑을 쫓지 않고 곧게 지나간다 (숨어 있어도 지나가다 닿으면 맞는다)
+        if (u.bug && u.bug.keep) { if (!u.bug.done && u.bug.r > 0 && !this.over && Math.hypot(dx, dy / 0.62) < u.bug.r) { u.bug.done = true; if (this.bossF) this.bossF.src = 'drake'; this._hitHero(1); } if (T > u.rush.until) { u.state = 'dead'; u.deadT = 9; u.fade = 1; } continue; }   /* 보스전의 드래곤: 무적 — 몸에 닿으면 한 번 맞는다 */
         if (u.bug) { if (d < u.bug.r && !this.over && !(u.bug.armAt > T)) { this._fx(u.x, u.y - 8, SK.explo.boom); D._play(5064, 0.3); this.bursts.push({ x: u.x, y: u.y - 6, t0: T, k: 'b', life: 0.35, r: u.bug.r + 14 }); if (this.bossF) this.bossF.src = 'bugs'; this._hitHero(1); u.state = 'dead'; u.deadT = 9; u.fade = 1; } else if (T > u.rush.until) { u.state = 'dead'; u.deadT = 9; u.fade = 1; } continue; }   /* 보스전의 곤충 (README 418): 닿으면 터진다 — 좀비처럼 */
         if (d < CFG.RUSH.touch && !this.over) { var RH = CFG.RUSH; if (!(T < this.rushSlowUntil)) this._text(h.x, h.y - h.headY - 30, '감속', '#ff9a8a'); this.rushSlowUntil = T + RH.slowSec;
           if (T >= (this.rushTick || 0) && !(this.invUntil - T > 0.3)) { this.rushTick = T + RH.tick; var rdm = Math.max(1, Math.round(h.maxHp * RH.dot * RH.tick)); this.stat.taken += Math.min(rdm, h.hp); h.hp -= rdm; h.hitT = T; this.hurtT = T;
@@ -1756,7 +1757,11 @@
     eye: q('bosseye', 78), near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 },
     warn: 2.8, dpad: { on: q('pad', 1), h: q('padh', 118), r: q('padr', 48), x: 20, fold: 22 },   /* 방향키 판 (README 424·425): on = 1 보스전이면 늘(기본) · -1 터치 기기에서만 · 0 끔, h = 판 높이, r = 방향키 반지름, x = 왼쪽 여백, fold = 접었을 때 남는 띠 높이 */ intro: 2.6, shift: 2.6, forms: [0.7, 0.4], start: q('bossform', 1), rage: 0.2, tiers: [0.85, 0.55],   /* forms = 이 비율에서 다음 형태로 · start = 시험용: 그 형태(1~3)부터 · tiers = 형태 1·2 안에서 단계가 오르는 체력 */ rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
     pad: { l: 10, r: 10, top: 112, bot: 6 }, home: 104, chest: 52, only: q('bosspat', 0),   /* only = 그 번호의 패턴만 되풀이 (1부 1~7, 2부 11~14) */
-    seqF: [['fan', 'ring', 'bugs', 'bolt'], ['spiral', 'wall', 'bugs', 'quake', 'orb']], seq2: ['tele', 'dash', 'bugs', 'turret', 'summon'], only1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb', 'bugs'], only2: ['tele', 'dash', 'turret', 'summon', 'bugs'],
+    seqF: [['fan', 'ring', 'bugs', 'bolt'], ['spiral', 'wall', 'bugs', 'quake', 'orb']], seq2: ['tele', 'dash', 'drake', 'bugs', 'turret', 'summon'], only1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb', 'bugs'], only2: ['tele', 'dash', 'turret', 'summon', 'bugs', 'drake', 'inferno'],
+    /* 드래곤 (README 426, 2026-11-27 사용자 "대마술사는 드래곤을 소환시켜서 변칙을" → "권장안대로 진행, 드래곤은 무적으로, 헷갈리지 않게 흑마술파 드래곤으로"): 흑마술파 드래곤(67, 검은 몸·보라 날개 — 무사의 투룡·5웨이브 우두머리의 붉은 드래곤과 구별). 맞지도 겨눠지지도 않는다.
+       drake = 횡단 브레스: 예고선(warn) → 드래곤이 전장을 가로지르며(speed) 불길 띠를 남긴다(fire 초) — 전장이 둘로 갈린다. n 번(광폭이면 +1), 둘째부터는 앞의 길과 엇갈리게.
+       inferno = 대브레스(광폭에 들어갈 때 한 번): 드래곤이 내려앉아 charge 초 숨을 모은 뒤 전장 전체를 태운다 — 보스 곁(near 안)만 안전, 밖에 있으면 한 대의 hitK 배 */
+    drake: { id: 67, warn: 1, speed: 430, fire: 3.4, n: 2, body: 34, rest: 0.9 }, inferno: { land: 0.9, charge: 4.5, hitK: 2.5, out: 0.9 },
     /* 곤충 사출 (README 418, 2026-11-27 사용자 "거울전쟁의 곤충류(개미 등)를 패턴으로 — 닿으면 폭발(좀비)" · "걔네들은 무적이어서 투사체와 같은 취급" · "탄막과 안 겹치도록, 난이도는 너무 어렵지 않게" · "사출되면 주인공을 따라가진 않고 퇴장"): 보스가 곤충을 부채꼴로 내보낸다 — 곧게 기어가 전장 밖으로 나가고, 맞지도 겨눠지지도 않는다. 이 패턴 동안에는 탄이 없다. kinds = [유닛, 걸음, 터지는 거리], every·n = 단계(1부 0~3 / 2부는 광폭이면 3, 아니면 1)별 값 */
     bugs: { kinds: [[68, 120, 20], [69, 150, 18], [70, 88, 26]], every: [1.5, 1.35, 1.2, 1.1], n: [4, 5, 5, 6], spread: 0.36, arm: 56 },
     dur: { fan: 7, ring: 8, bolt: 8, spiral: 9, wall: 9, quake: 7, orb: 7, turret: 7.5, summon: 5.5, bugs: 6.5 },
@@ -1805,8 +1810,8 @@
     else if (inBox(A.stop, x, y)) { this.bossAsk = null; if (D._raceSnd) D._raceSnd('click'); this.over = 'win'; this.overT = 0; this.stick = null; }
   };
   P._bossEnter = function () {
-    var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y, padOn = C.dpad.on === 1 || (C.dpad.on < 0 && (('ontouchstart' in root) || (root.navigator && root.navigator.maxTouchPoints > 0))); try { this.padFold = root.localStorage.getItem('mwPadFold') === '1'; } catch (eF) { this.padFold = false; } this.padH = padOn ? (this.padFold ? C.dpad.fold : C.dpad.h) : 0; this._layout(); this.padH = 0; if (!D.assets.img[BOSS_BG_KEY]) D.assets.load(BOSS_BG_KEY, BOSS_BG); bossType(D, 0); bossType(D, 1); bossType(D, 2); this._need([92, 93, BOSS_ID, 49, 50, 68, 69, 70]);
-    [5, 26, 27, 33, 35, 84].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
+    var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y, padOn = C.dpad.on === 1 || (C.dpad.on < 0 && (('ontouchstart' in root) || (root.navigator && root.navigator.maxTouchPoints > 0))); try { this.padFold = root.localStorage.getItem('mwPadFold') === '1'; } catch (eF) { this.padFold = false; } this.padH = padOn ? (this.padFold ? C.dpad.fold : C.dpad.h) : 0; this._layout(); this.padH = 0; if (!D.assets.img[BOSS_BG_KEY]) D.assets.load(BOSS_BG_KEY, BOSS_BG); bossType(D, 0); bossType(D, 1); bossType(D, 2); this._need([92, 93, BOSS_ID, 49, 50, 68, 69, 70, 67]);
+    [5, 26, 27, 32, 33, 35, 84].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var B = this.bossF = { st: 'intro', t0: T, in0: T, c: { x: h.x, y: h.y }, l: h.x + (C.pad.l - D.W / 2) / Z, r: h.x + (D.W / 2 - C.pad.r) / Z, top: h.y + (C.pad.top - hy) / Z, bot: h.y + (this.hudBot - C.pad.bot - hy) / Z,
       u: null, seq: 0, pat: null, next: 0, rings: [], line: null, hits: {}, n: 0, farT: 0, sh: { on: false, at: 0 }, log: [], logT: 0, cast: 0, near: 0, far: 0, pad: padOn, form: Math.max(0, Math.min(2, Math.round(C.start) - 1)) };
     B.hx = h.x; B.hy = B.top + C.home;
@@ -1834,6 +1839,29 @@
     var B = this.bossF, G = CFG.BOSSF.bugs, D = this.D, T = D.time, h = this.hero, u = B.u, n = this._bEvery(p, 'a', G.every[k], dt), i;
     while (n-- > 0) { var kd = G.kinds[(p.w = (p.w || 0) + 1) % G.kinds.length], cnt = G.n[k] - (kd[0] === 70 ? 1 : 0), a0 = Math.atan2(h.y - u.y, h.x - u.x) + (D.rng.next() - 0.5) * 0.2; if (!this._has(kd[0])) continue; this._bCast(0.45, 5018);
       for (i = 0; i < cnt; i++) { var a = a0 + (i - (cnt - 1) / 2) * G.spread, ca = Math.cos(a), sa = Math.sin(a), b = this._unit(kd[0], 1, u.x + ca * 18, u.y + sa * 12); b.life = b.life0 = 1; b.boom = null; b.act = null; b.noDrop = true; b.rush = { vx: ca * kd[1], vy: sa * kd[1], until: T + 12 }; b.bug = { r: kd[2], armAt: T + G.arm / kd[1] }; b.state = 'move'; b.cd = 0; D._faceVec(b, ca, sa, true); this.foes.push(b); } }
+  };
+  P._bossDragon = function (x, y, vx, vy, until, r) { var D = this.D, G = CFG.BOSSF.drake, u = this._unit(G.id, 1, x, y); u.life = u.life0 = 1; u.boom = null; u.act = null; u.noDrop = true; u.rush = { vx: vx, vy: vy, until: until }; u.bug = { keep: true, r: r, armAt: 0 }; u.state = 'move'; u.cd = 0; D._faceVec(u, vx || 0, vy || 1, true); this.foes.push(u); return u; };
+  P._bossDrake = function (p, t, dt, e) {
+    var B = this.bossF, C = CFG.BOSSF, G = C.drake, I = C.inferno, D = this.D, T = D.time, rng = D.rng, h = this.hero, u = B.u, i;
+    if (p.k === 'drake') {
+      if (!this._has(G.id)) { p.done = true; return; }
+      if (!p.ph) { p.ph = 'aim'; p.i = 0; p.at = 0; this._bCast(0.8, 5018); }
+      if (p.ph === 'aim') { if (!p.at) { var a = p.i === 0 ? (rng.next() < 0.5 ? 0 : 3.1416) + (rng.next() - 0.5) * 0.5 : p.a + 1.5708 + (rng.next() - 0.5) * 0.5, ca = Math.cos(a), sa = Math.sin(a), L = 520, mx = Math.max(B.l + 40, Math.min(B.r - 40, h.x)), my = Math.max(B.top + 60, Math.min(B.bot - 30, h.y)); p.a = a;   /* 주인공이 서 있는 곳을 지나는 길 — 첫 번은 가로에 가깝게, 다음은 그 길과 엇갈리게 */
+          p.x0 = mx - ca * L; p.y0 = my - sa * L; p.x1 = mx + ca * L; p.y1 = my + sa * L; p.at = T + G.warn * (e ? 0.8 : 1); B.line = { x0: p.x0, y0: p.y0, x1: p.x1, y1: p.y1, t0: T, at: p.at }; }
+        if (T >= p.at) { p.ph = 'go'; B.line = null; var ca2 = Math.cos(p.a), sa2 = Math.sin(p.a); p.dr = this._bossDragon(p.x0, p.y0, ca2 * G.speed, sa2 * G.speed, T + 1040 / G.speed, G.body); p.drop = 0; p.lx = p.x0; p.ly = p.y0; D._play(5049, 0.6); } }
+      else if (p.ph === 'go') { var dr = p.dr; if (!dr || dr.state === 'dead') { p.ph = 'rest'; p.at = T + G.rest; }
+        else { p.drop += Math.hypot(dr.x - p.lx, dr.y - p.ly); p.lx = dr.x; p.ly = dr.y; while (p.drop >= 20) { p.drop -= 20; if (dr.x > B.l && dr.x < B.r && dr.y > B.top && dr.y < B.bot) this._bShot(dr.x, dr.y - 4, 0, 0, 'flame', { life: G.fire, armAt: T + 0.25, pat: 'drake', big: 1.8 }); } } }
+      else if (T >= p.at) { if (++p.i >= G.n + e) p.done = true; else { p.ph = 'aim'; p.at = 0; } }
+      return; }
+    /* 대브레스 */
+    if (!p.ph) { p.ph = 'land'; if (u.x < -9000) { u.x = B.c.x; u.y = B.top + (B.bot - B.top) * 0.45; } u.ghostA = null; this._bossClear(); B.line = null; this.banner = { s: '대브레스 — 보스 곁으로!', t0: T, col: '#ff6a5a' }; D._play(5064, 0.9);
+      if (this._has(G.id)) { p.dr = this._bossDragon(B.c.x, B.top + 6, 0, 0, T + I.land + I.charge + I.out + 0.5, 0); p.dr.ghostA = 0; } }
+    if (p.dr) { p.dr.ghostA = t < I.land ? t / I.land : t > I.land + I.charge ? Math.max(0, 1 - (t - I.land - I.charge) / I.out) : 1; D._faceVec(p.dr, 0, 1, true); }
+    p.k2 = Math.max(0, Math.min(1, (t - I.land) / I.charge));   /* 바닥이 달아오르는 정도 (_bossGround) */
+    if (!p.fired && t >= I.land + I.charge) { p.fired = true; this.flashT = T; this.shakeUntil = T + 0.7; this.shakeLen = 0.7; this.shakeAmp = 7; D._play(5050, 0.9);
+      for (i = 0; i < 9; i++) this._fx(B.l + 40 + (i % 3) * ((B.r - B.l - 80) / 2), B.top + 60 + Math.floor(i / 3) * ((B.bot - B.top - 90) / 2), 27);
+      if (Math.hypot(h.x - u.x, (h.y - u.y) / 0.62) > C.near) { B.src = 'inferno'; B.hitK = I.hitK; this._hitHero(1); } }
+    if (t >= I.land + I.charge + I.out) p.done = true;
   };
   /* 1부 패턴 — p = { k, t0, tm, … }, t = 패턴이 시작된 뒤 흐른 시간, k = 단계 0~3 (체력 85·70·60% 에서 오른다) */
   P._bossP1 = function (p, t, dt, k) {
@@ -1863,6 +1891,7 @@
   P._bossP2 = function (p, t, dt, e) {
     var B = this.bossF, C = CFG.BOSSF, D = this.D, T = D.time, rng = D.rng, h = this.hero, u = B.u, ox = u.x, oy = u.y - C.chest, aim = Math.atan2(h.y - h.headY * 0.5 - oy, h.x - ox), n, i, cl = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
     if (p.k === 'bugs') { this._bossBugs(p, dt, e ? 3 : 1); if (t >= C.dur.bugs) p.done = true; return; }   /* 곤충 사출: 이 동안에는 광폭의 낙뢰도 쉰다 */
+    if (p.k === 'drake' || p.k === 'inferno') { this._bossDrake(p, t, dt, e); return; }   /* 드래곤: 탄·광폭의 낙뢰는 쉰다 */
     if (p.k === 'tele') {   /* 순간이동 강타 (텔레포테이션 + 어쓰 퀘이크): 사라짐 → 주인공 자리에 예고 원 → 나타나며 터지고 둘레로 탄 */
       if (!p.ph) { p.ph = 'out'; p.at = T + 0.35; p.i = 0; D._play(5018, 0.5); }
       if (p.ph === 'out') { u.ghostA = Math.max(0, (p.at - T) / 0.35); if (T >= p.at) { p.ph = 'wait'; p.x = cl(h.x, B.l + 30, B.r - 30); p.y = cl(h.y, B.top + 50, B.bot - 10); p.at = T + 0.85; this._bMark(p.x, p.y, 62, 0.85, 33, 'tele'); u.x = -9999; } }
@@ -1900,7 +1929,7 @@
       if (s.x < B.l - 30 || s.x > B.r + 30 || s.y < B.top - 60 || s.y > B.bot + 40) { s.dead = true; continue; }
       if (s.split && Math.hypot(s.x - s.x0, s.y - s.y0) >= s.split.d) { var a0 = Math.atan2(s.vy, s.vx), sv = Math.hypot(s.vx, s.vy), j; s.dead = true; for (j = 0; j < s.split.n; j++) add.push([s.x, s.y, a0 + (j - (s.split.n - 1) / 2) * 2 * s.split.da, sv, s.bk, s.pat]); } }
     for (i = 0; i < add.length; i++) this._bShot(add[i][0], add[i][1], add[i][2], add[i][3], add[i][4], { pat: add[i][5], armAt: 0 });
-    for (i = 0; i < this.foes.length; i++) { var bg = this.foes[i]; if (bg.bug && bg.state !== 'dead' && (bg.x < B.l - 30 || bg.x > B.r + 30 || bg.y < B.top - 50 || bg.y > B.bot + 40)) { bg.state = 'dead'; bg.deadT = 9; bg.fade = 1; } }   /* 곤충: 전장 밖으로 나가면 퇴장 */
+    for (i = 0; i < this.foes.length; i++) { var bg = this.foes[i]; if (bg.bug && !bg.bug.keep && bg.state !== 'dead' && (bg.x < B.l - 30 || bg.x > B.r + 30 || bg.y < B.top - 50 || bg.y > B.bot + 40)) { bg.state = 'dead'; bg.deadT = 9; bg.fade = 1; } }   /* 곤충: 전장 밖으로 나가면 퇴장 */
     /* 충격파 고리 */
     for (i = B.rings.length - 1; i >= 0; i--) { var rg = B.rings[i]; rg.r += rg.v * dt; if (rg.r > rg.max) { B.rings.splice(i, 1); continue; }
       if (!rg.hit) { var rx = h.x - rg.x, ry = (h.y - rg.y) / 0.62, rr = Math.hypot(rx, ry), ra = Math.atan2(ry, rx), open = rg.g.some(function (g) { return Math.abs(Math.atan2(Math.sin(ra - g), Math.cos(ra - g))) < rg.gw; }); if (Math.abs(rr - rg.r) < 9 && !open) { rg.hit = true; B.src = 'quake'; this._hitHero(1); } } }
@@ -1925,7 +1954,7 @@
     if (B.st === 'p1' && !(B.pat && B.pat.k === 'bugs')) { if (d > C.far) { B.farT += dt; if (B.farT >= C.farSec) { B.farT = C.farSec - 1.5; this._bMark(h.x, h.y, 40, 0.7, 84, 'snipe'); } } else B.farT = Math.max(0, B.farT - dt); }
     /* 패턴 차례 */
     var p = B.pat, k = B.form === 0 ? (hpk > C.tiers[0] ? 0 : 1) : (hpk > C.tiers[1] ? 2 : 3), e = hpk <= C.rage ? 1 : 0, ch = 26 * BFORM[B.form].k; B.chest = ch;
-    if (e && !B.raged) { B.raged = true; this.banner = { s: '보스 광폭', t0: T, col: '#ff4a3a' }; D._play(5064, 0.8); }
+    if (e && !B.raged) { B.raged = true; this.banner = { s: '보스 광폭', t0: T, col: '#ff4a3a' }; D._play(5064, 0.8); if (B.st === 'p2') { p = B.pat = { k: 'inferno', t0: T, tm: {} }; B.line = null; } }   /* 광폭에 들어가는 순간: 하던 패턴을 끊고 대브레스 */
     if (!p && T >= B.next) { var seq = B.st === 'p1' ? C.seqF[B.form] : C.seq2, on = C.only, key = on ? (on > 10 ? C.only2[(on - 11) % C.only2.length] : C.only1[(on - 1) % C.only1.length]) : seq[B.seq % seq.length]; if (on && (on > 10) !== (B.st === 'p2')) key = seq[B.seq % seq.length]; B.seq++; p = B.pat = { k: key, t0: T, tm: {} }; }
     if (p) { var pt = T - p.t0; if (B.st === 'p1') { this._bossP1(p, pt, dt, k); if (pt >= C.dur[p.k]) p.done = true; } else this._bossP2(p, pt, dt, e);
       if (p.done) { B.pat = null; B.line = null; u.ghostA = null; B.next = T + (B.st === 'p1' ? C.rest[k] : C.rest2[e]); } }
@@ -1941,6 +1970,8 @@
     edge(B.l - 20, B.top - 80, B.l + 26, B.bot + 60, B.l - 4, 0, B.l + 26, 0); edge(B.r - 26, B.top - 80, B.r + 20, B.bot + 60, B.r + 4, 0, B.r - 26, 0); edge(B.l - 20, B.bot - 20, B.r + 20, B.bot + 60, 0, B.bot + 8, 0, B.bot - 20); ctx.restore();
     if (u && u.state !== 'dead' && u.x > -9000 && (B.st === 'p1' || B.st === 'p2')) { ctx.save(); ctx.translate(u.x, u.y); ctx.scale(1, 0.62); ctx.strokeStyle = 'rgba(160,210,255,' + (B.sh.on ? 0.5 : 0.2) + ')'; ctx.lineWidth = B.sh.on ? 2 : 1; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.arc(0, 0, C.near, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }   /* 근접 구역: 이 안에서 준 피해는 실드에 깎이지 않는다 */
     for (i = 0; i < this.foes.length; i++) { var bq = this.foes[i]; if (!bq.bug || bq.state === 'dead') continue; var ba = bq.bug.armAt > T; ctx.strokeStyle = ba ? 'rgba(255,214,110,.45)' : Math.floor(T * 10) % 2 ? 'rgba(255,90,50,.95)' : 'rgba(255,200,90,.9)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(bq.x, bq.y, bq.bug.r * 0.7, bq.bug.r * 0.35, 0, 0, 6.2832); ctx.stroke(); }   /* 곤충의 발밑 고리: 터지는 놈이라는 표시 (폭탄 개미와 같은 모양) — 아직 판정이 없으면 옅게 */
+    var IP = B.pat && B.pat.k === 'inferno' ? B.pat : null; if (IP && u && !IP.fired) { var ik = IP.k2 || 0, pu = 0.5 + 0.5 * Math.sin(T * (6 + 10 * ik)); ctx.save(); ctx.beginPath(); ctx.rect(B.l - 20, B.top - 80, B.r - B.l + 40, B.bot - B.top + 140); ctx.ellipse(u.x, u.y, C.near, C.near * 0.62, 0, 0, 6.2832); ctx.fillStyle = 'rgba(255,50,15,' + (0.08 + 0.34 * ik + 0.06 * pu * ik).toFixed(3) + ')'; ctx.fill('evenodd');   /* 대브레스: 전장이 붉게 달아오른다 — 보스 곁의 고리 안만 빼고 */
+      ctx.strokeStyle = 'rgba(150,235,255,' + (0.6 + 0.4 * pu).toFixed(3) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(u.x, u.y, C.near, C.near * 0.62, 0, 0, 6.2832); ctx.stroke(); ctx.strokeStyle = 'rgba(255,90,40,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(u.x, u.y, C.near + (1 - ik) * 260, (C.near + (1 - ik) * 260) * 0.62, 0, 0, 6.2832); ctx.stroke(); ctx.restore(); }   /* 좁혀 오는 붉은 고리 = 남은 시간 */
     var L = B.line; if (L) { var lk = Math.max(0, Math.min(1, (T - L.t0) / (L.at - L.t0))); ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,60,40,' + (0.14 + 0.2 * lk).toFixed(3) + ')'; ctx.lineWidth = 44; ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke(); ctx.strokeStyle = 'rgba(255,120,90,' + (0.5 + 0.4 * lk).toFixed(3) + ')'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -T * 60; ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke(); ctx.restore(); }
     for (i = 0; i < B.rings.length; i++) { var rg = B.rings[i], ra = Math.max(0, 1 - rg.r / rg.max), a0 = rg.g[0] + rg.gw, a1 = rg.g[1] - rg.gw, a2 = rg.g[1] + rg.gw, a3 = rg.g[0] + 6.2832 - rg.gw; ctx.save(); ctx.translate(rg.x, rg.y); ctx.scale(1, 0.62); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       ctx.strokeStyle = 'rgba(255,140,50,' + (0.35 + 0.4 * ra).toFixed(3) + ')'; ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(0, 0, rg.r, a0, a1); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, rg.r, a2, a3); ctx.stroke();
@@ -1963,7 +1994,7 @@
   };
   P._bossShot = function (s) {
     var D = this.D, ctx = D.ctx, T = D.time, c = bSprite(s.bk), armed = !(s.armAt > T);
-    ctx.save(); ctx.translate(s.x, s.y); if (s.bk === 'flame') { ctx.globalAlpha = Math.min(1, (s.t0 + s.life - T) / 0.5) * (0.75 + 0.25 * Math.sin(T * 18 + s.x)); ctx.drawImage(c, -28, -22); }
+    ctx.save(); ctx.translate(s.x, s.y); if (s.bk === 'flame') { ctx.globalAlpha = Math.min(1, (s.t0 + s.life - T) / 0.5) * (0.75 + 0.25 * Math.sin(T * 18 + s.x)); if (s.big) ctx.scale(s.big, s.big); ctx.drawImage(c, -28, -22); }   /* big = 드래곤이 남긴 불길: 크게 */
     else { ctx.rotate(Math.atan2(s.vy, s.vx)); ctx.globalAlpha = armed ? 1 : 0.4; ctx.drawImage(c, -38, -16); }   /* 아직 판정이 없는 탄(태풍의 눈)은 옅게 */
     ctx.restore();
   };
