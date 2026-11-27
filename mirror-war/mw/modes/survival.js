@@ -145,13 +145,13 @@
     this.cam = { x: 0, y: 0 };
     this.hero.powMul = CFG.ATK.dmg; this.atkCd = 0.4; this.hurtT = -9; this.invUntil = 0;
     this.foes = []; this.shots = []; this.effects = []; this.texts = []; this.nums = []; this.bursts = []; this.feverUntil = 0; this.feverT0 = 0; this.ringT = -9; this.aimUntil = 0; this.crit = CFG.CRIT.p; this.spawnAcc = 0; this.wave = 0; this.waveOn = false; this.bossWait = null; this.miniDone = -1; this.miniWave = -1; this.miniN = 0; this.rushIn = null; this.rushWarn = null; this.siegeIn = null; this.siegeWarn = null; this.supIn = {}; this.magicIn = null; this.barr = null; this.barrNext = 0; this.rageSt = -1; this.rageOn = false; this.rageSoon = false; this.rageT = -99; this.shownWave = 0; var SP0 = CFG.SCALE.pool[Math.floor(this.D.rng.next() * CFG.SCALE.pool.length)]; this.scaleK = CFG.SCALE.k >= 0 ? CFG.SCALE.k : SP0[0]; this.scaleName = CFG.SCALE.k >= 0 ? '' : SP0[1]; this.shrine = null; this.shrineNext = CFG.SHRINE.from; this.shrineLast = null; this.buff = { war: 0, magic: 0, guard: 0 }; this.storm = null; this.rescueT = 0; this.lastV = null; this.marks = []; this.chillUntil = 0; this.banner = null; this.stat = { dealt: 0, maxHit: 0, taken: 0, crit: 0, dbl: 0, boss: 0 }; this.over = null; this.overT = 0; this.dieSndT = -9;
-    this.bossF = null; this.bossAsk = null; this.bossPre = false; this.cleared = false; this.bossKill = false; this._growReset(); if (BOSSQ) this._bossPrep();
+    this.bossF = null; this.bossAsk = null; this.bossPre = false; this.padH = 0; this.padV = null; this.padPt = null; this.padI = -1; this.cleared = false; this.bossKill = false; this._growReset(); if (BOSSQ) this._bossPrep();
     var n0 = q('n', 0); for (var i = 0; i < n0; i++) this._spawn();   // ?n=250: 시작하자마자 그만큼 (성능 시험)
   };
 
   /* ───────── 매 프레임 (D._frame 이 부른다) ───────── */
   P.frame = function (dt) {
-    var D = this.D;
+    var D = this.D; if (this.over && this.padH) { this.padH = 0; this.padV = null; this.padPt = null; }   /* 결과 화면에는 방향키 판이 없다 */
     if (D.time - (D._groundAt || 0) > 0.5 && D.terrain) D._makeGround();   // 아이폰이 보조 캔버스를 비우는 문제의 복구 (defense.js _frame 과 같은 이유)
     var TSv = this.devSpeed != null ? this.devSpeed : CFG.TS, steps = TSv > 0 ? Math.max(1, Math.round(TSv)) : 0, dt0 = dt; dt = steps ? dt0 * TSv / steps : 0;   /* 빠르기: ?ts= 또는 개발 모드의 버튼(devSpeed) — 1 보다 느리면 한 걸음을 짧게, 빠르면 여러 걸음. 0 = 멈춤 */
     for (var k = 0; k < steps; k++) {
@@ -170,6 +170,7 @@
   P._moveVec = function () {
     var K = this.keys, x = (K.KeyD || K.ArrowRight ? 1 : 0) - (K.KeyA || K.ArrowLeft ? 1 : 0), y = (K.KeyS || K.ArrowDown ? 1 : 0) - (K.KeyW || K.ArrowUp ? 1 : 0);
     if (x || y) { var d = Math.hypot(x, y); return [x / d, y / d]; }
+    if (this.padV) return this.padV;   /* 보스전의 방향키 */
     var S = this.stick; if (!S) return [0, 0];
     var dx = S.x - S.x0, dy = S.y - S.y0, m = Math.hypot(dx, dy); if (m < CFG.STICK.dead) return [0, 0];
     var k = Math.min(1, m / CFG.STICK.r); return [dx / m * k, dy / m * k];
@@ -559,6 +560,7 @@
     if (this.info) this._drawInfo();
     if (D.time - this.rageT < CFG.RAGE.show) this._drawRage();
     if (this.charPick) this._drawChars(); else if (this.invite) this._drawInvite(); else if (this.guide) this._drawGuide();
+    if (this.padH > 0 && !this.over) this._drawPad();
     if (this.bossAsk && !this.over) this._drawBossAsk();
     if (this.menu) this._drawMenu();
   };
@@ -757,7 +759,7 @@
   };
   /* HUD: 위 = 경험치 막대(폭 전체) + [남은 시간 · 처치 수 · 설정], 아래 = 가진 스킬 칸 6 + 축지법 칸. 가운데는 비운다 (전장을 가리지 않게) */
   P._layout = function () {
-    var D = this.D, W = D.W, H = D.H, S = CFG.SAFE, sw = 34, gap = 4, by = H - S.bottom - sw - 4, i;
+    var D = this.D, W = D.W, H = D.H - (this.padH || 0), S = CFG.SAFE, sw = 34, gap = 4, by = H - (this.padH ? 6 : S.bottom) - sw - 4, i;   /* 보스전의 방향키 판(padH)이 올라오면 스킬 줄·단추가 그만큼 위로 */
     this.xpBox = { x: 8, y: S.top, w: W - 16, h: 7 };
     this.menuBtn = { x: W - 8 - 34, y: S.top + 12, w: 34, h: 28 };
     this.slots = []; for (i = 0; i < CFG.SLOTS; i++) this.slots.push({ x: 8 + i * (sw + gap), y: by, w: sw, h: sw });
@@ -864,14 +866,15 @@
       if (self.aim2 && y < self.hudBot) { self.aim2 = 0; self.lastDown = null; self._ult2Fire(x - D.W / 2, y - D.H * CFG.HERO_Y); return; }   /* 402번(2026-11-26 사용자 "투룡 선택 후 지정 시에 숨기나 즉사가 발동되는 버그"): 투룡 조준 중의 누르기는 방향 지정일 뿐 — 숨어 있을 때 적을 누르면 아래의 '숨은 채 적 누르기 = 기습'이 먼저 걸려, 방향 대신 그 적에게 기습(순간 이동 + 일격)이 나가고 조준은 남아 있었다 */
       if (self.hide && self._hideTap(x, y)) return;   // 그림자 숨기: 적을 누르면 기습 (적이 아닌 곳은 평소처럼 조이스틱)
       var pk = self.over ? null : self._slotAt(x, y); if (pk) { self.press = { key: pk, t0: Date.now(), id: e.pointerId }; return; }   // 스킬 칸: 떼면 누르기(_slotTap), 0.35초 넘게 누르고 있으면 설명(frame)
+      if (self.padH > 0 && self.bossF) { if (y >= D.H - self.padH) { self.padPt = { id: e.pointerId }; self._padSet(x, y); try { cv.setPointerCapture(e.pointerId); } catch (err2) {} } else if (self.aim2 && y < self.hudBot) { self.aim2 = 0; self._ult2Fire(x - D.W / 2, y - D.H * CFG.HERO_Y); } return; }   /* 보스전: 이동은 아래 방향키 판으로만 — 전장을 눌러 끄는 조작은 쉰다 */
       if (y >= self.hudBot) return;                          // 스킬 줄
       if (self.aim2) { self.aim2 = 0; self.lastDown = null; self._ult2Fire(x - D.W / 2, y - D.H * CFG.HERO_Y); return; }   /* 투룡 조준 중: 누른 쪽으로 바로 시전 — 조이스틱·축지법은 시작하지 않는다 (367번, 사용자 "방향만 정하면 돼서 클릭한 방향으로 이동하지 않고 바로 스킬을 날린다") */
       var now = Date.now(), LD = self.lastDown; self.lastDown = { t: now, x: x, y: y };
       if (LD && now - LD.t < 300 && Math.hypot(x - LD.x, y - LD.y) < 44) { self.lastDown = null; self._blink(x - D.W / 2, y - D.H * CFG.HERO_Y); return; }   // 두 번 누르기 = 그쪽으로 축지법
       self.stick = { id: e.pointerId, x0: x, y0: y, x: x, y: y }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} });
-    cv.addEventListener('pointermove', function (e) { var S = self.stick; if (!on() || !S || S.id !== e.pointerId) return; var p = D._pos(e); S.x = p[0]; S.y = p[1];
+    cv.addEventListener('pointermove', function (e) { if (on() && self.padPt && self.padPt.id === e.pointerId) { var pp = D._pos(e); self._padSet(pp[0], pp[1]); return; } var S = self.stick; if (!on() || !S || S.id !== e.pointerId) return; var p = D._pos(e); S.x = p[0]; S.y = p[1];
       var dx = S.x - S.x0, dy = S.y - S.y0, m = Math.hypot(dx, dy), R = CFG.STICK.r * 1.6; if (m > R) { S.x0 = S.x - dx / m * R; S.y0 = S.y - dy / m * R; } });   // 멀리 끌면 중심이 따라온다 (방향을 바꾸려고 손가락을 한참 되돌리지 않게)
-    var end = function (e) { var S = self.stick; if (S && S.id === e.pointerId) self.stick = null;
+    var end = function (e) { if (self.padPt && self.padPt.id === e.pointerId) { self.padPt = null; self.padV = null; self.padI = -1; } var S = self.stick; if (S && S.id === e.pointerId) self.stick = null;
       var SP = self.sharePend; if (SP && SP.id === e.pointerId) { self.sharePend = null; if (e.type === 'pointerup' && on() && self.over) { var sp = D._pos(e); if (inBox(SP.b, sp[0], sp[1])) self._share(); } }
       var PR = self.press; if (PR && PR.id === e.pointerId) { self.press = null; if (e.type === 'pointerup' && on() && !self.cards && !self.menu && !self.over) self._slotTap(PR.key); } };
     cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
@@ -1751,7 +1754,7 @@
   var bossType = function (D, fi) { var F = BFORM[fi == null ? 2 : fi]; if (D.types[F.id]) return D.types[F.id]; var B = D.types[F.src], T = Object.create(Object.getPrototypeOf(B)); Object.keys(B).forEach(function (k) { T[k] = B[k]; }); T.id = F.id; T.name = '보스'; T.img = 'u/' + F.id + '.png'; T.frames = F.fr; T.fr = F.fr; if (T.h) T.h = Math.round(T.h * F.k); if (T.alt) T.alt = Math.round(T.alt * F.k); D.types[F.id] = T; return T; };
   CFG.BOSSF = { on: q('bossf', 1), lv: q('bosslv', 55), hp: q('bosshp', 0), hpK: q('bosshpk', 2600), hpMin: 60000,   /* on: 421번부터 기본으로 켬 — 10:00 에 보스전으로 이어진다(?bossf=0 이면 예전처럼 10:00 승리). 체력 = 주인공의 기본 공격값(_base) × hpK (레벨 55 대도 ≈ 100 → 26만 — 봇이 3~4분에 잡던 값), ?bosshp= 를 주면 그 값 */ bars: 12, hit: q('bosshit', 0.18), inv: q('bossinv', 0.8), cap: q('bosscap', 320), maxHit: 0.03,
     eye: q('bosseye', 78), near: q('bossnear', 150), far: q('bossfar', 300), farSec: 3, shield: { first: 12, on: 10, off: 15, k: 0.5 },
-    warn: 2.8, intro: 2.6, shift: 2.6, forms: [0.7, 0.4], start: q('bossform', 1), rage: 0.2, tiers: [0.85, 0.55],   /* forms = 이 비율에서 다음 형태로 · start = 시험용: 그 형태(1~3)부터 · tiers = 형태 1·2 안에서 단계가 오르는 체력 */ rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
+    warn: 2.8, dpad: { on: q('pad', -1), h: q('padh', 118), r: q('padr', 48), x: 20 },   /* 방향키 판 (README 424): on = -1 터치 기기에서만 · 1 늘 · 0 끔, h = 판 높이, r = 방향키 반지름, x = 왼쪽 여백 */ intro: 2.6, shift: 2.6, forms: [0.7, 0.4], start: q('bossform', 1), rage: 0.2, tiers: [0.85, 0.55],   /* forms = 이 비율에서 다음 형태로 · start = 시험용: 그 형태(1~3)부터 · tiers = 형태 1·2 안에서 단계가 오르는 체력 */ rest: [1.5, 1.4, 1.2, 1.0], rest2: [2.3, 1.4],
     pad: { l: 10, r: 10, top: 112, bot: 6 }, home: 104, chest: 52, only: q('bosspat', 0),   /* only = 그 번호의 패턴만 되풀이 (1부 1~7, 2부 11~14) */
     seqF: [['fan', 'ring', 'bugs', 'bolt'], ['spiral', 'wall', 'bugs', 'quake', 'orb']], seq2: ['tele', 'dash', 'bugs', 'turret', 'summon'], only1: ['fan', 'ring', 'bolt', 'spiral', 'wall', 'quake', 'orb', 'bugs'], only2: ['tele', 'dash', 'turret', 'summon', 'bugs'],
     /* 곤충 사출 (README 418, 2026-11-27 사용자 "거울전쟁의 곤충류(개미 등)를 패턴으로 — 닿으면 폭발(좀비)" · "걔네들은 무적이어서 투사체와 같은 취급" · "탄막과 안 겹치도록, 난이도는 너무 어렵지 않게" · "사출되면 주인공을 따라가진 않고 퇴장"): 보스가 곤충을 부채꼴로 내보낸다 — 곧게 기어가 전장 밖으로 나가고, 맞지도 겨눠지지도 않는다. 이 패턴 동안에는 탄이 없다. kinds = [유닛, 걸음, 터지는 거리], every·n = 단계(1부 0~3 / 2부는 광폭이면 3, 아니면 1)별 값 */
@@ -1802,10 +1805,10 @@
     else if (inBox(A.stop, x, y)) { this.bossAsk = null; if (D._raceSnd) D._raceSnd('click'); this.over = 'win'; this.overT = 0; this.stick = null; }
   };
   P._bossEnter = function () {
-    var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y; this._layout(); if (!D.assets.img[BOSS_BG_KEY]) D.assets.load(BOSS_BG_KEY, BOSS_BG); bossType(D, 0); bossType(D, 1); bossType(D, 2); this._need([92, 93, BOSS_ID, 49, 50, 68, 69, 70]);
+    var D = this.D, T = D.time, h = this.hero, Z = CFG.ZOOM, C = CFG.BOSSF, hy = D.H * CFG.HERO_Y, padOn = C.dpad.on === 1 || (C.dpad.on < 0 && (('ontouchstart' in root) || (root.navigator && root.navigator.maxTouchPoints > 0))); this.padH = padOn ? C.dpad.h : 0; this._layout(); this.padH = 0; this.stick = null; if (!D.assets.img[BOSS_BG_KEY]) D.assets.load(BOSS_BG_KEY, BOSS_BG); bossType(D, 0); bossType(D, 1); bossType(D, 2); this._need([92, 93, BOSS_ID, 49, 50, 68, 69, 70]);
     [5, 26, 27, 33, 35, 84].forEach(function (a) { var d = D.data.fx.arms[a]; (d && d.sheets || []).forEach(function (n) { D._loadFxSheet(n); }); });
     var B = this.bossF = { st: 'intro', t0: T, in0: T, c: { x: h.x, y: h.y }, l: h.x + (C.pad.l - D.W / 2) / Z, r: h.x + (D.W / 2 - C.pad.r) / Z, top: h.y + (C.pad.top - hy) / Z, bot: h.y + (this.hudBot - C.pad.bot - hy) / Z,
-      u: null, seq: 0, pat: null, next: 0, rings: [], line: null, hits: {}, n: 0, farT: 0, sh: { on: false, at: 0 }, log: [], logT: 0, cast: 0, near: 0, far: 0, form: Math.max(0, Math.min(2, Math.round(C.start) - 1)) };
+      u: null, seq: 0, pat: null, next: 0, rings: [], line: null, hits: {}, n: 0, farT: 0, sh: { on: false, at: 0 }, log: [], logT: 0, cast: 0, near: 0, far: 0, pad: padOn, padK: 0, form: Math.max(0, Math.min(2, Math.round(C.start) - 1)) };
     B.hx = h.x; B.hy = B.top + C.home;
     this.foes.forEach(function (u) { if (u.state !== 'dead') { u.state = 'dead'; u.deadT = 0; u.fade = 0; } }); this.shots = this.shots.filter(function (s) { return !s.foe; });
     this.marks = []; this.barr = null; this.shrine = null; this.rushWarn = null; this.siegeWarn = null; this.storm = null; this.cleared = true; this.wave = CFG.WAVE.list.length - 1; this.waveOn = true;
@@ -1889,6 +1892,7 @@
   };
   P._bossStep = function (dt) {
     var B = this.bossF, C = CFG.BOSSF, D = this.D, T = D.time, R = D.rules, h = this.hero, u = B.u, i, s, self = this;
+    if (B.pad) { B.padK = Math.max(0, Math.min(1, B.padK + (B.st === 'dead' ? -dt : dt) / 0.5)); var pe = 1 - (1 - B.padK) * (1 - B.padK); this.padH = Math.round(C.dpad.h * pe); if (!this.padH) { this.padV = null; this.padPt = null; } }   /* 방향키 판: WARNING 동안 아래에서 밀려 올라오고, 보스가 쓰러지면 내려간다 */
     /* 탄: 전장 밖으로 나가면 사라진다 · 분열 · 개수 세기 */
     B.n = 0; var add = [];
     for (i = 0; i < this.shots.length; i++) { s = this.shots[i]; if (!s.foe || s.dead) continue; B.n++; if (!s.bk && !s.bfx) continue;
@@ -1961,6 +1965,19 @@
     ctx.save(); ctx.translate(s.x, s.y); if (s.bk === 'flame') { ctx.globalAlpha = Math.min(1, (s.t0 + s.life - T) / 0.5) * (0.75 + 0.25 * Math.sin(T * 18 + s.x)); ctx.drawImage(c, -28, -22); }
     else { ctx.rotate(Math.atan2(s.vy, s.vx)); ctx.globalAlpha = armed ? 1 : 0.4; ctx.drawImage(c, -38, -16); }   /* 아직 판정이 없는 탄(태풍의 눈)은 옅게 */
     ctx.restore();
+  };
+  /* 보스전의 방향키 판 (README 424, 2026-11-27 사용자 "손가락에 화면이 가려서 힘든데 차라리 8방향 소프트웨어 버튼을 — 바텀 영역에 고정으로" → "보스전에서만 바텀에서 슥 위로 밀려 올라와서, 방향키만 있고 나머지는 인게임 창에 그대로" → "조작부가 너무 크면 화면 작아지니깐 최소한으로"):
+     화면 맨 아래의 얇은 판. 왼쪽에 8방향 키 — 판 어디를 눌러도 키 중심에서 손가락 쪽의 방향(45도 단위)으로 걷고, 누른 채 미끄러지면 방향이 바뀐다. 가운데(dead)는 멈춤. 스킬 줄·축지법·궁극기는 전장 창 아래 끝에 붙은 채 판만큼 올라간다 */
+  P._padCenter = function () { var D = this.D, P2 = CFG.BOSSF.dpad; return [P2.x + P2.r, D.H - this.padH + P2.h / 2]; };
+  P._padSet = function (x, y) { var c = this._padCenter(), dx = x - c[0], dy = y - c[1], m = Math.hypot(dx, dy); if (m < 11) { this.padV = [0, 0]; this.padI = -1; return; } var i = Math.round(Math.atan2(dy, dx) / 0.7854); this.padI = (i + 8) % 8; this.padV = [Math.cos(i * 0.7854), Math.sin(i * 0.7854)]; };
+  P._drawPad = function () {
+    var D = this.D, ctx = D.ctx, W = D.W, H = D.H, P2 = CFG.BOSSF.dpad, y0 = H - this.padH, c = this._padCenter(), R = P2.r, i;
+    var g = ctx.createLinearGradient(0, y0, 0, y0 + P2.h); g.addColorStop(0, '#2a2018'); g.addColorStop(1, '#15100c'); ctx.fillStyle = g; ctx.fillRect(0, y0, W, P2.h + 2); ctx.fillStyle = '#a8823a'; ctx.fillRect(0, y0, W, 2); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, y0 + 2, W, 2);
+    ctx.fillStyle = '#0e0b09'; ctx.beginPath(); ctx.arc(c[0], c[1], R + 4, 0, 6.2832); ctx.fill(); ctx.strokeStyle = '#a8823a'; ctx.lineWidth = 1.5; ctx.stroke();
+    for (i = 0; i < 8; i++) { var a = i * 0.7854, on = this.padI === i; ctx.beginPath(); ctx.moveTo(c[0] + Math.cos(a - 0.36) * 18, c[1] + Math.sin(a - 0.36) * 18); ctx.arc(c[0], c[1], R, a - 0.36, a + 0.36); ctx.lineTo(c[0] + Math.cos(a + 0.36) * 18, c[1] + Math.sin(a + 0.36) * 18); ctx.closePath(); ctx.fillStyle = on ? '#c8462a' : '#3a2e24'; ctx.fill(); ctx.strokeStyle = on ? '#ffd9a0' : '#8a6a2e'; ctx.lineWidth = 1; ctx.stroke();
+      var ax = c[0] + Math.cos(a) * R * 0.72, ay = c[1] + Math.sin(a) * R * 0.72, s2 = 6; ctx.fillStyle = on ? '#fff2c8' : '#e6c476'; ctx.beginPath(); ctx.moveTo(ax + Math.cos(a) * s2, ay + Math.sin(a) * s2); ctx.lineTo(ax + Math.cos(a + 2.5) * s2, ay + Math.sin(a + 2.5) * s2); ctx.lineTo(ax + Math.cos(a - 2.5) * s2, ay + Math.sin(a - 2.5) * s2); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#1a1410'; ctx.beginPath(); ctx.arc(c[0], c[1], 15, 0, 6.2832); ctx.fill(); ctx.strokeStyle = '#8a6a2e'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.font = '11px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(201,180,138,.55)'; ctx.fillText('방향키 — 누르고 있는 쪽으로 이동', c[0] + R + 22, c[1]);
   };
   /* 보스전 직전의 경고 (README 419, 2026-11-27 사용자 "보스전 직전 'WARNING' 경고 연출 — 메가맨과 비슷하게" + 참고 화면 둘, "굳이 소리까진 안 해 줘도 됨"): 화면이 붉게 어두워지고 두 줄의 붉은 띠 사이에서 붉은 WARNING 이 깜빡인다. warn 초 뒤에 보스가 나타난다 */
   P._bossWarn = function () {
